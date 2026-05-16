@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -26,18 +27,21 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.tune),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.pushNamed('model-setting'),
-          ),
+          ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.08, end: 0),
           SwitchListTile(
-            title: const Text('Dark mode'),
-            subtitle: Text(
-              isDark ? 'Dark theme enabled' : 'Light theme enabled',
-            ),
-            value: isDark,
-            onChanged: (_) {
-              ref.read(themeModeProvider.notifier).toggleLightDark();
-            },
-            secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-          ),
+                title: const Text('Dark mode'),
+                subtitle: Text(
+                  isDark ? 'Dark theme enabled' : 'Light theme enabled',
+                ),
+                value: isDark,
+                onChanged: (_) {
+                  ref.read(themeModeProvider.notifier).toggleLightDark();
+                },
+                secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+              )
+              .animate()
+              .fadeIn(duration: 220.ms, delay: 60.ms)
+              .slideY(begin: 0.08, end: 0),
         ],
       ),
     );

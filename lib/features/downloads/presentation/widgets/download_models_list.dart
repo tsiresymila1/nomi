@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
@@ -9,6 +10,19 @@ class DownloadModelsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Widget reveal(Widget child, {int delayMs = 0}) {
+      return child
+          .animate()
+          .fade(duration: 500.ms, delay: delayMs.ms)
+          .scale(
+            delay: (delayMs + 120).ms,
+            duration: 260.ms,
+            begin: const Offset(0.98, 0.98),
+            end: const Offset(1, 1),
+            curve: Curves.easeOutCubic,
+          );
+    }
+
     final modelsAsync = ref.watch(modelRepositoryProvider);
     final downloads = ref.watch(downloadProvider);
     final installedModels = ref.watch(modelInstallerProvider);
@@ -33,16 +47,23 @@ class DownloadModelsList extends ConsumerWidget {
                     final isInstalled =
                         installed.contains(installedId) || progress == 1.0;
                     return DownloadItem(
-                      model: model,
-                      progress: progress,
-                      isInstalled: isInstalled,
-                      onDownload: () {
-                        ref.read(downloadProvider.notifier).installModel(model);
-                      },
-                      onRemove: () {
-                        ref.read(downloadProvider.notifier).removeModel(model);
-                      },
-                    );
+                          model: model,
+                          progress: progress,
+                          isInstalled: isInstalled,
+                          onDownload: () {
+                            ref
+                                .read(downloadProvider.notifier)
+                                .installModel(model);
+                          },
+                          onRemove: () {
+                            ref
+                                .read(downloadProvider.notifier)
+                                .removeModel(model);
+                          },
+                        )
+                        .animate()
+                        .fadeIn(duration: 220.ms, delay: (index * 35).ms)
+                        .slideY(begin: 0.06, end: 0);
                   },
                 )
               : const Center(
@@ -50,12 +71,13 @@ class DownloadModelsList extends ConsumerWidget {
                     'No models, please add a new one',
                     style: TextStyle(fontSize: 13),
                   ),
-                ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+                ).animate().fade(duration: 500.ms).scale(delay: 500.ms),
+          loading: () =>
+              reveal(const Center(child: CircularProgressIndicator())),
+          error: (err, stack) => reveal(Center(child: Text('Error: $err'))),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => reveal(const Center(child: CircularProgressIndicator())),
+        error: (err, stack) => reveal(Center(child: Text('Error: $err'))),
       ),
     );
   }

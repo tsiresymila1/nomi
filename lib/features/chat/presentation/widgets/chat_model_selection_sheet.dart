@@ -30,7 +30,7 @@ class ChatModelSelectionSheet extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 Navigator.of(context).pop();
-                await ref.read(chatPageActionsProvider).installModel(model);
+                Future.microtask(() =>ref.read(chatPageActionsProvider).installModel(model));
               },
             );
           },

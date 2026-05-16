@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/presentation/providers/model_settings_actions_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
@@ -96,13 +97,13 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
 
       _hasEditedForm = false;
       if (!mounted) return;
-      _showSnack('Model settings saved');
+      _showToast('Model settings saved', AppToastType.success);
     } on ModelSettingsValidationException catch (e) {
       if (!mounted) return;
-      _showSnack(e.message);
+      _showToast(e.message, AppToastType.error);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Save failed: $e');
+      _showToast('Save failed: $e', AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -122,10 +123,10 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
       _hasEditedForm = false;
       if (!mounted) return;
       setState(() {});
-      _showSnack('Model settings reset to defaults');
+      _showToast('Model settings reset to defaults', AppToastType.success);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Reset failed: $e');
+      _showToast('Reset failed: $e', AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -162,10 +163,10 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
     try {
       ref.read(modelSettingsActionsProvider).resetFlutterGemma();
       if (!mounted) return;
-      _showSnack('FlutterGemma reset complete');
+      _showToast('FlutterGemma reset complete', AppToastType.success);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Reset failed: $e');
+      _showToast('Reset failed: $e', AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _isResettingGemma = false);
@@ -173,8 +174,8 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
     }
   }
 
-  void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _showToast(String text, AppToastType type) {
+    AppToast.show(text, type: type);
   }
 
   @override
@@ -229,7 +230,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
                       ),
                       filled: true,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 8,
                         vertical: 8,
                       ),
                     ),

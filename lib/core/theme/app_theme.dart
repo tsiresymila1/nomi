@@ -33,6 +33,7 @@ class AppTheme {
   }
 
   static InputDecorationTheme _inputDecorationTheme() {
+
     return InputDecorationTheme(
       filled: true,
       // fillColor: Colors.grey,
@@ -42,6 +43,10 @@ class AppTheme {
       // errorBorder: _noBorder,
       // focusedErrorBorder: _noBorder,
       // disabledBorder: _noBorder,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
     );
   }
 

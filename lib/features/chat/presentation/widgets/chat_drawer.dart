@@ -20,8 +20,8 @@ class ChatDrawer extends ConsumerWidget {
                 children: [
                   const Expanded(
                     child: Text(
-                      'History',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      'Chats',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -44,10 +44,10 @@ class ChatDrawer extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 spacing: 8,
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(LucideIcons.cpu),
+                    icon:  Icon(LucideIcons.cpu, color: Theme.of(context).colorScheme.primary,),
                     onPressed: () {
                       Navigator.of(context).pop();
                       context.pushNamed('download');
@@ -57,7 +57,7 @@ class ChatDrawer extends ConsumerWidget {
                     icon: const Icon(Icons.settings),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      context.pushNamed('model-setting');
+                      context.pushNamed('setting');
                     },
                   ),
                 ],

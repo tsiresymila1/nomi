@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/logger.dart';
@@ -82,6 +84,8 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
 
     try {
       await FlutterGemma.uninstallModel(installedId);
+      await _deleteCopiedSourceIfExists(model);
+      await ref.read(modelRepositoryActionsProvider).deleteModel(model.id);
       final nextState = {...state};
       nextState.remove(installKey);
       nextState.remove(installedId);
@@ -125,5 +129,14 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
       'phi' => ModelType.phi,
       _ => ModelType.gemmaIt,
     };
+  }
+
+  Future<void> _deleteCopiedSourceIfExists(ModelInfo model) async {
+    if (model.sourceType != 'file') return;
+
+    final file = File(model.source);
+    if (await file.exists()) {
+      await file.delete();
+    }
   }
 }

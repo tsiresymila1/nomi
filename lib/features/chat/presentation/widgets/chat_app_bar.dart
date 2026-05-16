@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
+import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -11,10 +13,8 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
-    final modelLabel = activeGemmaChat.maybeWhen(
-      data: (session) => session?.chat.modelType.name ?? 'Model not loaded',
-      orElse: () => 'Model loading...',
-    );
+    final modelsAsync = ref.watch(modelRepositoryProvider);
+    final modelLabel = _resolveModelLabel(modelsAsync, activeGemmaChat);
     final modelColor = activeGemmaChat.maybeWhen(
       data: (session) => session == null ? Colors.red : null,
       orElse: () => null,
@@ -23,8 +23,8 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return AppBar(
       scrolledUnderElevation: 2,
       elevation: 2,
-      title: TextButton(
-        onPressed: () => _showModelSelector(context, ref),
+      title: InkWell(
+        onTap: () => _showModelSelector(context, ref),
         child: Column(
           children: [
             const Text(
@@ -72,6 +72,7 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Future<void> _showModelSelector(BuildContext context, WidgetRef ref) async {
     await showModalBottomSheet<void>(
       context: context,
+      useSafeArea: true,
       builder: (context) {
         return const SafeArea(child: ChatModelSelectionSheet());
       },
@@ -80,4 +81,42 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  String _resolveModelLabel(
+    AsyncValue<dynamic> modelsAsync,
+    AsyncValue<GemmaChatSession?> activeGemmaChat,
+  ) {
+    final activeSpec =
+        gemma.FlutterGemmaPlugin.instance.modelManager.activeInferenceModel;
+    final activeModelId = activeSpec is gemma.InferenceModelSpec
+        ? activeSpec.name
+        : null;
+
+    if (activeModelId == null) {
+      return activeGemmaChat.maybeWhen(
+        data: (session) =>
+            session == null ? 'Model not loaded' : 'Unknown model',
+        orElse: () => 'Model loading...',
+      );
+    }
+
+    return modelsAsync.when(
+      data: (models) {
+        for (final model in models) {
+          final installedId = _installedModelIdFromSource(model.source);
+          if (installedId.toLowerCase() == activeModelId.toLowerCase()) {
+            return model.name;
+          }
+        }
+        return activeModelId;
+      },
+      loading: () => activeModelId,
+      error: (error, stackTrace) => activeModelId,
+    );
+  }
+
+  String _installedModelIdFromSource(String source) {
+    final parts = source.split(RegExp(r'[/\\]'));
+    return parts.isEmpty ? source : parts.last;
+  }
 }

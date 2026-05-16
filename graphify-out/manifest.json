@@ -1,0 +1,506 @@
+{
+  "/Users/tsiresymila/Development/Flutter/gena/macos/RunnerTests/RunnerTests.swift": {
+    "mtime": 1778758131.2978494,
+    "hash": "97d3a20fd20a063c192e886d1822b4a8"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/MainFlutterWindow.swift": {
+    "mtime": 1744650124.0,
+    "hash": "4a747b1f256d62a2bbb79bd976891eb5"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/AppDelegate.swift": {
+    "mtime": 1744650124.0,
+    "hash": "2a7411ae3e7c6715525b94b6f8d2e80b"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Flutter/GeneratedPluginRegistrant.swift": {
+    "mtime": 1778861977.527089,
+    "hash": "85b777b5a2d60c6979cf71397ac76e81"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/flutter_gemma/flutter_gemma-umbrella.h": {
+    "mtime": 1778768388.5007648,
+    "hash": "27cad98975e8655b18ee4038674f58e7"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/flutter_gemma/flutter_gemma-dummy.m": {
+    "mtime": 1778768388.5043056,
+    "hash": "120656da862f61f9c6a6b458875c9799"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/Pods-Runner/Pods-Runner-umbrella.h": {
+    "mtime": 1778768388.5254858,
+    "hash": "814a4c2d3024597e419f66f6f048d39e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/Pods-Runner/Pods-Runner-dummy.m": {
+    "mtime": 1778768388.5326717,
+    "hash": "d3f88e6bc5bffb456bd31d3ae36c9256"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/shared_preferences_foundation/shared_preferences_foundation-dummy.m": {
+    "mtime": 1778768388.5184736,
+    "hash": "7673a87a2ff137ab1024361310c89863"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/shared_preferences_foundation/shared_preferences_foundation-umbrella.h": {
+    "mtime": 1778768388.5158896,
+    "hash": "353082decddc13f39a8f7023b84e363e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/Pods-RunnerTests/Pods-RunnerTests-dummy.m": {
+    "mtime": 1778768388.5365233,
+    "hash": "097dfaf08332f413805fcca47157791c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/Pods-RunnerTests/Pods-RunnerTests-umbrella.h": {
+    "mtime": 1778768388.535719,
+    "hash": "c23802aedf43339011f9ddde1d7d0c49"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/path_provider_foundation/path_provider_foundation-dummy.m": {
+    "mtime": 1778768388.510392,
+    "hash": "51228058372a8904ac705f59db3910bc"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Pods/Target Support Files/path_provider_foundation/path_provider_foundation-umbrella.h": {
+    "mtime": 1778768388.5085948,
+    "hash": "70e1882bf6203a2be59264c874001b12"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/test/widget_test.dart": {
+    "mtime": 1778758530.4349592,
+    "hash": "c0f416835d9f93d112c1e9dd0838408e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/RunnerTests/RunnerTests.swift": {
+    "mtime": 1778758131.2698226,
+    "hash": "a225a382d14d7b16b6f602a5c1d49331"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Runner-Bridging-Header.h": {
+    "mtime": 1757855689.1151538,
+    "hash": "e07862ac930ed4d8479185d52c6cc66d"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/GeneratedPluginRegistrant.h": {
+    "mtime": 1778758131.9767668,
+    "hash": "decb9041b5e91a07e66f4664e5dac408"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/AppDelegate.swift": {
+    "mtime": 1757855689.1150658,
+    "hash": "303ca46dbd58544be7b816861d70a27c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/GeneratedPluginRegistrant.m": {
+    "mtime": 1778861977.5261357,
+    "hash": "c371ad7dc3b36e0e58131b744bcfec98"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Flutter/ephemeral/flutter_lldb_helper.py": {
+    "mtime": 1778825985.1882102,
+    "hash": "98fc75412162af387e2e3461e4e58094"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/runner/main.cc": {
+    "mtime": 1744650124.0,
+    "hash": "0643b8609698e96b3abd63c210361a87"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/runner/my_application.h": {
+    "mtime": 1763458519.5662525,
+    "hash": "326a85d68857137fdfe8698a0c071baf"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/runner/my_application.cc": {
+    "mtime": 1778758131.3316116,
+    "hash": "4fcfb779870831e81e6c833b8d6a2c76"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1778778140.6586099,
+    "hash": "be058bbf9e564bdb8c349215b7cdb110"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/flutter/generated_plugin_registrant.h": {
+    "mtime": 1778758131.973688,
+    "hash": "d295462c9da9f7fef22dc86c34492318"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/gradlew": {
+    "mtime": 1778758131.3411138,
+    "hash": "7f1cd7eb3f75a1dc85cd37753972a6e2"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/build.gradle.kts": {
+    "mtime": 1778758131.3224525,
+    "hash": "f11f360aed44d4f6871b398346af14f0"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/settings.gradle.kts": {
+    "mtime": 1778780012.979666,
+    "hash": "526841cbba5b6edb9c0161df55dc41e5"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/build.gradle.kts": {
+    "mtime": 1778779968.9065657,
+    "hash": "bdc5685ce6d2b6d15c05e1aca9560566"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java": {
+    "mtime": 1778861977.51745,
+    "hash": "942abed0feaea9ace52637b43bcd692c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/kotlin/com/example/gena/MainActivity.kt": {
+    "mtime": 1778758131.3237486,
+    "hash": "722a0e7617d50746ef96e000e82d856b"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/main.dart": {
+    "mtime": 1778926572.5994413,
+    "hash": "2c771fbf4cd003f48d2db8499951591e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/router.dart": {
+    "mtime": 1778926028.5615265,
+    "hash": "88fefe9083578ae6c7e25d214324fe1f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/logger.dart": {
+    "mtime": 1778819591.2607036,
+    "hash": "7a24ebd0b321891e9ec264a025cdd7f9"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/database/gena_database.g.dart": {
+    "mtime": 1778917882.2623885,
+    "hash": "992880fd5763f18b4ccd0eeae56d2da4"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/database/gena_database.dart": {
+    "mtime": 1778917926.6326838,
+    "hash": "3faa904284e143d80b95d630bb42db46"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/database/gena_provider.dart": {
+    "mtime": 1778858679.4352431,
+    "hash": "d3e9bc08d94cf10bae870ec9e9cb4e43"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/core/theme/app_theme.dart": {
+    "mtime": 1778930987.6486645,
+    "hash": "33a5497821e1f94ab3148ccfdd0345ca"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/home/presentation/home_page.dart": {
+    "mtime": 1778760148.160158,
+    "hash": "eb54b5d536a3d151ddcbfb587afdb32f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/data/chat_provider.dart": {
+    "mtime": 1778924035.137378,
+    "hash": "8bc88ff00ad2fc0ebfa60ee9c00db9f2"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/chat_repository_interface.dart": {
+    "mtime": 1778771239.219561,
+    "hash": "8d9a8b747e48f965821151e3c20106aa"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/models/chat_message.dart": {
+    "mtime": 1778853212.7017784,
+    "hash": "ca297a376400278c9b3d47f3997758bc"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/models/chat_message.freezed.dart": {
+    "mtime": 1778771326.6046047,
+    "hash": "76203b6b2e11625a0dd249a76e3b8d39"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/models/chat_message.g.dart": {
+    "mtime": 1778853372.5183523,
+    "hash": "f0b76ec3e616caf91521913979739b98"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/chat_entity.freezed.dart": {
+    "mtime": 1778771326.604349,
+    "hash": "f7819fd0e0fd3a76fb2281d4e3dabc08"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/chat_entity.dart": {
+    "mtime": 1778853216.3241205,
+    "hash": "b0e6bbfa5370397219a5d6d7c6f4901b"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/message_entity.dart": {
+    "mtime": 1778773605.2031844,
+    "hash": "98a9b817281725ce677d77b67cb4cc77"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/message_entity.g.dart": {
+    "mtime": 1778853372.5181792,
+    "hash": "aa2c62149d8abe8f8d760fe238d715db"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/chat_entity.g.dart": {
+    "mtime": 1778853372.517908,
+    "hash": "4b5efd413b8cc52de38187d2919f8846"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/domain/entities/message_entity.freezed.dart": {
+    "mtime": 1778771326.604483,
+    "hash": "10334793e606b646fffe875cc15195ae"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/chat_page.dart": {
+    "mtime": 1778930693.243027,
+    "hash": "b804df5a5a8d6d5ff769be1a26ea2f5e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/chat_model_selection_sheet.dart": {
+    "mtime": 1778774658.1312923,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/chat_view.dart": {
+    "mtime": 1778927364.4529464,
+    "hash": "45dcf9ff6bfed68afaaf0b4028aad84f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/widgets/chat_history_list.dart": {
+    "mtime": 1778925718.071171,
+    "hash": "09b648ac0648f5c3faa94890e913e7cb"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/widgets/chat_input.dart": {
+    "mtime": 1778927047.8133407,
+    "hash": "ece25e7cc19b6aaba790922ab762ad0c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/widgets/chat_list_tile.dart": {
+    "mtime": 1778771257.7074459,
+    "hash": "7a7dd1b59f69b472c9cbe6356c10fef3"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+    "mtime": 1778929546.1080444,
+    "hash": "62dafda66a43be46bbbc66c9e681c50b"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/setting/data/theme_settings_provider.dart": {
+    "mtime": 1778925431.017366,
+    "hash": "750d295b5d3b6a590a24c2cfb15c7ee2"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/setting/data/chat_model_settings_provider.dart": {
+    "mtime": 1778924022.6506438,
+    "hash": "a4c0e16b3c25d9d24c6928a278bd37e6"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/setting/data/chat_model_settings.dart": {
+    "mtime": 1778924145.8721478,
+    "hash": "9ef72ae53dc268bde581191849b9e53e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/setting/presentation/setting_page.dart": {
+    "mtime": 1778925574.746003,
+    "hash": "1314c2c7b91a80d700d31085d20b6d02"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/setting/presentation/model_setting_page.dart": {
+    "mtime": 1778931728.5594327,
+    "hash": "16bb824e7b75207c041ee25877c6062a"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/data/model_repository.dart": {
+    "mtime": 1778917926.6387575,
+    "hash": "c8951a126397cab581e137a073d0d1b5"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/domain/model_info.dart": {
+    "mtime": 1778916087.5796144,
+    "hash": "a5fcdbe97627e0d59cd2559c3c57d4ad"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/domain/model_info.freezed.dart": {
+    "mtime": 1778917882.2616482,
+    "hash": "1bfcd8f56b94333fb2ef495c8f662eb4"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/domain/model_info.g.dart": {
+    "mtime": 1778917882.2633598,
+    "hash": "41b2fb6498d5e2b776e9973d84299292"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/presentation/download_page.dart": {
+    "mtime": 1778917936.826565,
+    "hash": "91a37528ab73f5b9b50e673a237a14cd"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/presentation/providers/download_notifier.dart": {
+    "mtime": 1778922993.8922818,
+    "hash": "ef729fb06e1926b52daf33d47eba8dad"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/lib/features/downloads/presentation/widgets/download_item.dart": {
+    "mtime": 1778856908.2371528,
+    "hash": "eabf85f83c6f17634ba401d352202b60"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/flutter_window.cpp": {
+    "mtime": 1744650124.0,
+    "hash": "9b92b95a9eecce25e3e9d356688d0cb6"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/utils.h": {
+    "mtime": 1744650124.0,
+    "hash": "c741fb9cddbf3a62f4688b6cca39ddcc"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/utils.cpp": {
+    "mtime": 1744650124.0,
+    "hash": "9b5697b276c8ad67a02ec12ad2c09851"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/win32_window.h": {
+    "mtime": 1744650124.0,
+    "hash": "5a4cf051798d7e6931ee0405a4523c8f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/win32_window.cpp": {
+    "mtime": 1744650124.0,
+    "hash": "928e86a2be27eca688669dce6c9177d9"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/resource.h": {
+    "mtime": 1744650124.0,
+    "hash": "c8f809a4f8d3f2f625e358fd90f72fee"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/main.cpp": {
+    "mtime": 1778758131.2626123,
+    "hash": "c6fbf3769298f1196b2e772da5c4a036"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/flutter_window.h": {
+    "mtime": 1744650124.0,
+    "hash": "79bea736711adda00c49419a39a4a0b4"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1778778140.6611931,
+    "hash": "cbe38f14bad9ffe67f2ba6c587044114"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/flutter/generated_plugin_registrant.h": {
+    "mtime": 1778758131.9751909,
+    "hash": "0ea33875f9f8e118f9c2ded03e2e2835"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/README.md": {
+    "mtime": 1778758131.3254828,
+    "hash": "e0af5932de7d4080e1eeef2a8f7d85d1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/pubspec.yaml": {
+    "mtime": 1778927620.4781878,
+    "hash": "b705184861838c146d10ac37b8807839"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/analysis_options.yaml": {
+    "mtime": 1778758131.3268898,
+    "hash": "66d03d7647c8e438164feaf5b922d44a"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/index.html": {
+    "mtime": 1778758131.2930925,
+    "hash": "b9cedc5086bb3f9efad72907805efc20"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": {
+    "mtime": 1744650124.0,
+    "hash": "e175e436acacf76c814d83532d0b662c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/CMakeLists.txt": {
+    "mtime": 1778758131.33362,
+    "hash": "b895351479a7d13838b87087f78977c1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/runner/CMakeLists.txt": {
+    "mtime": 1744650124.0,
+    "hash": "6d75431dc21756981b53a7494c836311"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/linux/flutter/CMakeLists.txt": {
+    "mtime": 1744650124.0,
+    "hash": "46690fb8ffaf7d227d8bc4713f31140d"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/CMakeLists.txt": {
+    "mtime": 1778758131.2667763,
+    "hash": "87e7ad3db587eff3388020b1593f1c50"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/runner/CMakeLists.txt": {
+    "mtime": 1744650124.0,
+    "hash": "e99a99b5cc82a168fc557eb23b8d5a96"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/windows/flutter/CMakeLists.txt": {
+    "mtime": 1744650124.0,
+    "hash": "0c500410e3259a9a053797dc1c28070e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png": {
+    "mtime": 1760778909.1736388,
+    "hash": "8bf511604bc6ed0a6aeb380c5113fdcf"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png": {
+    "mtime": 1760778909.1750238,
+    "hash": "c9becc9105f8cabce934d20c7bfb6aac"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png": {
+    "mtime": 1760778909.1753273,
+    "hash": "dfe2c93d1536ae02f085cc63faa3430e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png": {
+    "mtime": 1760778909.1728396,
+    "hash": "04e7b6ef05346c70b663ca1d97de3ad5"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png": {
+    "mtime": 1760778909.1733956,
+    "hash": "0ad44039155424738917502c69667699"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png": {
+    "mtime": 1760778909.173137,
+    "hash": "3ded30823804caaa5ccc944067c54a36"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png": {
+    "mtime": 1760778909.1738803,
+    "hash": "8e0ae58e362a6636bdfccbc04da2c58c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/favicon.png": {
+    "mtime": 1744650124.0,
+    "hash": "5dcef449791fa27946b3d35ad8803796"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/icons/Icon-192.png": {
+    "mtime": 1744650124.0,
+    "hash": "ac9a721a12bbc803b44f645561ecb1e1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/icons/Icon-maskable-192.png": {
+    "mtime": 1760778909.201468,
+    "hash": "c457ef57daa1d16f64b27b786ec2ea3c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/icons/Icon-maskable-512.png": {
+    "mtime": 1760778909.201313,
+    "hash": "301a7604d45b3e739efc881eb04896ea"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/web/icons/Icon-512.png": {
+    "mtime": 1744650124.0,
+    "hash": "96e752610906ba2a93c65f8abe1645f1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png": {
+    "mtime": 1760778909.1762118,
+    "hash": "978c1bee49d7ad5fc1a4d81099b13e18"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png": {
+    "mtime": 1760778909.1758876,
+    "hash": "978c1bee49d7ad5fc1a4d81099b13e18"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png": {
+    "mtime": 1760778909.176455,
+    "hash": "978c1bee49d7ad5fc1a4d81099b13e18"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": {
+    "mtime": 1760778909.1793683,
+    "hash": "643842917530acf4c5159ae851b0baf2"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": {
+    "mtime": 1760778909.179177,
+    "hash": "be8887071dd7ec39cb754d236aa9584f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": {
+    "mtime": 1760778909.1771688,
+    "hash": "2247a840b6ee72b8a069208af170e5b1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": {
+    "mtime": 1760778909.178409,
+    "hash": "a2f8558fb1d42514111fbbb19fb67314"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": {
+    "mtime": 1760778909.178244,
+    "hash": "c785f8932297af4acd5f5ccb7630f01c"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": {
+    "mtime": 1760778909.178841,
+    "hash": "665cb5e3c5729da6d639d26eff47a503"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": {
+    "mtime": 1760778909.1786942,
+    "hash": "1b3b1538136316263c7092951e923e9d"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": {
+    "mtime": 1760778909.1777546,
+    "hash": "2247a840b6ee72b8a069208af170e5b1"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": {
+    "mtime": 1760778909.1785524,
+    "hash": "2b1452c4c1bda6177b4fbbb832df217f"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": {
+    "mtime": 1760778909.178975,
+    "hash": "8245359312aea1b0d2412f79a07b0ca5"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": {
+    "mtime": 1760778909.1767488,
+    "hash": "e419d22a37bc40ba185aca1acb6d4ac6"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": {
+    "mtime": 1760778909.1780035,
+    "hash": "5b3c0902200ce596e9848f22e1f0fe0e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": {
+    "mtime": 1760778909.177526,
+    "hash": "36c0d7a7132bdde18898ffdfcfcdc4d2"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": {
+    "mtime": 1760778909.1773508,
+    "hash": "5b3c0902200ce596e9848f22e1f0fe0e"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": {
+    "mtime": 1760778909.1769612,
+    "hash": "043119ef4faa026ff82bd03f241e5338"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1744650124.0,
+    "hash": "6270344430679711b81476e29878caa7"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1744650124.0,
+    "hash": "13e9c72ec37fac220397aa819fa1ef2d"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1744650124.0,
+    "hash": "57838d52c318faff743130c3fcfae0c6"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1744650124.0,
+    "hash": "afe1b655b9f32da22f9a4301bb8e6ba8"
+  },
+  "/Users/tsiresymila/Development/Flutter/gena/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1744650124.0,
+    "hash": "a0a8db5985280b3679d99a820ae2db79"
+  }
+}

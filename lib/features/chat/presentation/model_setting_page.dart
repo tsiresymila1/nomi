@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/presentation/providers/model_settings_actions_provider.dart';
+import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
+import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
 import 'package:gena/features/setting/data/chat_model_settings_provider.dart';
 
@@ -46,6 +47,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
     _maxTokensController.removeListener(_markEdited);
     _tokenBufferController.removeListener(_markEdited);
     _randomSeedController.removeListener(_markEdited);
+
     _systemPromptController.dispose();
     _topKController.dispose();
     _maxTokensController.dispose();
@@ -74,51 +76,33 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
   Future<void> _saveSettings() async {
     if (_isSaving) return;
 
-    final topK = int.tryParse(_topKController.text.trim());
-    final maxTokens = int.tryParse(_maxTokensController.text.trim());
-    final tokenBuffer = int.tryParse(_tokenBufferController.text.trim());
-    final randomSeed = int.tryParse(_randomSeedController.text.trim());
-
-    if (topK == null || topK < 1 || topK > 200) {
-      _showSnack('Top-K must be between 1 and 200');
-      return;
-    }
-    if (maxTokens == null || maxTokens < 256 || maxTokens > 8192) {
-      _showSnack('Max tokens must be between 256 and 8192');
-      return;
-    }
-    if (tokenBuffer == null || tokenBuffer < 32 || tokenBuffer > 4096) {
-      _showSnack('Token buffer must be between 32 and 4096');
-      return;
-    }
-    if (randomSeed == null || randomSeed < 0) {
-      _showSnack('Random seed must be 0 or greater');
-      return;
-    }
-    if (tokenBuffer >= maxTokens) {
-      _showSnack('Token buffer must be smaller than max tokens');
-      return;
-    }
-
-    final next = ChatModelSettings(
-      systemPrompt: _systemPromptController.text.trim(),
-      temperature: _temperature,
-      topK: topK,
-      topP: _topP,
-      maxTokens: maxTokens,
-      tokenBuffer: tokenBuffer,
-      randomSeed: randomSeed,
-      preferredBackend: _preferredBackend,
-      isThinking: _isThinking,
-    );
-
     setState(() => _isSaving = true);
     try {
-      await ref.read(chatModelSettingsProvider.notifier).save(next);
+      await ref
+          .read(modelSettingsActionsProvider)
+          .save(
+            ModelSettingsSaveInput(
+              systemPrompt: _systemPromptController.text,
+              topKText: _topKController.text,
+              maxTokensText: _maxTokensController.text,
+              tokenBufferText: _tokenBufferController.text,
+              randomSeedText: _randomSeedController.text,
+              temperature: _temperature,
+              topP: _topP,
+              preferredBackend: _preferredBackend,
+              isThinking: _isThinking,
+            ),
+          );
+
       _hasEditedForm = false;
-      ref.invalidate(activeGemmaChatProvider);
       if (!mounted) return;
       _showSnack('Model settings saved');
+    } on ModelSettingsValidationException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Save failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -128,16 +112,20 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
 
   Future<void> _resetModelSettings() async {
     if (_isSaving) return;
+
     setState(() => _isSaving = true);
     try {
-      await ref.read(chatModelSettingsProvider.notifier).resetDefaults();
-      final defaults = ChatModelSettings.defaults();
+      final defaults = await ref
+          .read(modelSettingsActionsProvider)
+          .resetDefaults();
       _loadSettingsIntoForm(defaults);
       _hasEditedForm = false;
-      ref.invalidate(activeGemmaChatProvider);
       if (!mounted) return;
       setState(() {});
       _showSnack('Model settings reset to defaults');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Reset failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -172,8 +160,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
 
     setState(() => _isResettingGemma = true);
     try {
-      FlutterGemma.reset();
-      ref.invalidate(activeGemmaChatProvider);
+      ref.read(modelSettingsActionsProvider).resetFlutterGemma();
       if (!mounted) return;
       _showSnack('FlutterGemma reset complete');
     } catch (e) {
@@ -208,7 +195,14 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(elevation:2, scrolledUnderElevation:2,title: const Text('Model Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),)),
+      appBar: AppBar(
+        elevation: 2,
+        scrolledUnderElevation: 2,
+        title: const Text(
+          'Model Settings',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -216,18 +210,17 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
             mainAxisSize: MainAxisSize.min,
             spacing: 12,
             children: [
-
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 8,
                 children: [
-                  Text("General prompt", style: TextStyle(fontSize: 14),),
+                  const Text('General prompt', style: TextStyle(fontSize: 14)),
                   TextField(
                     controller: _systemPromptController,
                     minLines: 5,
                     maxLines: 10,
-                    style: TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'You are helpfully assistant',
                       border: OutlineInputBorder(
@@ -244,7 +237,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              _sliderTile(
+              ModelSettingsSliderTile(
                 label: 'Temperature',
                 valueText: _temperature.toStringAsFixed(2),
                 slider: Slider(
@@ -258,7 +251,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
                   }),
                 ),
               ),
-              _sliderTile(
+              ModelSettingsSliderTile(
                 label: 'Top-P',
                 valueText: _topP.toStringAsFixed(2),
                 slider: Slider(
@@ -276,14 +269,14 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _numberField(
+                    child: ModelSettingsNumberField(
                       controller: _topKController,
                       label: 'Top-K',
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _numberField(
+                    child: ModelSettingsNumberField(
                       controller: _maxTokensController,
                       label: 'Max tokens',
                     ),
@@ -294,14 +287,14 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _numberField(
+                    child: ModelSettingsNumberField(
                       controller: _tokenBufferController,
                       label: 'Token buffer',
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _numberField(
+                    child: ModelSettingsNumberField(
                       controller: _randomSeedController,
                       label: 'Random seed',
                     ),
@@ -314,7 +307,7 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 8,
                 children: [
-                  Text("Preferred backend"),
+                  const Text('Preferred backend'),
                   DropdownButtonFormField<String>(
                     initialValue: _preferredBackend,
                     decoration: InputDecoration(
@@ -348,7 +341,9 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
                 }),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Enable thinking mode'),
-                subtitle: const Text('Use reasoning/thinking mode when supported'),
+                subtitle: const Text(
+                  'Use reasoning/thinking mode when supported',
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -392,54 +387,6 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _numberField({
-    required TextEditingController controller,
-    required String label,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 8,
-      children: [
-        Text(label, style: TextStyle(fontSize: 14)),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            hintText: label,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            filled: true,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _sliderTile({
-    required String label,
-    required String valueText,
-    required Widget slider,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
-            Text(
-              valueText,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        slider,
-      ],
     );
   }
 }

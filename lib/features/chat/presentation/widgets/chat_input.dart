@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/chat_provider.dart';
-import 'dart:io';
+import 'package:gena/features/chat/presentation/providers/chat_input_controller.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -12,8 +12,6 @@ class ChatInput extends ConsumerStatefulWidget {
 
 class _ChatInputState extends ConsumerState<ChatInput> {
   final _controller = TextEditingController();
-  File? _selectedFile;
-  bool _sending = false;
 
   @override
   void dispose() {
@@ -33,17 +31,26 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ListTile(
               leading: const Icon(Icons.insert_drive_file),
               title: const Text('Document'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                ref.read(chatInputControllerProvider.notifier).selectFile(null);
+                Navigator.pop(context);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.image),
               title: const Text('Image'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                ref.read(chatInputControllerProvider.notifier).selectFile(null);
+                Navigator.pop(context);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.audio_file),
               title: const Text('Audio'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                ref.read(chatInputControllerProvider.notifier).selectFile(null);
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -53,24 +60,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _sending) return;
-
-    setState(() => _sending = true);
+    if (text.isEmpty) return;
     _controller.clear();
-    setState(() => _selectedFile = null);
-
-    try {
-      await ref.read(chatThreadActionsProvider).sendMessage(text);
-    } finally {
-      if (mounted) {
-        setState(() => _sending = false);
-      }
-    }
+    await ref.read(chatInputControllerProvider.notifier).sendMessage(text);
   }
 
   @override
   Widget build(BuildContext context) {
     final isGenerating = ref.watch(chatGeneratingProvider);
+    final inputState = ref.watch(chatInputControllerProvider);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -88,7 +86,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         children: [
           IconButton(
             icon: Icon(
-              _selectedFile != null
+              inputState.selectedFile != null
                   ? Icons.attach_file
                   : Icons.add_circle_outline,
             ),
@@ -118,7 +116,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           const SizedBox(width: 8),
           IconButton(
             icon: Icon(Icons.send),
-            onPressed: (_sending || isGenerating) ? null : _sendMessage,
+            onPressed: (inputState.isSending || isGenerating)
+                ? null
+                : _sendMessage,
           ),
           IconButton(
             icon: const Icon(Icons.mic),

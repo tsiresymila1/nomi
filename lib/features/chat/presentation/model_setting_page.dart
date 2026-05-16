@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/presentation/providers/model_settings_actions_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
-import 'package:gena/features/setting/data/chat_model_settings_provider.dart';
+import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
 
 class ModelSettingsPage extends ConsumerStatefulWidget {
   const ModelSettingsPage({super.key});

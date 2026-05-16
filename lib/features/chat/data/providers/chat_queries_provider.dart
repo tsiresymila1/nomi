@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
-import 'package:gena/features/chat/domain/entities/chat_entity.dart';
-import 'package:gena/features/chat/domain/entities/message_entity.dart';
+import 'package:gena/features/chat/data/models/chat_entity.dart';
+import 'package:gena/features/chat/data/models/message_entity.dart';
 
 final chatListProvider = StreamProvider<List<ChatEntity>>((ref) {
   final database = ref.watch(genaDatabaseProvider);
@@ -42,7 +42,9 @@ final chatMessagesProvider = StreamProvider.family<List<MessageEntity>, String>(
               id: row.id.toString(),
               chatId: row.chat.toString(),
               role: row.role,
+              kind: row.kind,
               content: row.content,
+              mediaPath: row.mediaPath,
               createdAt: row.createdAt,
             ),
           )

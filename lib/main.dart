@@ -5,7 +5,7 @@ import 'package:flutter_gemma/core/domain/web_storage_mode.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/router.dart';
 import 'package:gena/core/theme/app_theme.dart';
-import 'package:gena/features/setting/data/theme_settings_provider.dart';
+import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 void main() async {

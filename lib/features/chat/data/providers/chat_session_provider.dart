@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
@@ -6,10 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/logger.dart';
-import 'package:gena/features/chat/domain/models/gemma_chat_session.dart';
+import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
-import 'package:gena/features/setting/data/chat_model_settings_provider.dart';
+import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
 
 final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
   ref,
@@ -45,11 +46,21 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
         catalogModels: catalogModels,
       );
     }
+    final activeCatalogModel = _resolveActiveCatalogModel(catalogModels);
+    final supportImage = activeCatalogModel?.supportImage ?? false;
+    final supportAudio = activeCatalogModel?.supportAudio ?? false;
+    final supportsFunctionCalls =
+        activeCatalogModel?.supportsFunctionCalls ?? false;
+    final isThinking =
+        activeCatalogModel?.isThinking ?? chatSettings.isThinking;
+    final modelTypeString = activeCatalogModel?.modelType ?? 'gemmaIt';
 
     final model = await _loadActiveModelWithRecovery(
       installedModels: installedModels,
       catalogModels: catalogModels,
       settings: chatSettings,
+      supportImage: supportImage,
+      supportAudio: supportAudio,
     );
     final systemPrompt = chatSettings.systemPrompt.trim();
     final chat = await model.createChat(
@@ -58,7 +69,11 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
       topK: chatSettings.topK,
       topP: chatSettings.topP,
       tokenBuffer: chatSettings.tokenBuffer,
-      isThinking: chatSettings.isThinking,
+      supportImage: supportImage,
+      supportAudio: supportAudio,
+      supportsFunctionCalls: supportsFunctionCalls,
+      isThinking: isThinking,
+      modelType: _parseModelType(modelTypeString),
       systemInstruction: systemPrompt.isEmpty ? null : systemPrompt,
     );
 
@@ -67,7 +82,33 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
               ..where((t) => t.chat.equals(parsedChatId))
               ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
             .get();
-    for (final message in storedMessages) {
+    for (var i = 0; i < storedMessages.length; i++) {
+      final message = storedMessages[i];
+      final isLastMessage = i == storedMessages.length - 1;
+
+      if (isLastMessage &&
+          message.kind == 'image' &&
+          message.mediaPath != null) {
+        final imageFile = File(message.mediaPath!);
+        if (await imageFile.exists()) {
+          final bytes = await imageFile.readAsBytes();
+          final text = message.content.trim();
+          await chat.addQueryChunk(
+            text.isEmpty
+                ? gemma.Message.imageOnly(
+                    imageBytes: bytes,
+                    isUser: message.role == 'user',
+                  )
+                : gemma.Message.withImage(
+                    text: text,
+                    imageBytes: bytes,
+                    isUser: message.role == 'user',
+                  ),
+          );
+          continue;
+        }
+      }
+
       await chat.addQueryChunk(
         gemma.Message.text(
           text: message.content,
@@ -98,11 +139,15 @@ Future<gemma.InferenceModel> _loadActiveModelWithRecovery({
   required List<String> installedModels,
   required List<db.Model> catalogModels,
   required ChatModelSettings settings,
+  required bool supportImage,
+  required bool supportAudio,
 }) async {
   try {
     return await gemma.FlutterGemma.getActiveModel(
       maxTokens: settings.maxTokens,
       preferredBackend: settings.backend,
+      supportImage: supportImage,
+      supportAudio: supportAudio,
     );
   } catch (e) {
     final message = e.toString();
@@ -121,6 +166,8 @@ Future<gemma.InferenceModel> _loadActiveModelWithRecovery({
     return await gemma.FlutterGemma.getActiveModel(
       maxTokens: settings.maxTokens,
       preferredBackend: settings.backend,
+      supportImage: supportImage,
+      supportAudio: supportAudio,
     );
   }
 }
@@ -175,4 +222,35 @@ gemma.ModelType _parseModelType(String value) {
     'phi' => gemma.ModelType.phi,
     _ => gemma.ModelType.gemmaIt,
   };
+}
+
+db.Model? _resolveActiveCatalogModel(List<db.Model> catalogModels) {
+  final activeSpec =
+      gemma.FlutterGemmaPlugin.instance.modelManager.activeInferenceModel;
+  if (activeSpec is! gemma.InferenceModelSpec) return null;
+  final activeId = activeSpec.name.toLowerCase();
+
+  for (final model in catalogModels) {
+    final modelId = (model.modelId ?? '').trim().toLowerCase();
+    if (modelId.isNotEmpty && modelId == activeId) {
+      return model;
+    }
+  }
+
+  for (final model in catalogModels) {
+    final fallbackId = _modelSpecNameFromSource(model.source).toLowerCase();
+    if (fallbackId == activeId) {
+      return model;
+    }
+  }
+
+  return null;
+}
+
+String _modelSpecNameFromSource(String source) {
+  final parts = source.split(RegExp(r'[/\\]'));
+  final filename = parts.isEmpty ? source : parts.last;
+  final dotIndex = filename.lastIndexOf('.');
+  if (dotIndex <= 0) return filename;
+  return filename.substring(0, dotIndex);
 }

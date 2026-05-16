@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
@@ -14,9 +17,12 @@ class ChatThreadActions {
   final Ref ref;
   ChatThreadActions(this.ref);
 
-  Future<void> sendMessage(String rawText) async {
+  Future<void> sendMessage(String rawText, {String? imagePath}) async {
     final text = rawText.trim();
-    if (text.isEmpty) return;
+    final normalizedImagePath = imagePath?.trim();
+    final hasImage =
+        normalizedImagePath != null && normalizedImagePath.isNotEmpty;
+    if (text.isEmpty && !hasImage) return;
 
     var chatId = ref.read(selectedChatIdProvider);
     chatId ??= await ref
@@ -38,12 +44,30 @@ class ChatThreadActions {
             chat: parsedChatId,
             role: 'user',
             content: text,
+            kind: Value(hasImage ? 'image' : 'text'),
+            mediaPath: hasImage
+                ? Value<String?>(normalizedImagePath)
+                : const Value.absent(),
           ),
         );
 
-    await session.chat.addQueryChunk(
-      gemma.Message.text(text: text, isUser: true),
-    );
+    if (hasImage) {
+      final imageFile = File(normalizedImagePath);
+      final bytes = await imageFile.readAsBytes();
+      await session.chat.addQueryChunk(
+        text.isEmpty
+            ? gemma.Message.imageOnly(imageBytes: bytes, isUser: true)
+            : gemma.Message.withImage(
+                text: text,
+                imageBytes: bytes,
+                isUser: true,
+              ),
+      );
+    } else {
+      await session.chat.addQueryChunk(
+        gemma.Message.text(text: text, isUser: true),
+      );
+    }
 
     ref.read(chatGeneratingProvider.notifier).setGenerating(true);
     ref.read(chatDraftResponseProvider.notifier).setDraft('');
@@ -70,6 +94,7 @@ class ChatThreadActions {
             db.MessagesCompanion.insert(
               chat: parsedChatId,
               role: 'assistant',
+              kind: const Value('text'),
               content: responseText,
             ),
           );

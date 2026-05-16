@@ -3,7 +3,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
-import 'package:gena/features/downloads/domain/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 
 final modelRepositoryProvider = StreamProvider<List<ModelInfo>>((ref) {
   final database = ref.watch(genaDatabaseProvider);
@@ -17,7 +17,12 @@ final modelRepositoryProvider = StreamProvider<List<ModelInfo>>((ref) {
             id: row.id,
             name: row.name,
             description: row.description,
+            modelId: row.modelId,
             modelType: row.modelType,
+            supportImage: row.supportImage,
+            supportAudio: row.supportAudio,
+            supportsFunctionCalls: row.supportsFunctionCalls,
+            isThinking: row.isThinking,
             sourceType: row.sourceType,
             source: row.source,
           ),
@@ -42,6 +47,10 @@ class ModelRepositoryActions {
     required String name,
     required String description,
     required String modelType,
+    required bool supportImage,
+    required bool supportAudio,
+    required bool supportsFunctionCalls,
+    required bool isThinking,
     required String sourceType,
     required String source,
   }) async {
@@ -52,7 +61,12 @@ class ModelRepositoryActions {
           db.ModelsCompanion.insert(
             name: name,
             description: description,
+            modelId: const Value.absent(),
             modelType: modelType,
+            supportImage: Value(supportImage),
+            supportAudio: Value(supportAudio),
+            supportsFunctionCalls: Value(supportsFunctionCalls),
+            isThinking: Value(isThinking),
             sourceType: sourceType,
             source: source,
           ),
@@ -64,5 +78,17 @@ class ModelRepositoryActions {
     await (database.delete(
       database.models,
     )..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> updateModelId({
+    required int id,
+    required String modelId,
+  }) async {
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(
+      database.models,
+    )..where((t) => t.id.equals(id))).write(
+      db.ModelsCompanion(modelId: Value(modelId)),
+    );
   }
 }

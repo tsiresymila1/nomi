@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_history_list.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -20,8 +20,8 @@ class ChatDrawer extends ConsumerWidget {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Chats',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      'Gena',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -34,18 +34,6 @@ class ChatDrawer extends ConsumerWidget {
                     },
                     icon: const Icon(LucideIcons.squarePen500, size: 20),
                   ),
-                ],
-              ),
-            ),
-            const Divider(),
-            const Expanded(child: ChatHistoryList()),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                spacing: 8,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
                   IconButton(
                     icon:  Icon(LucideIcons.cpu, color: Theme.of(context).colorScheme.primary,),
                     onPressed: () {
@@ -60,6 +48,20 @@ class ChatDrawer extends ConsumerWidget {
                       context.pushNamed('setting');
                     },
                   ),
+
+                ],
+              ),
+            ),
+            const Divider(),
+            const Expanded(child: ChatHistoryList()),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                spacing: 8,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+
                 ],
               ),
             ),

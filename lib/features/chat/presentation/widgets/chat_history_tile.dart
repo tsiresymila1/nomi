@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
-import 'package:gena/features/chat/domain/entities/chat_entity.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:gena/features/chat/data/models/chat_entity.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ChatHistoryTile extends ConsumerWidget {

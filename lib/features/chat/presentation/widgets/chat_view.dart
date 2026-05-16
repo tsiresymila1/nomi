@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
 class ChatView extends ConsumerStatefulWidget {
@@ -18,8 +19,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final ScrollController _scrollController = ScrollController();
   int _lastMessageCount = 0;
   String _lastDraft = '';
-  bool _forceScrollScheduled = false;
-  bool _isGeneratingNow = false;
+  bool _lastWaitingIndicator = false;
 
   @override
   void dispose() {
@@ -30,13 +30,18 @@ class _ChatViewState extends ConsumerState<ChatView> {
   void _autoScrollToEndIfNeeded({
     required int messageCount,
     required String draft,
+    required bool waitingIndicator,
+    bool forceAutoScroll = false,
   }) {
+    final shouldAutoScroll = forceAutoScroll || _isNearBottom();
     final changed =
         messageCount != _lastMessageCount ||
-        (draft.isNotEmpty && draft != _lastDraft);
+        (draft.isNotEmpty && draft != _lastDraft) ||
+        waitingIndicator != _lastWaitingIndicator;
     _lastMessageCount = messageCount;
     _lastDraft = draft;
-    if (!changed) return;
+    _lastWaitingIndicator = waitingIndicator;
+    if (!changed || !shouldAutoScroll) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
@@ -50,28 +55,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
     });
   }
 
-  void _scheduleForceScroll() {
-    if (_forceScrollScheduled) return;
-    _forceScrollScheduled = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _forceScrollScheduled = false;
-      if (!mounted || !_scrollController.hasClients) return;
-
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_scrollController.hasClients) return;
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      });
-
-      if (_isGeneratingNow) {
-        Future<void>.delayed(const Duration(milliseconds: 16), () {
-          if (!mounted) return;
-          _scheduleForceScroll();
-        });
-      }
-    });
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+    final position = _scrollController.position;
+    return (position.maxScrollExtent - position.pixels) <= 96;
   }
 
   @override
@@ -79,19 +66,23 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
     final draft = ref.watch(chatDraftResponseProvider);
     final isGenerating = ref.watch(chatGeneratingProvider);
-    _isGeneratingNow = isGenerating;
 
     return messagesAsync.when(
       data: (messages) {
+        final hasDraft = draft != null && draft.isNotEmpty;
+        final waitingIndicator = isGenerating && !hasDraft;
+        final forceAutoScrollOnUserSend =
+            messages.length > _lastMessageCount &&
+            messages.isNotEmpty &&
+            messages.last.role == 'user';
         final totalCount =
-            messages.length + (draft == null || draft.isEmpty ? 0 : 1);
+            messages.length + (hasDraft ? 1 : 0) + (waitingIndicator ? 1 : 0);
         _autoScrollToEndIfNeeded(
           messageCount: messages.length,
           draft: draft ?? '',
+          waitingIndicator: waitingIndicator,
+          forceAutoScroll: forceAutoScrollOnUserSend,
         );
-        if (isGenerating) {
-          _scheduleForceScroll();
-        }
 
         if (totalCount == 0) {
           return const Center(child: Text('No messages yet'));
@@ -107,6 +98,41 @@ class _ChatViewState extends ConsumerState<ChatView> {
               return ChatBubble(
                 message: message.content,
                 isUser: message.role == 'user',
+                kind: message.kind,
+                mediaPath: message.mediaPath,
+              );
+            }
+
+            if (waitingIndicator) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.all(10),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      16,
+                    ).copyWith(bottomLeft: const Radius.circular(4)),
+                  ),
+                  child: SizedBox(
+                    height: 18,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: SpinKitThreeBounce(
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               );
             }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_history_tile.dart';
 
 class ChatHistoryList extends ConsumerWidget {

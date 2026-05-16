@@ -1,8 +1,8 @@
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
-import 'package:gena/features/setting/data/chat_model_settings_provider.dart';
+import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
 
 final modelSettingsActionsProvider = Provider<ModelSettingsActions>(
   (ref) => ModelSettingsActions(ref),

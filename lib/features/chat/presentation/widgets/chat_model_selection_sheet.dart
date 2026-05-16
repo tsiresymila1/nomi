@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 
 class ChatModelSelectionSheet extends ConsumerWidget {
@@ -30,7 +30,7 @@ class ChatModelSelectionSheet extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 Navigator.of(context).pop();
-                Future.microtask(() =>ref.read(chatPageActionsProvider).installModel(model));
+                await ref.read(chatPageActionsProvider).installModel(model);
               },
             );
           },

@@ -1,5 +1,5 @@
-import 'package:gena/features/chat/domain/entities/chat_entity.dart';
-import 'package:gena/features/chat/domain/entities/message_entity.dart';
+import 'package:gena/features/chat/data/models/chat_entity.dart';
+import 'package:gena/features/chat/data/models/message_entity.dart';
 
 abstract class ChatRepository {
   Future<List<ChatEntity>> getChats();

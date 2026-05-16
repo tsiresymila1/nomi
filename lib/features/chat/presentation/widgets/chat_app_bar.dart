@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:go_router/go_router.dart';
@@ -21,37 +21,28 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     );
 
     return AppBar(
-      scrolledUnderElevation: 2,
-      elevation: 2,
+      scrolledUnderElevation: 0,
+      elevation: 0,
       title: InkWell(
         onTap: () => _showModelSelector(context, ref),
-        child: Column(
-          children: [
-            const Text(
-              'Gena',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).highlightColor),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                modelLabel,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: modelColor),
-              ),
-            ),
-          ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).highlightColor),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Text(
+            modelLabel,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: modelColor),
+          ),
         ),
       ),
       centerTitle: true,
       leading: Builder(
         builder: (context) {
           return IconButton(
-            icon: const Icon(Icons.menu),
+            icon: const Icon(LucideIcons.textAlignStart600),
             onPressed: () => Scaffold.of(context).openDrawer(),
           );
         },
@@ -62,7 +53,7 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onPressed: () => ref.read(chatPageActionsProvider).createNewThread(),
         ),
         IconButton(
-          icon: const Icon(Icons.settings),
+          icon: const Icon(LucideIcons.slidersHorizontal),
           onPressed: () => context.pushNamed('model-setting'),
         ),
       ],
@@ -103,7 +94,13 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return modelsAsync.when(
       data: (models) {
         for (final model in models) {
-          final installedId = _installedModelIdFromSource(model.source);
+          final modelId = (model.modelId ?? '').trim();
+          if (modelId.isNotEmpty &&
+              modelId.toLowerCase() == activeModelId.toLowerCase()) {
+            return model.name;
+          }
+
+          final installedId = _modelSpecNameFromSource(model.source);
           if (installedId.toLowerCase() == activeModelId.toLowerCase()) {
             return model.name;
           }
@@ -115,8 +112,11 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 
-  String _installedModelIdFromSource(String source) {
+  String _modelSpecNameFromSource(String source) {
     final parts = source.split(RegExp(r'[/\\]'));
-    return parts.isEmpty ? source : parts.last;
+    final filename = parts.isEmpty ? source : parts.last;
+    final dotIndex = filename.lastIndexOf('.');
+    if (dotIndex <= 0) return filename;
+    return filename.substring(0, dotIndex);
   }
 }

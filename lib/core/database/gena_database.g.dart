@@ -299,6 +299,16 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('text'),
+  );
   static const VerificationMeta _contentMeta = const VerificationMeta(
     'content',
   );
@@ -310,8 +320,27 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _mediaPathMeta = const VerificationMeta(
+    'mediaPath',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, createdAt, chat, role, content];
+  late final GeneratedColumn<String> mediaPath = GeneratedColumn<String>(
+    'media_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    chat,
+    role,
+    kind,
+    content,
+    mediaPath,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -349,6 +378,12 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     } else if (isInserting) {
       context.missing(_roleMeta);
     }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
     if (data.containsKey('content')) {
       context.handle(
         _contentMeta,
@@ -356,6 +391,12 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
       );
     } else if (isInserting) {
       context.missing(_contentMeta);
+    }
+    if (data.containsKey('media_path')) {
+      context.handle(
+        _mediaPathMeta,
+        mediaPath.isAcceptableOrUnknown(data['media_path']!, _mediaPathMeta),
+      );
     }
     return context;
   }
@@ -382,10 +423,18 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         DriftSqlType.string,
         data['${effectivePrefix}role'],
       )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
       content: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}content'],
       )!,
+      mediaPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_path'],
+      ),
     );
   }
 
@@ -400,13 +449,17 @@ class Message extends DataClass implements Insertable<Message> {
   final DateTime createdAt;
   final int chat;
   final String role;
+  final String kind;
   final String content;
+  final String? mediaPath;
   const Message({
     required this.id,
     required this.createdAt,
     required this.chat,
     required this.role,
+    required this.kind,
     required this.content,
+    this.mediaPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -415,7 +468,11 @@ class Message extends DataClass implements Insertable<Message> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['chat'] = Variable<int>(chat);
     map['role'] = Variable<String>(role);
+    map['kind'] = Variable<String>(kind);
     map['content'] = Variable<String>(content);
+    if (!nullToAbsent || mediaPath != null) {
+      map['media_path'] = Variable<String>(mediaPath);
+    }
     return map;
   }
 
@@ -425,7 +482,11 @@ class Message extends DataClass implements Insertable<Message> {
       createdAt: Value(createdAt),
       chat: Value(chat),
       role: Value(role),
+      kind: Value(kind),
       content: Value(content),
+      mediaPath: mediaPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaPath),
     );
   }
 
@@ -439,7 +500,9 @@ class Message extends DataClass implements Insertable<Message> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       chat: serializer.fromJson<int>(json['chat']),
       role: serializer.fromJson<String>(json['role']),
+      kind: serializer.fromJson<String>(json['kind']),
       content: serializer.fromJson<String>(json['content']),
+      mediaPath: serializer.fromJson<String?>(json['mediaPath']),
     );
   }
   @override
@@ -450,7 +513,9 @@ class Message extends DataClass implements Insertable<Message> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'chat': serializer.toJson<int>(chat),
       'role': serializer.toJson<String>(role),
+      'kind': serializer.toJson<String>(kind),
       'content': serializer.toJson<String>(content),
+      'mediaPath': serializer.toJson<String?>(mediaPath),
     };
   }
 
@@ -459,13 +524,17 @@ class Message extends DataClass implements Insertable<Message> {
     DateTime? createdAt,
     int? chat,
     String? role,
+    String? kind,
     String? content,
+    Value<String?> mediaPath = const Value.absent(),
   }) => Message(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     chat: chat ?? this.chat,
     role: role ?? this.role,
+    kind: kind ?? this.kind,
     content: content ?? this.content,
+    mediaPath: mediaPath.present ? mediaPath.value : this.mediaPath,
   );
   Message copyWithCompanion(MessagesCompanion data) {
     return Message(
@@ -473,7 +542,9 @@ class Message extends DataClass implements Insertable<Message> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       chat: data.chat.present ? data.chat.value : this.chat,
       role: data.role.present ? data.role.value : this.role,
+      kind: data.kind.present ? data.kind.value : this.kind,
       content: data.content.present ? data.content.value : this.content,
+      mediaPath: data.mediaPath.present ? data.mediaPath.value : this.mediaPath,
     );
   }
 
@@ -484,13 +555,16 @@ class Message extends DataClass implements Insertable<Message> {
           ..write('createdAt: $createdAt, ')
           ..write('chat: $chat, ')
           ..write('role: $role, ')
-          ..write('content: $content')
+          ..write('kind: $kind, ')
+          ..write('content: $content, ')
+          ..write('mediaPath: $mediaPath')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, createdAt, chat, role, content);
+  int get hashCode =>
+      Object.hash(id, createdAt, chat, role, kind, content, mediaPath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -499,7 +573,9 @@ class Message extends DataClass implements Insertable<Message> {
           other.createdAt == this.createdAt &&
           other.chat == this.chat &&
           other.role == this.role &&
-          other.content == this.content);
+          other.kind == this.kind &&
+          other.content == this.content &&
+          other.mediaPath == this.mediaPath);
 }
 
 class MessagesCompanion extends UpdateCompanion<Message> {
@@ -507,20 +583,26 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<DateTime> createdAt;
   final Value<int> chat;
   final Value<String> role;
+  final Value<String> kind;
   final Value<String> content;
+  final Value<String?> mediaPath;
   const MessagesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.chat = const Value.absent(),
     this.role = const Value.absent(),
+    this.kind = const Value.absent(),
     this.content = const Value.absent(),
+    this.mediaPath = const Value.absent(),
   });
   MessagesCompanion.insert({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     required int chat,
     required String role,
+    this.kind = const Value.absent(),
     required String content,
+    this.mediaPath = const Value.absent(),
   }) : chat = Value(chat),
        role = Value(role),
        content = Value(content);
@@ -529,14 +611,18 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Expression<DateTime>? createdAt,
     Expression<int>? chat,
     Expression<String>? role,
+    Expression<String>? kind,
     Expression<String>? content,
+    Expression<String>? mediaPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
       if (chat != null) 'chat': chat,
       if (role != null) 'role': role,
+      if (kind != null) 'kind': kind,
       if (content != null) 'content': content,
+      if (mediaPath != null) 'media_path': mediaPath,
     });
   }
 
@@ -545,14 +631,18 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Value<DateTime>? createdAt,
     Value<int>? chat,
     Value<String>? role,
+    Value<String>? kind,
     Value<String>? content,
+    Value<String?>? mediaPath,
   }) {
     return MessagesCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
       chat: chat ?? this.chat,
       role: role ?? this.role,
+      kind: kind ?? this.kind,
       content: content ?? this.content,
+      mediaPath: mediaPath ?? this.mediaPath,
     );
   }
 
@@ -571,8 +661,14 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     if (role.present) {
       map['role'] = Variable<String>(role.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
     if (content.present) {
       map['content'] = Variable<String>(content.value);
+    }
+    if (mediaPath.present) {
+      map['media_path'] = Variable<String>(mediaPath.value);
     }
     return map;
   }
@@ -584,7 +680,9 @@ class MessagesCompanion extends UpdateCompanion<Message> {
           ..write('createdAt: $createdAt, ')
           ..write('chat: $chat, ')
           ..write('role: $role, ')
-          ..write('content: $content')
+          ..write('kind: $kind, ')
+          ..write('content: $content, ')
+          ..write('mediaPath: $mediaPath')
           ..write(')'))
         .toString();
   }
@@ -644,6 +742,17 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _modelIdMeta = const VerificationMeta(
+    'modelId',
+  );
+  @override
+  late final GeneratedColumn<String> modelId = GeneratedColumn<String>(
+    'model_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _modelTypeMeta = const VerificationMeta(
     'modelType',
   );
@@ -654,6 +763,66 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _supportImageMeta = const VerificationMeta(
+    'supportImage',
+  );
+  @override
+  late final GeneratedColumn<bool> supportImage = GeneratedColumn<bool>(
+    'support_image',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("support_image" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _supportAudioMeta = const VerificationMeta(
+    'supportAudio',
+  );
+  @override
+  late final GeneratedColumn<bool> supportAudio = GeneratedColumn<bool>(
+    'support_audio',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("support_audio" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _supportsFunctionCallsMeta =
+      const VerificationMeta('supportsFunctionCalls');
+  @override
+  late final GeneratedColumn<bool> supportsFunctionCalls =
+      GeneratedColumn<bool>(
+        'supports_function_calls',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("supports_function_calls" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _isThinkingMeta = const VerificationMeta(
+    'isThinking',
+  );
+  @override
+  late final GeneratedColumn<bool> isThinking = GeneratedColumn<bool>(
+    'is_thinking',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_thinking" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
     'sourceType',
@@ -681,7 +850,12 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     createdAt,
     name,
     description,
+    modelId,
     modelType,
+    supportImage,
+    supportAudio,
+    supportsFunctionCalls,
+    isThinking,
     sourceType,
     source,
   ];
@@ -725,6 +899,12 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     } else if (isInserting) {
       context.missing(_descriptionMeta);
     }
+    if (data.containsKey('model_id')) {
+      context.handle(
+        _modelIdMeta,
+        modelId.isAcceptableOrUnknown(data['model_id']!, _modelIdMeta),
+      );
+    }
     if (data.containsKey('model_type')) {
       context.handle(
         _modelTypeMeta,
@@ -732,6 +912,39 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
       );
     } else if (isInserting) {
       context.missing(_modelTypeMeta);
+    }
+    if (data.containsKey('support_image')) {
+      context.handle(
+        _supportImageMeta,
+        supportImage.isAcceptableOrUnknown(
+          data['support_image']!,
+          _supportImageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('support_audio')) {
+      context.handle(
+        _supportAudioMeta,
+        supportAudio.isAcceptableOrUnknown(
+          data['support_audio']!,
+          _supportAudioMeta,
+        ),
+      );
+    }
+    if (data.containsKey('supports_function_calls')) {
+      context.handle(
+        _supportsFunctionCallsMeta,
+        supportsFunctionCalls.isAcceptableOrUnknown(
+          data['supports_function_calls']!,
+          _supportsFunctionCallsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_thinking')) {
+      context.handle(
+        _isThinkingMeta,
+        isThinking.isAcceptableOrUnknown(data['is_thinking']!, _isThinkingMeta),
+      );
     }
     if (data.containsKey('source_type')) {
       context.handle(
@@ -774,9 +987,29 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       )!,
+      modelId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_id'],
+      ),
       modelType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model_type'],
+      )!,
+      supportImage: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}support_image'],
+      )!,
+      supportAudio: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}support_audio'],
+      )!,
+      supportsFunctionCalls: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}supports_function_calls'],
+      )!,
+      isThinking: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_thinking'],
       )!,
       sourceType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -800,7 +1033,12 @@ class Model extends DataClass implements Insertable<Model> {
   final DateTime createdAt;
   final String name;
   final String description;
+  final String? modelId;
   final String modelType;
+  final bool supportImage;
+  final bool supportAudio;
+  final bool supportsFunctionCalls;
+  final bool isThinking;
   final String sourceType;
   final String source;
   const Model({
@@ -808,7 +1046,12 @@ class Model extends DataClass implements Insertable<Model> {
     required this.createdAt,
     required this.name,
     required this.description,
+    this.modelId,
     required this.modelType,
+    required this.supportImage,
+    required this.supportAudio,
+    required this.supportsFunctionCalls,
+    required this.isThinking,
     required this.sourceType,
     required this.source,
   });
@@ -819,7 +1062,14 @@ class Model extends DataClass implements Insertable<Model> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['name'] = Variable<String>(name);
     map['description'] = Variable<String>(description);
+    if (!nullToAbsent || modelId != null) {
+      map['model_id'] = Variable<String>(modelId);
+    }
     map['model_type'] = Variable<String>(modelType);
+    map['support_image'] = Variable<bool>(supportImage);
+    map['support_audio'] = Variable<bool>(supportAudio);
+    map['supports_function_calls'] = Variable<bool>(supportsFunctionCalls);
+    map['is_thinking'] = Variable<bool>(isThinking);
     map['source_type'] = Variable<String>(sourceType);
     map['source'] = Variable<String>(source);
     return map;
@@ -831,7 +1081,14 @@ class Model extends DataClass implements Insertable<Model> {
       createdAt: Value(createdAt),
       name: Value(name),
       description: Value(description),
+      modelId: modelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelId),
       modelType: Value(modelType),
+      supportImage: Value(supportImage),
+      supportAudio: Value(supportAudio),
+      supportsFunctionCalls: Value(supportsFunctionCalls),
+      isThinking: Value(isThinking),
       sourceType: Value(sourceType),
       source: Value(source),
     );
@@ -847,7 +1104,14 @@ class Model extends DataClass implements Insertable<Model> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String>(json['description']),
+      modelId: serializer.fromJson<String?>(json['modelId']),
       modelType: serializer.fromJson<String>(json['modelType']),
+      supportImage: serializer.fromJson<bool>(json['supportImage']),
+      supportAudio: serializer.fromJson<bool>(json['supportAudio']),
+      supportsFunctionCalls: serializer.fromJson<bool>(
+        json['supportsFunctionCalls'],
+      ),
+      isThinking: serializer.fromJson<bool>(json['isThinking']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
       source: serializer.fromJson<String>(json['source']),
     );
@@ -860,7 +1124,12 @@ class Model extends DataClass implements Insertable<Model> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String>(description),
+      'modelId': serializer.toJson<String?>(modelId),
       'modelType': serializer.toJson<String>(modelType),
+      'supportImage': serializer.toJson<bool>(supportImage),
+      'supportAudio': serializer.toJson<bool>(supportAudio),
+      'supportsFunctionCalls': serializer.toJson<bool>(supportsFunctionCalls),
+      'isThinking': serializer.toJson<bool>(isThinking),
       'sourceType': serializer.toJson<String>(sourceType),
       'source': serializer.toJson<String>(source),
     };
@@ -871,7 +1140,12 @@ class Model extends DataClass implements Insertable<Model> {
     DateTime? createdAt,
     String? name,
     String? description,
+    Value<String?> modelId = const Value.absent(),
     String? modelType,
+    bool? supportImage,
+    bool? supportAudio,
+    bool? supportsFunctionCalls,
+    bool? isThinking,
     String? sourceType,
     String? source,
   }) => Model(
@@ -879,7 +1153,12 @@ class Model extends DataClass implements Insertable<Model> {
     createdAt: createdAt ?? this.createdAt,
     name: name ?? this.name,
     description: description ?? this.description,
+    modelId: modelId.present ? modelId.value : this.modelId,
     modelType: modelType ?? this.modelType,
+    supportImage: supportImage ?? this.supportImage,
+    supportAudio: supportAudio ?? this.supportAudio,
+    supportsFunctionCalls: supportsFunctionCalls ?? this.supportsFunctionCalls,
+    isThinking: isThinking ?? this.isThinking,
     sourceType: sourceType ?? this.sourceType,
     source: source ?? this.source,
   );
@@ -891,7 +1170,20 @@ class Model extends DataClass implements Insertable<Model> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      modelId: data.modelId.present ? data.modelId.value : this.modelId,
       modelType: data.modelType.present ? data.modelType.value : this.modelType,
+      supportImage: data.supportImage.present
+          ? data.supportImage.value
+          : this.supportImage,
+      supportAudio: data.supportAudio.present
+          ? data.supportAudio.value
+          : this.supportAudio,
+      supportsFunctionCalls: data.supportsFunctionCalls.present
+          ? data.supportsFunctionCalls.value
+          : this.supportsFunctionCalls,
+      isThinking: data.isThinking.present
+          ? data.isThinking.value
+          : this.isThinking,
       sourceType: data.sourceType.present
           ? data.sourceType.value
           : this.sourceType,
@@ -906,7 +1198,12 @@ class Model extends DataClass implements Insertable<Model> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('modelId: $modelId, ')
           ..write('modelType: $modelType, ')
+          ..write('supportImage: $supportImage, ')
+          ..write('supportAudio: $supportAudio, ')
+          ..write('supportsFunctionCalls: $supportsFunctionCalls, ')
+          ..write('isThinking: $isThinking, ')
           ..write('sourceType: $sourceType, ')
           ..write('source: $source')
           ..write(')'))
@@ -919,7 +1216,12 @@ class Model extends DataClass implements Insertable<Model> {
     createdAt,
     name,
     description,
+    modelId,
     modelType,
+    supportImage,
+    supportAudio,
+    supportsFunctionCalls,
+    isThinking,
     sourceType,
     source,
   );
@@ -931,7 +1233,12 @@ class Model extends DataClass implements Insertable<Model> {
           other.createdAt == this.createdAt &&
           other.name == this.name &&
           other.description == this.description &&
+          other.modelId == this.modelId &&
           other.modelType == this.modelType &&
+          other.supportImage == this.supportImage &&
+          other.supportAudio == this.supportAudio &&
+          other.supportsFunctionCalls == this.supportsFunctionCalls &&
+          other.isThinking == this.isThinking &&
           other.sourceType == this.sourceType &&
           other.source == this.source);
 }
@@ -941,7 +1248,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
   final Value<DateTime> createdAt;
   final Value<String> name;
   final Value<String> description;
+  final Value<String?> modelId;
   final Value<String> modelType;
+  final Value<bool> supportImage;
+  final Value<bool> supportAudio;
+  final Value<bool> supportsFunctionCalls;
+  final Value<bool> isThinking;
   final Value<String> sourceType;
   final Value<String> source;
   const ModelsCompanion({
@@ -949,7 +1261,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.createdAt = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
+    this.modelId = const Value.absent(),
     this.modelType = const Value.absent(),
+    this.supportImage = const Value.absent(),
+    this.supportAudio = const Value.absent(),
+    this.supportsFunctionCalls = const Value.absent(),
+    this.isThinking = const Value.absent(),
     this.sourceType = const Value.absent(),
     this.source = const Value.absent(),
   });
@@ -958,7 +1275,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.createdAt = const Value.absent(),
     required String name,
     required String description,
+    this.modelId = const Value.absent(),
     required String modelType,
+    this.supportImage = const Value.absent(),
+    this.supportAudio = const Value.absent(),
+    this.supportsFunctionCalls = const Value.absent(),
+    this.isThinking = const Value.absent(),
     required String sourceType,
     required String source,
   }) : name = Value(name),
@@ -971,7 +1293,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Expression<DateTime>? createdAt,
     Expression<String>? name,
     Expression<String>? description,
+    Expression<String>? modelId,
     Expression<String>? modelType,
+    Expression<bool>? supportImage,
+    Expression<bool>? supportAudio,
+    Expression<bool>? supportsFunctionCalls,
+    Expression<bool>? isThinking,
     Expression<String>? sourceType,
     Expression<String>? source,
   }) {
@@ -980,7 +1307,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       if (createdAt != null) 'created_at': createdAt,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
+      if (modelId != null) 'model_id': modelId,
       if (modelType != null) 'model_type': modelType,
+      if (supportImage != null) 'support_image': supportImage,
+      if (supportAudio != null) 'support_audio': supportAudio,
+      if (supportsFunctionCalls != null)
+        'supports_function_calls': supportsFunctionCalls,
+      if (isThinking != null) 'is_thinking': isThinking,
       if (sourceType != null) 'source_type': sourceType,
       if (source != null) 'source': source,
     });
@@ -991,7 +1324,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Value<DateTime>? createdAt,
     Value<String>? name,
     Value<String>? description,
+    Value<String?>? modelId,
     Value<String>? modelType,
+    Value<bool>? supportImage,
+    Value<bool>? supportAudio,
+    Value<bool>? supportsFunctionCalls,
+    Value<bool>? isThinking,
     Value<String>? sourceType,
     Value<String>? source,
   }) {
@@ -1000,7 +1338,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       createdAt: createdAt ?? this.createdAt,
       name: name ?? this.name,
       description: description ?? this.description,
+      modelId: modelId ?? this.modelId,
       modelType: modelType ?? this.modelType,
+      supportImage: supportImage ?? this.supportImage,
+      supportAudio: supportAudio ?? this.supportAudio,
+      supportsFunctionCalls:
+          supportsFunctionCalls ?? this.supportsFunctionCalls,
+      isThinking: isThinking ?? this.isThinking,
       sourceType: sourceType ?? this.sourceType,
       source: source ?? this.source,
     );
@@ -1021,8 +1365,25 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (modelId.present) {
+      map['model_id'] = Variable<String>(modelId.value);
+    }
     if (modelType.present) {
       map['model_type'] = Variable<String>(modelType.value);
+    }
+    if (supportImage.present) {
+      map['support_image'] = Variable<bool>(supportImage.value);
+    }
+    if (supportAudio.present) {
+      map['support_audio'] = Variable<bool>(supportAudio.value);
+    }
+    if (supportsFunctionCalls.present) {
+      map['supports_function_calls'] = Variable<bool>(
+        supportsFunctionCalls.value,
+      );
+    }
+    if (isThinking.present) {
+      map['is_thinking'] = Variable<bool>(isThinking.value);
     }
     if (sourceType.present) {
       map['source_type'] = Variable<String>(sourceType.value);
@@ -1040,7 +1401,12 @@ class ModelsCompanion extends UpdateCompanion<Model> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('modelId: $modelId, ')
           ..write('modelType: $modelType, ')
+          ..write('supportImage: $supportImage, ')
+          ..write('supportAudio: $supportAudio, ')
+          ..write('supportsFunctionCalls: $supportsFunctionCalls, ')
+          ..write('isThinking: $isThinking, ')
           ..write('sourceType: $sourceType, ')
           ..write('source: $source')
           ..write(')'))
@@ -1310,7 +1676,9 @@ typedef $$MessagesTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       required int chat,
       required String role,
+      Value<String> kind,
       required String content,
+      Value<String?> mediaPath,
     });
 typedef $$MessagesTableUpdateCompanionBuilder =
     MessagesCompanion Function({
@@ -1318,7 +1686,9 @@ typedef $$MessagesTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<int> chat,
       Value<String> role,
+      Value<String> kind,
       Value<String> content,
+      Value<String?> mediaPath,
     });
 
 final class $$MessagesTableReferences
@@ -1367,8 +1737,18 @@ class $$MessagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get content => $composableBuilder(
     column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaPath => $composableBuilder(
+    column: $table.mediaPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1420,8 +1800,18 @@ class $$MessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get content => $composableBuilder(
     column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mediaPath => $composableBuilder(
+    column: $table.mediaPath,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1467,8 +1857,14 @@ class $$MessagesTableAnnotationComposer
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
 
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get mediaPath =>
+      $composableBuilder(column: $table.mediaPath, builder: (column) => column);
 
   $$ChatsTableAnnotationComposer get chat {
     final $$ChatsTableAnnotationComposer composer = $composerBuilder(
@@ -1526,13 +1922,17 @@ class $$MessagesTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> chat = const Value.absent(),
                 Value<String> role = const Value.absent(),
+                Value<String> kind = const Value.absent(),
                 Value<String> content = const Value.absent(),
+                Value<String?> mediaPath = const Value.absent(),
               }) => MessagesCompanion(
                 id: id,
                 createdAt: createdAt,
                 chat: chat,
                 role: role,
+                kind: kind,
                 content: content,
+                mediaPath: mediaPath,
               ),
           createCompanionCallback:
               ({
@@ -1540,13 +1940,17 @@ class $$MessagesTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 required int chat,
                 required String role,
+                Value<String> kind = const Value.absent(),
                 required String content,
+                Value<String?> mediaPath = const Value.absent(),
               }) => MessagesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
                 chat: chat,
                 role: role,
+                kind: kind,
                 content: content,
+                mediaPath: mediaPath,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -1621,7 +2025,12 @@ typedef $$ModelsTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       required String name,
       required String description,
+      Value<String?> modelId,
       required String modelType,
+      Value<bool> supportImage,
+      Value<bool> supportAudio,
+      Value<bool> supportsFunctionCalls,
+      Value<bool> isThinking,
       required String sourceType,
       required String source,
     });
@@ -1631,7 +2040,12 @@ typedef $$ModelsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<String> name,
       Value<String> description,
+      Value<String?> modelId,
       Value<String> modelType,
+      Value<bool> supportImage,
+      Value<bool> supportAudio,
+      Value<bool> supportsFunctionCalls,
+      Value<bool> isThinking,
       Value<String> sourceType,
       Value<String> source,
     });
@@ -1665,8 +2079,33 @@ class $$ModelsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get modelId => $composableBuilder(
+    column: $table.modelId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get modelType => $composableBuilder(
     column: $table.modelType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get supportImage => $composableBuilder(
+    column: $table.supportImage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get supportAudio => $composableBuilder(
+    column: $table.supportAudio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get supportsFunctionCalls => $composableBuilder(
+    column: $table.supportsFunctionCalls,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isThinking => $composableBuilder(
+    column: $table.isThinking,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1710,8 +2149,33 @@ class $$ModelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get modelId => $composableBuilder(
+    column: $table.modelId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get modelType => $composableBuilder(
     column: $table.modelType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get supportImage => $composableBuilder(
+    column: $table.supportImage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get supportAudio => $composableBuilder(
+    column: $table.supportAudio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get supportsFunctionCalls => $composableBuilder(
+    column: $table.supportsFunctionCalls,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isThinking => $composableBuilder(
+    column: $table.isThinking,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1749,8 +2213,31 @@ class $$ModelsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get modelId =>
+      $composableBuilder(column: $table.modelId, builder: (column) => column);
+
   GeneratedColumn<String> get modelType =>
       $composableBuilder(column: $table.modelType, builder: (column) => column);
+
+  GeneratedColumn<bool> get supportImage => $composableBuilder(
+    column: $table.supportImage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get supportAudio => $composableBuilder(
+    column: $table.supportAudio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get supportsFunctionCalls => $composableBuilder(
+    column: $table.supportsFunctionCalls,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isThinking => $composableBuilder(
+    column: $table.isThinking,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get sourceType => $composableBuilder(
     column: $table.sourceType,
@@ -1793,7 +2280,12 @@ class $$ModelsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> description = const Value.absent(),
+                Value<String?> modelId = const Value.absent(),
                 Value<String> modelType = const Value.absent(),
+                Value<bool> supportImage = const Value.absent(),
+                Value<bool> supportAudio = const Value.absent(),
+                Value<bool> supportsFunctionCalls = const Value.absent(),
+                Value<bool> isThinking = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
                 Value<String> source = const Value.absent(),
               }) => ModelsCompanion(
@@ -1801,7 +2293,12 @@ class $$ModelsTableTableManager
                 createdAt: createdAt,
                 name: name,
                 description: description,
+                modelId: modelId,
                 modelType: modelType,
+                supportImage: supportImage,
+                supportAudio: supportAudio,
+                supportsFunctionCalls: supportsFunctionCalls,
+                isThinking: isThinking,
                 sourceType: sourceType,
                 source: source,
               ),
@@ -1811,7 +2308,12 @@ class $$ModelsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 required String name,
                 required String description,
+                Value<String?> modelId = const Value.absent(),
                 required String modelType,
+                Value<bool> supportImage = const Value.absent(),
+                Value<bool> supportAudio = const Value.absent(),
+                Value<bool> supportsFunctionCalls = const Value.absent(),
+                Value<bool> isThinking = const Value.absent(),
                 required String sourceType,
                 required String source,
               }) => ModelsCompanion.insert(
@@ -1819,7 +2321,12 @@ class $$ModelsTableTableManager
                 createdAt: createdAt,
                 name: name,
                 description: description,
+                modelId: modelId,
                 modelType: modelType,
+                supportImage: supportImage,
+                supportAudio: supportAudio,
+                supportsFunctionCalls: supportsFunctionCalls,
+                isThinking: isThinking,
                 sourceType: sourceType,
                 source: source,
               ),

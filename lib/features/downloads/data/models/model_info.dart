@@ -9,7 +9,12 @@ abstract class ModelInfo with _$ModelInfo {
     required int id,
     required String name,
     required String description,
+    String? modelId,
     required String modelType,
+    required bool supportImage,
+    required bool supportAudio,
+    required bool supportsFunctionCalls,
+    required bool isThinking,
     required String sourceType,
     required String source,
   }) = _ModelInfo;

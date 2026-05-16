@@ -21,6 +21,10 @@ Future<void> showAddModelSheet(BuildContext context, WidgetRef ref) async {
               name: model.name,
               description: model.description,
               modelType: model.modelType,
+              supportImage: model.supportImage,
+              supportAudio: model.supportAudio,
+              supportsFunctionCalls: model.supportsFunctionCalls,
+              isThinking: model.isThinking,
               sourceType: model.sourceType,
               source: model.source,
             );
@@ -33,6 +37,10 @@ class _DraftModel {
   final String name;
   final String description;
   final String modelType;
+  final bool supportImage;
+  final bool supportAudio;
+  final bool supportsFunctionCalls;
+  final bool isThinking;
   final String sourceType;
   final String source;
 
@@ -40,6 +48,10 @@ class _DraftModel {
     required this.name,
     required this.description,
     required this.modelType,
+    required this.supportImage,
+    required this.supportAudio,
+    required this.supportsFunctionCalls,
+    required this.isThinking,
     required this.sourceType,
     required this.source,
   });
@@ -61,6 +73,10 @@ class _AddModelSheetState extends State<_AddModelSheet> {
 
   String _sourceType = 'network';
   String _modelType = ModelType.gemmaIt.name;
+  bool _supportImage = false;
+  bool _supportAudio = false;
+  bool _supportsFunctionCalls = false;
+  bool _isThinking = false;
   bool _saving = false;
   bool _picking = false;
 
@@ -94,6 +110,8 @@ class _AddModelSheetState extends State<_AddModelSheet> {
         );
         return;
       }
+      // delete cache
+      await FilePicker.platform.clearTemporaryFiles();
       _sourceController.text = importedPath;
     } on PlatformException catch (_) {
       if (!mounted) return;
@@ -145,6 +163,10 @@ class _AddModelSheetState extends State<_AddModelSheet> {
           name: name,
           description: description,
           modelType: _modelType,
+          supportImage: _supportImage,
+          supportAudio: _supportAudio,
+          supportsFunctionCalls: _supportsFunctionCalls,
+          isThinking: _isThinking,
           sourceType: _sourceType,
           source: normalizedSource,
         ),
@@ -212,6 +234,39 @@ class _AddModelSheetState extends State<_AddModelSheet> {
                 },
               ),
               const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _supportImage,
+                title: const Text('Support image'),
+                onChanged: (value) {
+                  setState(() => _supportImage = value);
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _supportAudio,
+                title: const Text('Support audio'),
+                onChanged: (value) {
+                  setState(() => _supportAudio = value);
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _supportsFunctionCalls,
+                title: const Text('Support function calls'),
+                onChanged: (value) {
+                  setState(() => _supportsFunctionCalls = value);
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _isThinking,
+                title: const Text('Enable thinking mode'),
+                onChanged: (value) {
+                  setState(() => _isThinking = value);
+                },
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -243,7 +298,7 @@ class _AddModelSheetState extends State<_AddModelSheet> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _saving  | _picking ? null : _save,
+                  onPressed: _saving | _picking ? null : _save,
                   child: _saving
                       ? const SizedBox(
                           width: 18,

@@ -1,24 +1,22 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'chat_message.dart';
+part of '../../data/models/chat_entity.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-_ChatMessage _$ChatMessageFromJson(Map<String, dynamic> json) => _ChatMessage(
+_ChatEntity _$ChatEntityFromJson(Map<String, dynamic> json) => _ChatEntity(
   id: json['id'] as String,
-  chatId: json['chatId'] as String,
-  role: json['role'] as String,
-  content: json['content'] as String,
+  title: json['title'] as String,
   createdAt: DateTime.parse(json['createdAt'] as String),
+  updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
 
-Map<String, dynamic> _$ChatMessageToJson(_ChatMessage instance) =>
+Map<String, dynamic> _$ChatEntityToJson(_ChatEntity instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'chatId': instance.chatId,
-      'role': instance.role,
-      'content': instance.content,
+      'title': instance.title,
       'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt.toIso8601String(),
     };

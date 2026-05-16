@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gena/features/chat/domain/entities/chat_entity.dart';
+import 'package:gena/features/chat/data/models/chat_entity.dart';
 
 class ChatListTile extends StatelessWidget {
   final ChatEntity chat;

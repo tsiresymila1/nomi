@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/downloads/presentation/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 
 class ActiveModelInstallOverlay extends ConsumerWidget {
   const ActiveModelInstallOverlay({super.key});

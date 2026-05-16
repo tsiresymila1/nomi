@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gena/features/downloads/domain/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class DownloadItem extends StatelessWidget {
@@ -40,6 +40,38 @@ class DownloadItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(model.description, style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _capabilityChip(
+                  context,
+                  label: 'Type: ${model.modelType}',
+                  enabled: true,
+                ),
+                _capabilityChip(
+                  context,
+                  label: 'Image',
+                  enabled: model.supportImage,
+                ),
+                _capabilityChip(
+                  context,
+                  label: 'Audio',
+                  enabled: model.supportAudio,
+                ),
+                _capabilityChip(
+                  context,
+                  label: 'Functions',
+                  enabled: model.supportsFunctionCalls,
+                ),
+                _capabilityChip(
+                  context,
+                  label: 'Thinking',
+                  enabled: model.isThinking,
+                ),
+              ],
+            ),
             if (isDownloading) ...[
               const SizedBox(height: 8),
               LinearProgressIndicator(value: progress),
@@ -109,5 +141,30 @@ class DownloadItem extends StatelessWidget {
     if (shouldRemove == true) {
       onRemove();
     }
+  }
+
+  Widget _capabilityChip(
+    BuildContext context, {
+    required String label,
+    required bool enabled,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: enabled
+            ? colorScheme.primary.withValues(alpha: 0.15)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        enabled ? label : '$label: No',
+        style: TextStyle(
+          fontSize: 11,
+          color: enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
   }
 }

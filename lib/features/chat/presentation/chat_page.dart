@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/chat_provider.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_app_bar.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_drawer.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_view.dart';
-import 'package:gena/features/downloads/presentation/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 
 class ChatPage extends ConsumerWidget {
   const ChatPage({super.key});
@@ -14,13 +15,16 @@ class ChatPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedChat = ref.watch(selectedChatIdProvider);
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
+    final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
     final activeInstall = ref.watch(activeModelInstallProvider);
     final downloadState = ref.watch(downloadProvider);
 
-    final body = selectedChat == null
+    final body = isSwitchingModel
+        ?   Center(child: SpinKitThreeInOut(size: 40,color: Theme.of(context).colorScheme.primary,))
+        : selectedChat == null
         ? const Center(child: Text('Select or create a chat'))
         : activeGemmaChat.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () =>  Center(child: SpinKitThreeInOut(size: 40,color: Theme.of(context).colorScheme.primary,)),
             error: (error, stack) => Center(child: Text('Error: $error')),
             data: (session) {
               if (session == null) {
@@ -34,7 +38,8 @@ class ChatPage extends ConsumerWidget {
       appBar: const ChatAppBar(),
       drawer: const ChatDrawer(),
       bottomNavigationBar: activeGemmaChat.maybeWhen(
-        data: (session) => selectedChat == null || session == null
+        data: (session) =>
+            isSwitchingModel || selectedChat == null || session == null
             ? const SizedBox.shrink()
             : AnimatedPadding(
                 duration: const Duration(milliseconds: 180),
@@ -70,11 +75,7 @@ class ChatPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         if (downloadState[activeInstall.key] == null)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 4),
-                          )
+                          Center(child: SpinKitThreeInOut(size: 40,color: Theme.of(context).colorScheme.primary,))
                         else
                           LinearProgressIndicator(
                             value: downloadState[activeInstall.key],

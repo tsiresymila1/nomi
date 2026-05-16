@@ -4,7 +4,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
-import 'package:gena/features/downloads/domain/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 
 class ActiveModelInstall {
   final String key;
@@ -58,9 +58,15 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
           ? installer.fromFile(model.source)
           : installer.fromNetwork(model.source);
 
-      await builder.withProgress((progress) {
-        state = {...state, installKey: progress / 100};
-      }).install();
+      final installation = await builder
+          .withProgress((progress) {
+            state = {...state, installKey: progress / 100};
+          })
+          .install();
+      await ref.read(modelRepositoryActionsProvider).updateModelId(
+            id: model.id,
+            modelId: installation.spec.name,
+          );
 
       state = {...state, installKey: 1.0};
       ref.invalidate(modelInstallerProvider);

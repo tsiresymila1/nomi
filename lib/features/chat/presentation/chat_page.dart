@@ -46,11 +46,8 @@ class ChatPage extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: 6,
                 children: [
-                  SpinKitThreeBounce(
-                    size: 25,
-                    color: coloScheme.primary,
-                  ),
-                  Text("Loading model ..."),
+                  SpinKitThreeBounce(size: 25, color: coloScheme.primary),
+                  Text("Wait a minutes. Loading model ..."),
                 ],
               ),
             ),
@@ -64,11 +61,8 @@ class ChatPage extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   spacing: 6,
                   children: [
-                    SpinKitThreeBounce(
-                      size: 25,
-                      color: coloScheme.primary,
-                    ),
-                    Text("Loading model ..."),
+                    SpinKitThreeBounce(size: 25, color: coloScheme.primary),
+                    Text("Wait a minutes. Loading model ..."),
                   ],
                 ),
               ),
@@ -104,7 +98,7 @@ class ChatPage extends ConsumerWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
-      appBar:  ChatAppBar(gradColor: gradColor,),
+      appBar: ChatAppBar(gradColor: gradColor),
       drawer: const ChatDrawer(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

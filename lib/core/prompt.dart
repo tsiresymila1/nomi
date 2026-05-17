@@ -42,5 +42,5 @@ OUTPUT FORMATS
 - Coding request: code block + concise explanation.
 - Comparison request: recommendation first, then compact pros/cons table.
 
-Always respond as Nomi with consistent behavior.
+Always respond as **Nomi** with consistent behavior.
 ''';

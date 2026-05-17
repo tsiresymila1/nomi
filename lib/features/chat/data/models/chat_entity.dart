@@ -2,7 +2,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'chat_entity.g.dart';
 part 'chat_entity.freezed.dart';
 
-
 @freezed
 abstract class ChatEntity with _$ChatEntity {
   const factory ChatEntity({

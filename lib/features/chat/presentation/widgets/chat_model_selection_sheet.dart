@@ -32,7 +32,10 @@ class ChatModelSelectionSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
         children: [
-          Text("Models", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),),
+          Text(
+            "Models",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           modelsAsync.when(
             data: (models) {
               if (models.isEmpty) {
@@ -56,7 +59,11 @@ class ChatModelSelectionSheet extends ConsumerWidget {
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () async {
                           Navigator.of(context).pop();
-                          unawaited(ref.read(chatPageActionsProvider).installModel(model));
+                          unawaited(
+                            ref
+                                .read(chatPageActionsProvider)
+                                .installModel(model),
+                          );
                         },
                       )
                       .animate()

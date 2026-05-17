@@ -18,10 +18,10 @@ class ChatDrawer extends ConsumerWidget {
               padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
-                   Expanded(
+                  Expanded(
                     child: Row(
                       children: [
-                        Image.asset("assets/images/logo.png", width: 50,),
+                        Image.asset("assets/images/logo.png", width: 50),
                         Text(
                           'Nomi',
                           style: TextStyle(
@@ -50,27 +50,57 @@ class ChatDrawer extends ConsumerWidget {
             const Divider(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                spacing: 12,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton.icon(
-                    icon: HugeIcon(
-                      icon: HugeIcons.strokeRoundedCpu,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.pushNamed('download');
-                    },
-                    label: Text("Models"),
+                  Row(
+                    spacing: 12,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        icon: HugeIcon(
+                          icon: HugeIcons.strokeRoundedCpu,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          context.pushNamed('download');
+                        },
+                        label: Text("Models"),
+                      ),
+                      IconButton(
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedSettings02,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          context.pushNamed('setting');
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings02),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.pushNamed('setting');
-                    },
+                  Opacity(
+                    opacity: 0.5,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Power by ",
+                          style: TextStyle(
+                            fontSize: 12,
+                            // color: Colors.green.shade500,
+                          ),
+                        ),
+                        Text(
+                          "Tsiresy Milà",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            // color: Colors.green.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

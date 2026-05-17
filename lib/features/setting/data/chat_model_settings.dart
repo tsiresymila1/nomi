@@ -2,8 +2,6 @@ import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/prompt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-
 class ChatModelSettings {
   final String systemPrompt;
   final double temperature;

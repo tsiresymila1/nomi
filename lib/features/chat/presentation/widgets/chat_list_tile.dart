@@ -5,11 +5,7 @@ class ChatListTile extends StatelessWidget {
   final ChatEntity chat;
   final VoidCallback? onTap;
 
-  const ChatListTile({
-    super.key,
-    required this.chat,
-    this.onTap,
-  });
+  const ChatListTile({super.key, required this.chat, this.onTap});
 
   @override
   Widget build(BuildContext context) {

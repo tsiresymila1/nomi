@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -99,14 +100,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.transparent
-      ),
+      decoration: BoxDecoration(color: Colors.transparent),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
         children: [
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
@@ -135,7 +133,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   .pickImageFromDevice();
                             }
                           },
-                    icon: HugeIcon(icon:HugeIcons.strokeRoundedAdd01),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01),
                   ),
                 Flexible(
                   child: Container(
@@ -148,7 +146,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       children: [
                         if (hasSelectedImage)
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20).copyWith(top: 8),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                            ).copyWith(top: 8),
                             child: Row(
                               children: [
                                 Stack(
@@ -165,14 +165,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     Positioned(
                                       right: 0,
                                       child: InkWell(
-                                        child:  HugeIcon(
+                                        child: HugeIcon(
                                           icon: HugeIcons.strokeRoundedAdd01,
                                           size: 22,
-                                          color: colorScheme.surfaceContainerHigh,
+                                          color:
+                                              colorScheme.surfaceContainerHigh,
                                         ),
                                         onTap: () {
                                           ref
-                                              .read(chatInputControllerProvider.notifier)
+                                              .read(
+                                                chatInputControllerProvider
+                                                    .notifier,
+                                              )
                                               .clearSelectedImage();
                                         },
                                       ),
@@ -192,7 +196,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             hintText: 'Type a message...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none
+                              borderSide: BorderSide.none,
                             ),
                             filled: true,
                             fillColor: Theme.of(
@@ -206,42 +210,45 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               minWidth: 0,
                               minHeight: 0,
                             ),
-                            prefixIcon: _hasFocus && canAttachImage && !hasSelectedImage ? Padding(
-                              padding: const EdgeInsets.only(left: 6),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                    suffixActionButton(
-                                      icon: HugeIcons.strokeRoundedAdd01,
-                                      color: hasSelectedImage
-                                          ? colorScheme.primary
-                                          : null,
-                                      onPressed: isGenerating
-                                          ? null
-                                          : () {
-                                              if (hasSelectedImage) {
-                                                ref
-                                                    .read(
-                                                      chatInputControllerProvider
-                                                          .notifier,
-                                                    )
-                                                    .clearSelectedImage();
-                                              } else {
-                                                ref
-                                                    .read(
-                                                      chatInputControllerProvider
-                                                          .notifier,
-                                                    )
-                                                    .pickImageFromDevice();
-                                              }
-                                            },
-                                      tooltip: hasSelectedImage
-                                          ? 'Remove selected image'
-                                          : 'Add image',
+                            prefixIcon:
+                                _hasFocus && canAttachImage && !hasSelectedImage
+                                ? Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        suffixActionButton(
+                                          icon: HugeIcons.strokeRoundedAdd01,
+                                          color: hasSelectedImage
+                                              ? colorScheme.primary
+                                              : null,
+                                          onPressed: isGenerating
+                                              ? null
+                                              : () {
+                                                  if (hasSelectedImage) {
+                                                    ref
+                                                        .read(
+                                                          chatInputControllerProvider
+                                                              .notifier,
+                                                        )
+                                                        .clearSelectedImage();
+                                                  } else {
+                                                    ref
+                                                        .read(
+                                                          chatInputControllerProvider
+                                                              .notifier,
+                                                        )
+                                                        .pickImageFromDevice();
+                                                  }
+                                                },
+                                          tooltip: hasSelectedImage
+                                              ? 'Remove selected image'
+                                              : 'Add image',
+                                        ),
+                                      ],
                                     ),
-                                ],
-                              ),
-                            ): null,
+                                  )
+                                : null,
                             suffixIcon: Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: Row(
@@ -252,21 +259,29 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                       canRecordAudio)
                                     suffixActionButton(
                                       icon: HugeIcons.strokeRoundedMic02,
-                                      onPressed: () {},
+                                      onPressed: () {
+                                        AppToast.show("Coming soon ...");
+                                      },
                                       tooltip: 'Voice input',
                                       color: colorScheme.primary,
                                     ),
                                   if (isGenerating || hasSendableContent)
                                     Container(
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(100),
-                                        color: !isGenerating ? Colors.green[900]: null,
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
+                                        color: !isGenerating
+                                            ? Colors.green[900]
+                                            : null,
                                       ),
                                       child: suffixActionButton(
                                         icon: isGenerating
                                             ? HugeIcons.strokeRoundedStop
                                             : HugeIcons.strokeRoundedArrowUp02,
-                                        color: isGenerating ? Colors.red : Colors.white,
+                                        color: isGenerating
+                                            ? Colors.red
+                                            : Colors.white,
                                         onPressed: isGenerating
                                             ? _stopGeneration
                                             : (inputState.isSending

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_model_switching_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
@@ -26,8 +27,22 @@ class ChatPageActions {
   }
 
   Future<void> installModel(ModelInfo model) async {
+    final hasActiveInstall = ref.read(activeModelInstallProvider) != null;
+    final isSwitching = ref.read(chatModelSwitchingProvider);
+    final isRuntimeLoading = ref
+        .read(activeGemmaModelRuntimeProvider)
+        .isLoading;
+    if (hasActiveInstall || isSwitching || isRuntimeLoading) {
+      await AppToast.show(
+        'Model is already installing/loading. Please wait.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
     ref.read(chatModelSwitchingProvider.notifier).start();
     try {
+      await ref.read(chatThreadActionsProvider).stopGeneration();
       await ref.read(downloadProvider.notifier).installModel(model);
       ref.invalidate(activeModelInfoProvider);
       ref.invalidate(activeGemmaModelRuntimeProvider);

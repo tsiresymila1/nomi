@@ -80,15 +80,9 @@ class ModelRepositoryActions {
     )..where((t) => t.id.equals(id))).go();
   }
 
-  Future<void> updateModelId({
-    required int id,
-    required String modelId,
-  }) async {
+  Future<void> updateModelId({required int id, required String modelId}) async {
     final database = ref.read(genaDatabaseProvider);
-    await (database.update(
-      database.models,
-    )..where((t) => t.id.equals(id))).write(
-      db.ModelsCompanion(modelId: Value(modelId)),
-    );
+    await (database.update(database.models)..where((t) => t.id.equals(id)))
+        .write(db.ModelsCompanion(modelId: Value(modelId)));
   }
 }

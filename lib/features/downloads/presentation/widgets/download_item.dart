@@ -94,7 +94,9 @@ class DownloadItem extends StatelessWidget {
               )
             else if (isInstalled)
               const HugeIcon(
-                  icon: HugeIcons.strokeRoundedCheckmarkCircle03, color: Colors.green)
+                icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+                color: Colors.green,
+              )
             else if (isNetworkSource)
               IconButton(
                 icon: const Icon(Icons.download),
@@ -108,8 +110,7 @@ class DownloadItem extends StatelessWidget {
                 onPressed: onDownload,
               ),
             IconButton(
-              icon:  HugeIcon(
-                  icon: HugeIcons.strokeRoundedDelete02),
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02),
               tooltip: 'Remove model',
               onPressed: () => _confirmRemove(context),
             ),

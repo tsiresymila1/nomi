@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 
@@ -37,15 +38,27 @@ final downloadProvider =
     );
 
 class DownloadNotifier extends Notifier<Map<String, double>> {
+  bool _installInProgress = false;
+
   @override
   Map<String, double> build() {
     return {};
   }
 
   Future<void> installModel(ModelInfo model) async {
+    final currentInstall = ref.read(activeModelInstallProvider);
+    if (_installInProgress || currentInstall != null) {
+      await AppToast.show(
+        'A model install is already running. Please wait.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
     final installKey = _installKey(model);
     final installedId = _installedModelId(model);
 
+    _installInProgress = true;
     state = {...state, installKey: 0.0};
     ref.read(activeModelInstallProvider.notifier).start(installKey, model.name);
     try {
@@ -58,15 +71,12 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
           ? installer.fromFile(model.source)
           : installer.fromNetwork(model.source);
 
-      final installation = await builder
-          .withProgress((progress) {
-            state = {...state, installKey: progress / 100};
-          })
-          .install();
-      await ref.read(modelRepositoryActionsProvider).updateModelId(
-            id: model.id,
-            modelId: installation.spec.name,
-          );
+      final installation = await builder.withProgress((progress) {
+        state = {...state, installKey: progress / 100};
+      }).install();
+      await ref
+          .read(modelRepositoryActionsProvider)
+          .updateModelId(id: model.id, modelId: installation.spec.name);
 
       state = {...state, installKey: 1.0};
       ref.invalidate(modelInstallerProvider);
@@ -77,6 +87,7 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
       state = nextState;
       rethrow;
     } finally {
+      _installInProgress = false;
       ref.read(activeModelInstallProvider.notifier).clear();
       if (state[installKey] == 1.0) {
         state = {...state, installedId: 1.0};

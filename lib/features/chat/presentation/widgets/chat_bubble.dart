@@ -7,7 +7,6 @@ import 'package:flutter_highlight/themes/a11y-dark.dart';
 import 'package:flutter_highlight/themes/a11y-light.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/extension.dart';
-import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/core/utils.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -29,12 +28,13 @@ class ChatBubble extends ConsumerWidget {
   @override
   Widget build(BuildContext context, ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
+    return Column(
+      mainAxisAlignment: isUser ? MainAxisAlignment.end: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
             margin: const EdgeInsets.symmetric(vertical: 6),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             constraints: BoxConstraints(
@@ -55,6 +55,7 @@ class ChatBubble extends ConsumerWidget {
             child: (kind == 'image' && mediaPath != null)
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: isUser? MainAxisAlignment.end: MainAxisAlignment.start,
                     crossAxisAlignment: isUser
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
@@ -91,17 +92,17 @@ class ChatBubble extends ConsumerWidget {
                     isDark: isDark,
                   ),
           ),
-          if (!isUser)
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => unawaited(copyToClipboard(message)),
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedCopy02, size: 20),
-                ),
-              ],
-            ),
-        ],
-      ),
+        ),
+        if (!isUser)
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => unawaited(copyToClipboard(message)),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedCopy02, size: 20),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

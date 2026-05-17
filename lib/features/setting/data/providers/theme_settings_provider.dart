@@ -22,7 +22,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     _hydrated = true;
 
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_themeModeKey) ?? 'light';
+    final raw = prefs.getString(_themeModeKey) ?? 'dark';
     state = _fromRaw(raw);
   }
 

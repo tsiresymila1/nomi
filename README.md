@@ -81,6 +81,40 @@ Nomi is created by **Tsiresy Milà** and focused on local-first chat with downlo
     - PR to `main`
     - tag push `v*` (publishes GitHub Release)
 
+## Manual `.litertlm` Download URLs (LiteRT Community)
+
+Recommended direct URLs (copy/paste into Add Model URL):
+
+- Gemma 4 E2B IT  
+  `https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm?download=true`
+- Qwen3 0.6B  
+  `https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B.litertlm?download=true`
+
+Other LiteRT Community models (`.litertlm`) you can add:
+
+- Gemma 4 E4B IT  
+  `https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm?download=true`
+- Gemma 3 1B IT (int4)  
+  `https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.litertlm?download=true`
+- Qwen2.5 1.5B Instruct (q8)  
+  `https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm?download=true`
+- DeepSeek R1 Distill Qwen 1.5B (q8)  
+  `https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm?download=true`
+- Phi 4 Mini Instruct (q8)  
+  `https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm?download=true`
+- FastVLM 0.5B  
+  `https://huggingface.co/litert-community/FastVLM-0.5B/resolve/main/FastVLM-0.5B.litertlm?download=true`
+- FunctionGemma Mobile Actions  
+  `https://huggingface.co/litert-community/functiongemma-270m-ft-mobile-actions/resolve/main/mobile_actions_q8_ekv1024.litertlm?download=true`
+- Gemma 3 270M IT (q8)  
+  `https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.litertlm?download=true`
+- Qwen3 4B  
+  `https://huggingface.co/litert-community/Qwen3-4B/resolve/main/qwen3_4b_channelwise_int8_float32kv.litertlm?download=true`
+- Qwen3 8B  
+  `https://huggingface.co/litert-community/Qwen3-8B/resolve/main/qwen3_8b_channelwise_int8_float32kv.litertlm?download=true`
+
+Note: Use direct `resolve/main/...litertlm?download=true` links, not the model card page URL.
+
 ## Coming Future
 
 - Add thinking message

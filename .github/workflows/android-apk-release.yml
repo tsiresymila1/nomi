@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate .env from GitHub Secrets
+        run: |
+          if [ -z "${{ secrets.HUGGING_FACE_TOKEN }}" ]; then
+            echo "Missing required secret: HUGGING_FACE_TOKEN"
+            exit 1
+          fi
+          printf "HUGGING_FACE_TOKEN=%s\n" "${{ secrets.HUGGING_FACE_TOKEN }}" > .env
+          chmod u+rw,go-rwx .env
       - name: Build release APK
         run: flutter build apk --release
 

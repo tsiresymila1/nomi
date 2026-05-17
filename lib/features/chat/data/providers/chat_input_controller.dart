@@ -84,6 +84,10 @@ class ChatInputController extends Notifier<ChatInputState> {
     }
   }
 
+  Future<void> stopGeneration() async {
+    await ref.read(chatThreadActionsProvider).stopGeneration();
+  }
+
   Future<String> _copyImageToAppSupport(String sourcePath) async {
     final sourceFile = File(sourcePath);
     final appSupportDir = await getApplicationSupportDirectory();

@@ -10,7 +10,7 @@ class ChatModelSettings {
   final int tokenBuffer;
   final int randomSeed;
   final String preferredBackend;
-  final bool isThinking;
+  final bool? isThinkingOverride;
 
   const ChatModelSettings({
     required this.systemPrompt,
@@ -21,7 +21,7 @@ class ChatModelSettings {
     required this.tokenBuffer,
     required this.randomSeed,
     required this.preferredBackend,
-    required this.isThinking,
+    required this.isThinkingOverride,
   });
 
   factory ChatModelSettings.defaults() {
@@ -34,7 +34,7 @@ class ChatModelSettings {
       tokenBuffer: 256,
       randomSeed: 1,
       preferredBackend: 'gpu',
-      isThinking: false,
+      isThinkingOverride: null,
     );
   }
 
@@ -47,7 +47,8 @@ class ChatModelSettings {
     int? tokenBuffer,
     int? randomSeed,
     String? preferredBackend,
-    bool? isThinking,
+    bool? isThinkingOverride,
+    bool updateIsThinkingOverride = false,
   }) {
     return ChatModelSettings(
       systemPrompt: systemPrompt ?? this.systemPrompt,
@@ -58,7 +59,9 @@ class ChatModelSettings {
       tokenBuffer: tokenBuffer ?? this.tokenBuffer,
       randomSeed: randomSeed ?? this.randomSeed,
       preferredBackend: preferredBackend ?? this.preferredBackend,
-      isThinking: isThinking ?? this.isThinking,
+      isThinkingOverride: updateIsThinkingOverride
+          ? isThinkingOverride
+          : this.isThinkingOverride,
     );
   }
 
@@ -84,7 +87,7 @@ class ChatModelSettings {
       randomSeed: prefs.getInt(_Keys.randomSeed) ?? defaults.randomSeed,
       preferredBackend:
           prefs.getString(_Keys.preferredBackend) ?? defaults.preferredBackend,
-      isThinking: prefs.getBool(_Keys.isThinking) ?? defaults.isThinking,
+      isThinkingOverride: _readThinkingOverride(prefs),
     );
   }
 
@@ -97,7 +100,23 @@ class ChatModelSettings {
     await prefs.setInt(_Keys.tokenBuffer, tokenBuffer);
     await prefs.setInt(_Keys.randomSeed, randomSeed);
     await prefs.setString(_Keys.preferredBackend, preferredBackend);
-    await prefs.setBool(_Keys.isThinking, isThinking);
+    if (isThinkingOverride == null) {
+      await prefs.remove(_Keys.isThinkingOverride);
+      await prefs.remove(_Keys.legacyIsThinking);
+    } else {
+      await prefs.setBool(_Keys.isThinkingOverride, isThinkingOverride!);
+      await prefs.remove(_Keys.legacyIsThinking);
+    }
+  }
+
+  static bool? _readThinkingOverride(SharedPreferences prefs) {
+    if (prefs.containsKey(_Keys.isThinkingOverride)) {
+      return prefs.getBool(_Keys.isThinkingOverride);
+    }
+    if (prefs.containsKey(_Keys.legacyIsThinking)) {
+      return prefs.getBool(_Keys.legacyIsThinking);
+    }
+    return null;
   }
 }
 
@@ -110,5 +129,6 @@ class _Keys {
   static const tokenBuffer = 'chat_settings_token_buffer';
   static const randomSeed = 'chat_settings_random_seed';
   static const preferredBackend = 'chat_settings_preferred_backend';
-  static const isThinking = 'chat_settings_is_thinking';
+  static const isThinkingOverride = 'chat_settings_is_thinking_override';
+  static const legacyIsThinking = 'chat_settings_is_thinking';
 }

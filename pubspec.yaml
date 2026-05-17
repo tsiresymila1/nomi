@@ -47,4 +47,3 @@ flutter:
   assets:
     - .env
     - assets/  # JSON data file
-

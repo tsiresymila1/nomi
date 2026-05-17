@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
@@ -31,9 +33,11 @@ class ChatHistoryTile extends ConsumerWidget {
         onPressed: () => _onArchivePressed(context, ref),
       ),
       selected: isSelected,
-      onTap: () {
-        ref.read(selectedChatIdProvider.notifier).selectChat(chat.id);
-        Navigator.pop(context);
+      onTap: ()  {
+        unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
       },
       dense: true,
     );

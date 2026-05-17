@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 
 final chatHistoryActionsProvider = Provider<ChatHistoryActions>(
@@ -28,6 +29,7 @@ class ChatHistoryActions {
     });
 
     if (isActiveChat) {
+      await ref.read(chatThreadActionsProvider).stopGeneration();
       await ref.read(selectedChatIdProvider.notifier).createNewThread();
     }
   }

@@ -99,23 +99,106 @@ class _ChatViewState extends ConsumerState<ChatView> {
         );
 
         if (totalCount == 0) {
-          return reveal(const Center(child: Text('No messages yet')));
+          const quickPrompts = <String>[
+            'Help me get started with this app',
+            'Summarize our previous context',
+            'Give me 3 ideas I can work on now',
+          ];
+          return reveal(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 16,
+                  children: [
+                    Text(
+                          'Start with a quick prompt',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        )
+                        .animate(key: const ValueKey('quick-prompt-title'))
+                        .fade(duration: 320.ms, delay: 80.ms),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final entry in quickPrompts.asMap().entries)
+                          Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(50),
+                                  border: Border.all(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHigh,
+                                  ),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHigh,
+                                ),
+                                child: InkWell(
+                                  onTap: isGenerating
+                                      ? null
+                                      : () async {
+                                          await ref
+                                              .read(chatThreadActionsProvider)
+                                              .sendMessage(entry.value);
+                                        },
+                                  child: Text(
+                                    entry.value,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              )
+                              .animate(
+                                key: ValueKey('quick-prompt-${entry.key}'),
+                              )
+                              .fade(
+                                duration: 360.ms,
+                                delay: (180 + (entry.key * 100)).ms,
+                              ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
-          itemCount: totalCount,
-          itemBuilder: (context, index) {
+          itemCount: totalCount + 1 ,
+          itemBuilder: (context, oldlindex) {
+            final index = oldlindex -1;
+            if(index == -1) {
+              return SizedBox(height: MediaQuery.of(context).padding.top,);
+            }
             if (index < messages.length) {
               final message = messages[index];
+              final delayMs = (index * 45).clamp(0, 360);
               return ChatBubble(
-                key: ValueKey('chat-message-${message.id}'),
-                message: message.content,
-                isUser: message.role == 'user',
-                kind: message.kind,
-                mediaPath: message.mediaPath,
-              ).animate().fadeIn(duration: 180.ms).slideY(begin: 0.06, end: 0);
+                    key: ValueKey('chat-message-${message.id}'),
+                    message: message.content,
+                    isUser: message.role == 'user',
+                    kind: message.kind,
+                    mediaPath: message.mediaPath,
+                  )
+                  .animate(key: ValueKey('chat-message-anim-${message.id}'))
+                  .fadeIn(duration: 220.ms, delay: delayMs.ms)
+                  .slideY(
+                    begin: 0.06,
+                    end: 0,
+                    duration: 220.ms,
+                    delay: delayMs.ms,
+                  );
             }
 
             if (waitingIndicator) {
@@ -139,9 +222,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: SizedBox(
-                          width: 18,
+                          width: 40,
                           height: 18,
-                          child: SpinKitPulse(
+                          child: SpinKitThreeBounce(
                             size: 18,
                             color: Theme.of(
                               context,

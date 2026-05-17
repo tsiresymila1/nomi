@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_history_tile.dart';
 
@@ -42,7 +43,14 @@ class ChatHistoryList extends ConsumerWidget {
                       .fadeIn(duration: 220.ms, delay: (index * 40).ms)
                       .slideX(begin: -0.08, end: 0),
             ),
-      loading: () => reveal(const Center(child: CircularProgressIndicator())),
+      loading: () => reveal(
+        Center(
+          child: SpinKitThreeBounce(
+            size: 30,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
       error: (err, stack) => reveal(Center(child: Text('Error: $err'))),
     );
   }

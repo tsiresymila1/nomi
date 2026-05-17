@@ -25,7 +25,7 @@ class ModelSettingsSaveInput {
   final double temperature;
   final double topP;
   final String preferredBackend;
-  final bool isThinking;
+  final bool? isThinkingOverride;
 
   const ModelSettingsSaveInput({
     required this.systemPrompt,
@@ -36,7 +36,7 @@ class ModelSettingsSaveInput {
     required this.temperature,
     required this.topP,
     required this.preferredBackend,
-    required this.isThinking,
+    required this.isThinkingOverride,
   });
 }
 
@@ -85,21 +85,30 @@ class ModelSettingsActions {
       tokenBuffer: tokenBuffer,
       randomSeed: randomSeed,
       preferredBackend: input.preferredBackend,
-      isThinking: input.isThinking,
+      isThinkingOverride: input.isThinkingOverride,
     );
 
     await ref.read(chatModelSettingsProvider.notifier).save(next);
-    ref.invalidate(activeGemmaChatProvider);
+    await _reinitializeModelWithSettings();
   }
 
   Future<ChatModelSettings> resetDefaults() async {
     await ref.read(chatModelSettingsProvider.notifier).resetDefaults();
-    ref.invalidate(activeGemmaChatProvider);
+    await _reinitializeModelWithSettings();
     return ref.read(chatModelSettingsProvider);
+  }
+
+  Future<void> _reinitializeModelWithSettings() async {
+    ref.invalidate(activeGemmaModelRuntimeProvider);
+    ref.invalidate(activeGemmaChatProvider);
+
+    // Re-initialize model immediately with the updated settings.
+    await ref.read(activeGemmaModelRuntimeProvider.future);
   }
 
   void resetFlutterGemma() {
     FlutterGemma.reset();
+    ref.invalidate(activeGemmaModelRuntimeProvider);
     ref.invalidate(activeGemmaChatProvider);
   }
 }

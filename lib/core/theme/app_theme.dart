@@ -4,7 +4,6 @@ class AppTheme {
   static const double _defaultFontSize = 13;
   static const double _materialBaseBodySize = 14;
   static const double _fontScale = _defaultFontSize / _materialBaseBodySize;
-  static const InputBorder _noBorder = InputBorder.none;
 
   static TextTheme _scaledTextTheme(TextTheme source) {
     TextStyle? scale(TextStyle? style) {
@@ -33,7 +32,6 @@ class AppTheme {
   }
 
   static InputDecorationTheme _inputDecorationTheme() {
-
     return InputDecorationTheme(
       filled: true,
       // fillColor: Colors.grey,
@@ -57,6 +55,7 @@ class AppTheme {
       ),
     );
   }
+
   static FilledButtonThemeData _filledButtonTheme() {
     return FilledButtonThemeData(
       style: FilledButton.styleFrom(
@@ -73,12 +72,18 @@ class AppTheme {
         brightness: Brightness.light,
       ),
     );
+    final robotoTextTheme = _scaledTextTheme(
+      base.textTheme,
+    );
+    final robotoPrimaryTextTheme = _scaledTextTheme(
+      base.primaryTextTheme,
+    );
     return base.copyWith(
-      textTheme: _scaledTextTheme(base.textTheme),
-      primaryTextTheme: _scaledTextTheme(base.primaryTextTheme),
+      textTheme: robotoTextTheme,
+      primaryTextTheme: robotoPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
-      filledButtonTheme: _filledButtonTheme()
+      filledButtonTheme: _filledButtonTheme(),
     );
   }
 
@@ -91,12 +96,18 @@ class AppTheme {
       ),
       outlinedButtonTheme: _outlinedButtonTheme(),
     );
+    final robotoTextTheme = _scaledTextTheme(
+      base.textTheme,
+    );
+    final robotoPrimaryTextTheme = _scaledTextTheme(
+      base.primaryTextTheme,
+    );
     return base.copyWith(
-      textTheme: _scaledTextTheme(base.textTheme),
-      primaryTextTheme: _scaledTextTheme(base.primaryTextTheme),
+      textTheme: robotoTextTheme,
+      primaryTextTheme: robotoPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
-        filledButtonTheme: _filledButtonTheme()
+      filledButtonTheme: _filledButtonTheme(),
     );
   }
 }

@@ -102,4 +102,18 @@ class ChatThreadActions {
 
     ref.read(chatDraftResponseProvider.notifier).clear();
   }
+
+  Future<void> stopGeneration() async {
+    final isGenerating = ref.read(chatGeneratingProvider);
+    if (!isGenerating) return;
+
+    final session = await ref.read(activeGemmaChatProvider.future);
+    if (session == null) return;
+
+    try {
+      await session.chat.stopGeneration();
+    } finally {
+      ref.read(chatGeneratingProvider.notifier).setGenerating(false);
+    }
+  }
 }

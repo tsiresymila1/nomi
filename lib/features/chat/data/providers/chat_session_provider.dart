@@ -12,11 +12,80 @@ import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
 import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
 
+class ActiveGemmaModelRuntime {
+  final gemma.InferenceModel model;
+  final bool supportImage;
+  final bool supportAudio;
+  final bool supportsFunctionCalls;
+  final bool defaultIsThinking;
+  final gemma.ModelType modelType;
+
+  const ActiveGemmaModelRuntime({
+    required this.model,
+    required this.supportImage,
+    required this.supportAudio,
+    required this.supportsFunctionCalls,
+    required this.defaultIsThinking,
+    required this.modelType,
+  });
+}
+
+final activeGemmaModelRuntimeProvider =
+    FutureProvider<ActiveGemmaModelRuntime?>((ref) async {
+      final installedModels = await gemma.FlutterGemma.listInstalledModels();
+      if (installedModels.isEmpty) {
+        return null;
+      }
+
+      final database = ref.watch(genaDatabaseProvider);
+      final chatSettings = ref.read(chatModelSettingsProvider);
+
+      final catalogModels = await (database.select(
+        database.models,
+      )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
+
+      if (!gemma.FlutterGemma.hasActiveModel()) {
+        await _recoverActiveModelFromCatalog(
+          installedModels: installedModels,
+          catalogModels: catalogModels,
+        );
+      }
+
+      final activeCatalogModel = _resolveActiveCatalogModel(catalogModels);
+      final supportImage = activeCatalogModel?.supportImage ?? false;
+      final supportAudio = activeCatalogModel?.supportAudio ?? false;
+      final supportsFunctionCalls =
+          activeCatalogModel?.supportsFunctionCalls ?? false;
+      final defaultIsThinking = activeCatalogModel?.isThinking ?? false;
+      final modelTypeString = activeCatalogModel?.modelType ?? 'gemmaIt';
+
+      final model = await _loadActiveModelWithRecovery(
+        installedModels: installedModels,
+        catalogModels: catalogModels,
+        settings: chatSettings,
+        supportImage: supportImage,
+        supportAudio: supportAudio,
+      );
+
+      ref.onDispose(() {
+        unawaited(model.close());
+      });
+
+      return ActiveGemmaModelRuntime(
+        model: model,
+        supportImage: supportImage,
+        supportAudio: supportAudio,
+        supportsFunctionCalls: supportsFunctionCalls,
+        defaultIsThinking: defaultIsThinking,
+        modelType: _parseModelType(modelTypeString),
+      );
+    });
+
 final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
   ref,
 ) async* {
-  final installedModels = await gemma.FlutterGemma.listInstalledModels();
-  if (installedModels.isEmpty) {
+  final modelRuntime = await ref.watch(activeGemmaModelRuntimeProvider.future);
+  if (modelRuntime == null) {
     yield null;
     return;
   }
@@ -36,44 +105,20 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
   }
 
   try {
-    final catalogModels = await (database.select(
-      database.models,
-    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
-
-    if (!gemma.FlutterGemma.hasActiveModel()) {
-      await _recoverActiveModelFromCatalog(
-        installedModels: installedModels,
-        catalogModels: catalogModels,
-      );
-    }
-    final activeCatalogModel = _resolveActiveCatalogModel(catalogModels);
-    final supportImage = activeCatalogModel?.supportImage ?? false;
-    final supportAudio = activeCatalogModel?.supportAudio ?? false;
-    final supportsFunctionCalls =
-        activeCatalogModel?.supportsFunctionCalls ?? false;
-    final isThinking =
-        activeCatalogModel?.isThinking ?? chatSettings.isThinking;
-    final modelTypeString = activeCatalogModel?.modelType ?? 'gemmaIt';
-
-    final model = await _loadActiveModelWithRecovery(
-      installedModels: installedModels,
-      catalogModels: catalogModels,
-      settings: chatSettings,
-      supportImage: supportImage,
-      supportAudio: supportAudio,
-    );
     final systemPrompt = chatSettings.systemPrompt.trim();
-    final chat = await model.createChat(
+    final effectiveThinking =
+        chatSettings.isThinkingOverride ?? modelRuntime.defaultIsThinking;
+    final chat = await modelRuntime.model.createChat(
       temperature: chatSettings.temperature,
       randomSeed: chatSettings.randomSeed,
       topK: chatSettings.topK,
       topP: chatSettings.topP,
       tokenBuffer: chatSettings.tokenBuffer,
-      supportImage: supportImage,
-      supportAudio: supportAudio,
-      supportsFunctionCalls: supportsFunctionCalls,
-      isThinking: isThinking,
-      modelType: _parseModelType(modelTypeString),
+      supportImage: modelRuntime.supportImage,
+      supportAudio: modelRuntime.supportAudio,
+      supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
+      isThinking: effectiveThinking,
+      modelType: modelRuntime.modelType,
       systemInstruction: systemPrompt.isEmpty ? null : systemPrompt,
     );
 
@@ -119,9 +164,8 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
 
     ref.onDispose(() {
       unawaited(chat.close());
-      unawaited(model.close());
     });
-    yield GemmaChatSession(model: model, chat: chat);
+    yield GemmaChatSession(model: modelRuntime.model, chat: chat);
   } catch (e) {
     logger.e('Failed to initialize active Gemma chat session', error: e);
     yield null;

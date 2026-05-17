@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_highlight/themes/atom-one-light.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
@@ -29,34 +32,41 @@ class ChatBubble extends ConsumerWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.80,
+          maxWidth: isUser
+              ? MediaQuery.of(context).size.width * 0.80
+              : MediaQuery.of(context).size.width,
         ),
         decoration: BoxDecoration(
           color: isUser
-              ? Colors.green[700]
-              : isDark
-              ? Colors.grey[800]?.withAlpha(100)
-              : Colors.grey[200],
+              ? Colors.green[900]: Colors.transparent,
+              // : isDark
+              // ? Colors.grey[800]?.withAlpha(100)
+              // : Colors.grey[200],
           borderRadius: BorderRadius.circular(16).copyWith(
             bottomRight: isUser ? const Radius.circular(4) : null,
             bottomLeft: !isUser ? const Radius.circular(4) : null,
           ),
         ),
-        child:  (kind == 'image' && mediaPath != null)  ?
-              Column(
+        child: (kind == 'image' && mediaPath != null)
+            ? Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: isUser ? CrossAxisAlignment.end: CrossAxisAlignment.start,
+                crossAxisAlignment: isUser
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 spacing: 12,
                 children: [
-                  if(message.isNotEmpty)  MdMessage(message: message, isUser: isUser, isDark: isDark),
+                  if (message.isNotEmpty)
+                    MdMessage(message: message, isUser: isUser, isDark: isDark),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.file(
                       File(mediaPath!),
                       fit: BoxFit.cover,
+                      width: 180,
+                      height: 220,
                       errorBuilder: (context, error, stackTrace) {
                         return const SizedBox(
                           height: 120,
@@ -67,8 +77,7 @@ class ChatBubble extends ConsumerWidget {
                   ),
                 ],
               )
-           :
-              MdMessage(message: message, isUser: isUser, isDark: isDark),
+            : MdMessage(message: message, isUser: isUser, isDark: isDark),
       ),
     );
   }
@@ -86,6 +95,11 @@ class MdMessage extends StatelessWidget {
   final bool isUser;
   final bool isDark;
 
+  Future copyToClipboard( String textToCopy) async {
+    await Clipboard.setData(ClipboardData(text: textToCopy));
+    AppToast.show("Copied to clipboard");
+  }
+
   @override
   Widget build(BuildContext context) {
     return GptMarkdown(
@@ -95,8 +109,9 @@ class MdMessage extends StatelessWidget {
         fontSize: 14,
         height: 1.4,
       ),
-      textAlign:TextAlign.left,
+      textAlign: TextAlign.left,
       followLinkColor: true,
+      useDollarSignsForLatex: true,
       codeBuilder: (context, name, code, closed) {
         Widget buildCodeContent(Widget child) {
           return LayoutBuilder(
@@ -106,9 +121,7 @@ class MdMessage extends StatelessWidget {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth,
-                    ),
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
                     child: child,
                   ),
                 ),
@@ -121,23 +134,49 @@ class MdMessage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: Colors.grey.shade900),
-            child: Text(
-              code,
-              style: const TextStyle(fontFamily: 'monospace'),
-            ),
+            child: Text(code, style: const TextStyle(fontFamily: 'monospace')),
           );
         }
-        return buildCodeContent(
-          SizedBox(
-            width: 1000,
-            child: HighlightView(
-              code,
-              language: name,
-              theme: isDark ? atomOneDarkTheme : atomOneLightTheme,
-              padding: const EdgeInsets.all(12),
-              textStyle: const TextStyle(fontSize: 13),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
+                InkWell(
+                  child: Icon(Icons.copy, size: 20),
+                  onTap: () => unawaited(copyToClipboard(code)),
+                ),
+              ],
             ),
-          ),
+            buildCodeContent(
+              SizedBox(
+                width: 1000,
+                child: HighlightView(
+                  code,
+                  language: name,
+                  theme: isDark
+                      ? {
+                          ...atomOneDarkTheme,
+                          'root': TextStyle(
+                            color: Color(0xffabb2bf),
+                            backgroundColor: Colors.transparent,
+                          ),
+                        }
+                      : {
+                          ...atomOneLightTheme,
+                          'root': TextStyle(
+                            color: Color(0xff383a42),
+                            backgroundColor: Colors.transparent,
+                          ),
+                        },
+                  padding: const EdgeInsets.all(12),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

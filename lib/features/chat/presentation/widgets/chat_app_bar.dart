@@ -19,22 +19,32 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       data: (session) => session == null ? Colors.red : null,
       orElse: () => null,
     );
+    final primaryColor = Theme.of(context).colorScheme.primary.withAlpha(5);
 
     return AppBar(
       scrolledUnderElevation: 0,
       elevation: 0,
+      backgroundColor: primaryColor,
+      surfaceTintColor: primaryColor,
+      shadowColor: primaryColor,
       title: InkWell(
         onTap: () => _showModelSelector(context, ref),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: Theme.of(context).highlightColor),
+            // border: Border.all(color: Theme.of(context).highlightColor),
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Text(
-            modelLabel,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: modelColor),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                modelLabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: modelColor),
+              ),
+              Icon(Icons.arrow_drop_down)
+            ],
           ),
         ),
       ),

@@ -36,9 +36,16 @@ class ChatPage extends ConsumerWidget {
     final body = isSwitchingModel
         ? reveal(
             Center(
-              child: SpinKitThreeInOut(
-                size: 40,
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  SpinKitThreeBounce(
+                    size: 25,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  Text("Loading model ..."),
+                ],
               ),
             ),
           )
@@ -47,9 +54,16 @@ class ChatPage extends ConsumerWidget {
         : activeGemmaChat.when(
             loading: () => reveal(
               Center(
-                child: SpinKitThreeInOut(
-                  size: 40,
-                  color: Theme.of(context).colorScheme.primary,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 6,
+                  children: [
+                    SpinKitThreeBounce(
+                      size: 25,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    Text("Loading model ..."),
+                  ],
                 ),
               ),
             ),
@@ -59,7 +73,10 @@ class ChatPage extends ConsumerWidget {
               if (session == null) {
                 return reveal(const Center(child: Text('No active model')));
               }
-              return ChatView(chatId: selectedChat, chat: session.chat);
+              return ChatView(
+                chatId: selectedChat,
+                chat: session.chat,
+              ).animate().fadeIn(duration: Duration(milliseconds: 1200));
             },
           );
 
@@ -79,6 +96,7 @@ class ChatPage extends ConsumerWidget {
     );
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const ChatAppBar(),
       drawer: const ChatDrawer(),
       bottomNavigationBar: bottomBar is SizedBox
@@ -137,8 +155,8 @@ class ChatPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                           if (downloadState[activeInstall.key] == null)
-                            SpinKitThreeInOut(
-                              size: 40,
+                            SpinKitThreeBounce(
+                              size: 30,
                               color: Theme.of(context).colorScheme.primary,
                             )
                           else

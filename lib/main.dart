@@ -27,6 +27,7 @@ class GenaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Gena',
       theme: AppTheme.light().copyWith(
         extensions: [

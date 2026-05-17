@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
@@ -29,7 +32,33 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
   double _temperature = 0.8;
   double _topP = 0.95;
   String _preferredBackend = 'gpu';
-  bool _isThinking = false;
+  bool _useModelThinkingDefault = true;
+  bool _isThinkingOverride = false;
+
+  TextTheme _font14TextTheme(TextTheme source) {
+    TextStyle? normalize(TextStyle? style) {
+      if (style == null) return null;
+      return style.copyWith(fontSize: 14);
+    }
+
+    return source.copyWith(
+      displayLarge: normalize(source.displayLarge),
+      displayMedium: normalize(source.displayMedium),
+      displaySmall: normalize(source.displaySmall),
+      headlineLarge: normalize(source.headlineLarge),
+      headlineMedium: normalize(source.headlineMedium),
+      headlineSmall: normalize(source.headlineSmall),
+      titleLarge: normalize(source.titleLarge),
+      titleMedium: normalize(source.titleMedium),
+      titleSmall: normalize(source.titleSmall),
+      bodyLarge: normalize(source.bodyLarge),
+      bodyMedium: normalize(source.bodyMedium),
+      bodySmall: normalize(source.bodySmall),
+      labelLarge: normalize(source.labelLarge),
+      labelMedium: normalize(source.labelMedium),
+      labelSmall: normalize(source.labelSmall),
+    );
+  }
 
   @override
   void initState() {
@@ -71,10 +100,12 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
     _temperature = settings.temperature;
     _topP = settings.topP;
     _preferredBackend = settings.preferredBackend;
-    _isThinking = settings.isThinking;
+    final override = settings.isThinkingOverride;
+    _useModelThinkingDefault = override == null;
+    _isThinkingOverride = override ?? false;
   }
 
-  Future<void> _saveSettings() async {
+  Future _saveSettings() async {
     if (_isSaving) return;
 
     setState(() => _isSaving = true);
@@ -91,18 +122,17 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
               temperature: _temperature,
               topP: _topP,
               preferredBackend: _preferredBackend,
-              isThinking: _isThinking,
+              isThinkingOverride: _useModelThinkingDefault
+                  ? null
+                  : _isThinkingOverride,
             ),
           );
 
       _hasEditedForm = false;
-      if (!mounted) return;
       _showToast('Model settings saved', AppToastType.success);
     } on ModelSettingsValidationException catch (e) {
-      if (!mounted) return;
       _showToast(e.message, AppToastType.error);
     } catch (e) {
-      if (!mounted) return;
       _showToast('Save failed: $e', AppToastType.error);
     } finally {
       if (mounted) {
@@ -195,196 +225,275 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
       _hasEditedForm = false;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 2,
-        scrolledUnderElevation: 2,
-        title: const Text(
-          'Model Settings',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    Widget animatedItem(int index, Widget child) {
+      final delay = (index * 20).ms;
+      return child
+          .animate(key: ValueKey('model-setting-item-$index'))
+          .fade(duration: 500.ms, delay: delay)
+          .scale(
+            delay: delay + 120.ms,
+            duration: 260.ms,
+            begin: const Offset(0.98, 0.98),
+            end: const Offset(1, 1),
+            curve: Curves.easeOutCubic,
+          );
+    }
+
+    final baseTheme = Theme.of(context);
+    final textTheme14 = _font14TextTheme(baseTheme.textTheme);
+
+    return Theme(
+      data: baseTheme.copyWith(
+        textTheme: textTheme14,
+        primaryTextTheme: _font14TextTheme(baseTheme.primaryTextTheme),
+        inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+          hintStyle: const TextStyle(fontSize: 14),
+          labelStyle: const TextStyle(fontSize: 14),
+          helperStyle: const TextStyle(fontSize: 14),
+          errorStyle: const TextStyle(fontSize: 14),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 12,
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  const Text('General prompt', style: TextStyle(fontSize: 14)),
-                  TextField(
-                    controller: _systemPromptController,
-                    minLines: 5,
-                    maxLines: 10,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'You are helpfully assistant',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 2,
+          scrolledUnderElevation: 2,
+          title: const Text(
+            'Model Settings',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                animatedItem(
+                  0,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      const Text(
+                        'General prompt',
+                        style: TextStyle(fontSize: 14),
                       ),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
+                      TextField(
+                        controller: _systemPromptController,
+                        minLines: 5,
+                        maxLines: 10,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'You are helpfully assistant',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ModelSettingsSliderTile(
-                label: 'Temperature',
-                valueText: _temperature.toStringAsFixed(2),
-                slider: Slider(
-                  value: _temperature,
-                  min: 0,
-                  max: 2,
-                  divisions: 40,
-                  onChanged: (value) => setState(() {
-                    _temperature = value;
-                    _hasEditedForm = true;
-                  }),
-                ),
-              ),
-              ModelSettingsSliderTile(
-                label: 'Top-P',
-                valueText: _topP.toStringAsFixed(2),
-                slider: Slider(
-                  value: _topP,
-                  min: 0.1,
-                  max: 1.0,
-                  divisions: 18,
-                  onChanged: (value) => setState(() {
-                    _topP = value;
-                    _hasEditedForm = true;
-                  }),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ModelSettingsNumberField(
-                      controller: _topKController,
-                      label: 'Top-K',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ModelSettingsNumberField(
-                      controller: _maxTokensController,
-                      label: 'Max tokens',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ModelSettingsNumberField(
-                      controller: _tokenBufferController,
-                      label: 'Token buffer',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ModelSettingsNumberField(
-                      controller: _randomSeedController,
-                      label: 'Random seed',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  const Text('Preferred backend'),
-                  DropdownButtonFormField<String>(
-                    initialValue: _preferredBackend,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'auto', child: Text('Auto')),
-                      DropdownMenuItem(value: 'gpu', child: Text('GPU')),
-                      DropdownMenuItem(value: 'cpu', child: Text('CPU')),
-                      DropdownMenuItem(value: 'npu', child: Text('NPU')),
                     ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _preferredBackend = value;
-                        _hasEditedForm = true;
-                      });
-                    },
                   ),
-                ],
-              ),
-              SwitchListTile(
-                value: _isThinking,
-                onChanged: (value) => setState(() {
-                  _isThinking = value;
-                  _hasEditedForm = true;
-                }),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Enable thinking mode'),
-                subtitle: const Text(
-                  'Use reasoning/thinking mode when supported',
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving ? null : _resetModelSettings,
-                      child: const Text('Reset Default'),
+                animatedItem(1, const SizedBox(height: 16)),
+                animatedItem(
+                  2,
+                  ModelSettingsSliderTile(
+                    label: 'Temperature',
+                    valueText: _temperature.toStringAsFixed(2),
+                    slider: Slider(
+                      value: _temperature,
+                      min: 0,
+                      max: 2,
+                      divisions: 40,
+                      onChanged: (value) => setState(() {
+                        _temperature = value;
+                        _hasEditedForm = true;
+                      }),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isSaving ? null : _saveSettings,
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Save'),
+                ),
+                animatedItem(
+                  3,
+                  ModelSettingsSliderTile(
+                    label: 'Top-P',
+                    valueText: _topP.toStringAsFixed(2),
+                    slider: Slider(
+                      value: _topP,
+                      min: 0.1,
+                      max: 1.0,
+                      divisions: 18,
+                      onChanged: (value) => setState(() {
+                        _topP = value;
+                        _hasEditedForm = true;
+                      }),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _isResettingGemma ? null : _resetFlutterGemma,
-                icon: _isResettingGemma
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.restart_alt),
-                label: const Text('Reset FlutterGemma'),
-              ),
-            ],
+                ),
+                animatedItem(4, const SizedBox(height: 8)),
+                animatedItem(
+                  5,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ModelSettingsNumberField(
+                          controller: _topKController,
+                          label: 'Top-K',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ModelSettingsNumberField(
+                          controller: _maxTokensController,
+                          label: 'Max tokens',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                animatedItem(6, const SizedBox(height: 12)),
+                animatedItem(
+                  7,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ModelSettingsNumberField(
+                          controller: _tokenBufferController,
+                          label: 'Token buffer',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ModelSettingsNumberField(
+                          controller: _randomSeedController,
+                          label: 'Random seed',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                animatedItem(8, const SizedBox(height: 16)),
+                animatedItem(
+                  9,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      const Text('Preferred backend'),
+                      DropdownButtonFormField<String>(
+                        initialValue: _preferredBackend,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                          DropdownMenuItem(value: 'gpu', child: Text('GPU')),
+                          DropdownMenuItem(value: 'cpu', child: Text('CPU')),
+                          DropdownMenuItem(value: 'npu', child: Text('NPU')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _preferredBackend = value;
+                            _hasEditedForm = true;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                animatedItem(
+                  10,
+                  SwitchListTile(
+                    value: _useModelThinkingDefault,
+                    onChanged: (value) => setState(() {
+                      _useModelThinkingDefault = value;
+                      _hasEditedForm = true;
+                    }),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Use model default thinking'),
+                    subtitle: const Text(
+                      'When enabled, use model capability from model info.',
+                    ),
+                  ),
+                ),
+                if (!_useModelThinkingDefault)
+                  animatedItem(
+                    11,
+                    SwitchListTile(
+                      value: _isThinkingOverride,
+                      onChanged: (value) => setState(() {
+                        _isThinkingOverride = value;
+                        _hasEditedForm = true;
+                      }),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Enable thinking mode'),
+                      subtitle: const Text(
+                        'Override model default for reasoning/thinking behavior.',
+                      ),
+                    ),
+                  ),
+                animatedItem(12, const SizedBox(height: 12)),
+                animatedItem(
+                  13,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isSaving ? null : _resetModelSettings,
+                          child: const Text('Reset Default'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _isSaving
+                              ? null
+                              : () => unawaited(_saveSettings()),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Save'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                animatedItem(14, const SizedBox(height: 24)),
+                animatedItem(15, const Divider()),
+                animatedItem(16, const SizedBox(height: 12)),
+                animatedItem(
+                  17,
+                  FilledButton.icon(
+                    onPressed: _isResettingGemma ? null : _resetFlutterGemma,
+                    icon: _isResettingGemma
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.restart_alt),
+                    label: const Text('Reset FlutterGemma'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -78,7 +79,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     _wasKeyboardVisible = keyboardVisible;
 
     Widget suffixActionButton({
-      required IconData icon,
+      required dynamic icon,
       required VoidCallback? onPressed,
       Color? color,
       String? tooltip,
@@ -89,7 +90,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         visualDensity: VisualDensity.compact,
         onPressed: onPressed,
         tooltip: tooltip,
-        icon: Icon(icon, size: 22, color: color),
+        icon: HugeIcon(icon: icon, size: 25, color: color),
         splashRadius: 16,
       );
     }
@@ -99,14 +100,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: Colors.transparent
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -141,7 +135,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   .pickImageFromDevice();
                             }
                           },
-                    icon: Icon(Icons.add),
+                    icon: HugeIcon(icon:HugeIcons.strokeRoundedAdd01),
                   ),
                 Flexible(
                   child: Container(
@@ -171,8 +165,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     Positioned(
                                       right: 0,
                                       child: InkWell(
-                                        child:  Icon(
-                                          Icons.close,
+                                        child:  HugeIcon(
+                                          icon: HugeIcons.strokeRoundedAdd01,
                                           size: 22,
                                           color: colorScheme.surfaceContainerHigh,
                                         ),
@@ -218,7 +212,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                     suffixActionButton(
-                                      icon: hasSelectedImage ? Icons.image : Icons.add,
+                                      icon: HugeIcons.strokeRoundedAdd01,
                                       color: hasSelectedImage
                                           ? colorScheme.primary
                                           : null,
@@ -257,7 +251,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                       !hasSendableContent &&
                                       canRecordAudio)
                                     suffixActionButton(
-                                      icon: Icons.mic_none,
+                                      icon: HugeIcons.strokeRoundedMic02,
                                       onPressed: () {},
                                       tooltip: 'Voice input',
                                       color: colorScheme.primary,
@@ -270,8 +264,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                       ),
                                       child: suffixActionButton(
                                         icon: isGenerating
-                                            ? Icons.stop_circle
-                                            : Icons.arrow_upward,
+                                            ? HugeIcons.strokeRoundedStop
+                                            : HugeIcons.strokeRoundedArrowUp02,
                                         color: isGenerating ? Colors.red : Colors.white,
                                         onPressed: isGenerating
                                             ? _stopGeneration

@@ -1,5 +1,8 @@
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
+import 'package:gena/features/setting/data/prompt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+
 
 class ChatModelSettings {
   final String systemPrompt;
@@ -26,7 +29,7 @@ class ChatModelSettings {
 
   factory ChatModelSettings.defaults() {
     return const ChatModelSettings(
-      systemPrompt: '',
+      systemPrompt: SYSTEM_PROMPT,
       temperature: 0.8,
       topK: 40,
       topP: 0.95,

@@ -69,7 +69,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
           .animate()
           .fade(duration: 500.ms, delay: delayMs.ms)
           .scale(
-            delay: (delayMs + 120).ms,
+            delay: (delayMs + 10).ms,
             duration: 260.ms,
             begin: const Offset(0.98, 0.98),
             end: const Offset(1, 1),
@@ -174,13 +174,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
         return ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount: totalCount + 1 ,
-          itemBuilder: (context, oldlindex) {
-            final index = oldlindex -1;
-            if(index == -1) {
-              return SizedBox(height: MediaQuery.of(context).padding.top,);
-            }
+          padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+            top: MediaQuery.of(context).padding.top,
+            bottom: MediaQuery.of(context).padding.bottom,
+          ),
+          itemCount: totalCount,
+          itemBuilder: (context, index) {
             if (index < messages.length) {
               final message = messages[index];
               final delayMs = (index * 45).clamp(0, 360);

@@ -8,6 +8,7 @@ import 'package:gena/features/chat/presentation/widgets/chat_drawer.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_view.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 
 class ChatPage extends ConsumerWidget {
   const ChatPage({super.key});
@@ -32,6 +33,11 @@ class ChatPage extends ConsumerWidget {
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
     final activeInstall = ref.watch(activeModelInstallProvider);
     final downloadState = ref.watch(downloadProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    final coloScheme = Theme.of(context).colorScheme;
+    final isDark = themeMode == ThemeMode.dark;
+    final gradColor = isDark ? Colors.black : Colors.white70;
 
     final body = isSwitchingModel
         ? reveal(
@@ -42,7 +48,7 @@ class ChatPage extends ConsumerWidget {
                 children: [
                   SpinKitThreeBounce(
                     size: 25,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: coloScheme.primary,
                   ),
                   Text("Loading model ..."),
                 ],
@@ -60,7 +66,7 @@ class ChatPage extends ConsumerWidget {
                   children: [
                     SpinKitThreeBounce(
                       size: 25,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: coloScheme.primary,
                     ),
                     Text("Loading model ..."),
                   ],
@@ -97,11 +103,25 @@ class ChatPage extends ConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const ChatAppBar(),
+      extendBody: true,
+      appBar:  ChatAppBar(gradColor: gradColor,),
       drawer: const ChatDrawer(),
-      bottomNavigationBar: bottomBar is SizedBox
-          ? bottomBar
-          : reveal(bottomBar, delayMs: 60),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              gradColor.withAlpha(0),
+              gradColor.withAlpha(125),
+              gradColor.withAlpha(250),
+            ],
+          ),
+        ),
+        child: bottomBar is SizedBox
+            ? bottomBar
+            : reveal(bottomBar, delayMs: 60),
+      ),
       body: Stack(
         children: [
           Column(

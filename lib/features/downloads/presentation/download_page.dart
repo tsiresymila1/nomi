@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/downloads/presentation/widgets/active_model_install_overlay.dart';
 import 'package:gena/features/downloads/presentation/widgets/add_model_sheet.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_models_list.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DownloadPage extends ConsumerWidget {
   const DownloadPage({super.key});
@@ -20,7 +20,7 @@ class DownloadPage extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.plusCircle),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedAddCircle),
             tooltip: 'Add model',
             onPressed: () => showAddModelSheet(context, ref),
           ),

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatHistoryTile extends ConsumerWidget {
   final ChatEntity chat;
@@ -17,10 +17,10 @@ class ChatHistoryTile extends ConsumerWidget {
     final isSelected = selectedChatId == chat.id;
 
     return ListTile(
-      leading: Icon(
+      leading: HugeIcon(icon:
         isSelected
-            ? LucideIcons.messageCircleMore500
-            : LucideIcons.messageCircle500,
+            ? HugeIcons.strokeRoundedMessageDone01
+            : HugeIcons.strokeRoundedMessage01,
       ),
       title: Text(chat.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
@@ -28,7 +28,7 @@ class ChatHistoryTile extends ConsumerWidget {
         style: const TextStyle(fontSize: 12),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.archive_outlined),
+        icon: const HugeIcon(icon: HugeIcons.strokeRoundedArchive04),
         tooltip: 'Archive chat',
         onPressed: () => _onArchivePressed(context, ref),
       ),

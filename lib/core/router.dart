@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/chat/presentation/chat_page.dart';
 import 'package:gena/features/downloads/presentation/download_page.dart';
-import 'package:gena/features/chat/presentation/model_setting_page.dart';
+import 'package:gena/features/setting/presentation/model_setting_page.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/setting/presentation/setting_page.dart';

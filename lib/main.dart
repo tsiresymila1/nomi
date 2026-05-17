@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:flutter_gemma/core/domain/web_storage_mode.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:gena/core/router.dart';
 import 'package:gena/core/theme/app_theme.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
@@ -29,6 +30,25 @@ class GenaApp extends ConsumerWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Gena',
+      builder: (context, child) {
+        final isDark = themeMode == ThemeMode.dark;
+        final overlayStyle = isDark
+            ? SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+              )
+            : SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+              );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlayStyle,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: AppTheme.light().copyWith(
         extensions: [
           GptMarkdownThemeData(
@@ -43,7 +63,7 @@ class GenaApp extends ConsumerWidget {
             h5: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
             h6: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
-        ]
+        ],
       ),
       darkTheme: AppTheme.dark().copyWith(
         extensions: [

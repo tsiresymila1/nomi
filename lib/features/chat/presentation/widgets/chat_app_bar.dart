@@ -5,10 +5,12 @@ import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const ChatAppBar({super.key});
+  final Color gradColor;
+
+  const ChatAppBar({super.key, required this.gradColor});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,14 +21,25 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       data: (session) => session == null ? Colors.red : null,
       orElse: () => null,
     );
-    final primaryColor = Theme.of(context).colorScheme.primary.withAlpha(5);
 
     return AppBar(
       scrolledUnderElevation: 0,
       elevation: 0,
-      backgroundColor: primaryColor,
-      surfaceTintColor: primaryColor,
-      shadowColor: primaryColor,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              gradColor.withAlpha(0),
+              gradColor.withAlpha(125),
+              gradColor.withAlpha(250),
+            ],
+          ),
+        ),
+      ),
       title: InkWell(
         onTap: () => _showModelSelector(context, ref),
         child: Container(
@@ -41,9 +54,13 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
               Text(
                 modelLabel,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: modelColor),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: modelColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              Icon(Icons.arrow_drop_down)
+              HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01),
             ],
           ),
         ),
@@ -52,18 +69,24 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       leading: Builder(
         builder: (context) {
           return IconButton(
-            icon: const Icon(LucideIcons.textAlignStart600),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedMenu02, size: 28),
             onPressed: () => Scaffold.of(context).openDrawer(),
           );
         },
       ),
       actions: [
         IconButton(
-          icon: const Icon(LucideIcons.squarePen500, size: 20),
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedPencilEdit02,
+            size: 28,
+          ),
           onPressed: () => ref.read(chatPageActionsProvider).createNewThread(),
         ),
         IconButton(
-          icon: const Icon(LucideIcons.slidersHorizontal),
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedSlidersHorizontal,
+            size: 28,
+          ),
           onPressed: () => context.pushNamed('model-setting'),
         ),
       ],

@@ -60,8 +60,8 @@ class ChatModelSelectionSheet extends ConsumerWidget {
                         },
                       )
                       .animate()
-                      .fadeIn(duration: 210.ms, delay: (index * 30).ms)
-                      .slideX(begin: 0.06, end: 0);
+                      .fadeIn(duration: 300.ms, delay: (index * 30).ms)
+                      .slideY(begin: 0.06, end: 0);
                 },
               );
             },

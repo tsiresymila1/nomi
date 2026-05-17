@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/atom-one-dark.dart';
-import 'package:flutter_highlight/themes/atom-one-light.dart';
+import 'package:flutter_highlight/themes/a11y-dark.dart';
+import 'package:flutter_highlight/themes/a11y-light.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/extension.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatBubble extends ConsumerWidget {
   final String message;
@@ -40,11 +42,10 @@ class ChatBubble extends ConsumerWidget {
               : MediaQuery.of(context).size.width,
         ),
         decoration: BoxDecoration(
-          color: isUser
-              ? Colors.green[900]: Colors.transparent,
-              // : isDark
-              // ? Colors.grey[800]?.withAlpha(100)
-              // : Colors.grey[200],
+          color: isUser ? Colors.green[900] : Colors.transparent,
+          // : isDark
+          // ? Colors.grey[800]?.withAlpha(100)
+          // : Colors.grey[200],
           borderRadius: BorderRadius.circular(16).copyWith(
             bottomRight: isUser ? const Radius.circular(4) : null,
             bottomLeft: !isUser ? const Radius.circular(4) : null,
@@ -95,7 +96,7 @@ class MdMessage extends StatelessWidget {
   final bool isUser;
   final bool isDark;
 
-  Future copyToClipboard( String textToCopy) async {
+  Future copyToClipboard(String textToCopy) async {
     await Clipboard.setData(ClipboardData(text: textToCopy));
     AppToast.show("Copied to clipboard");
   }
@@ -137,46 +138,65 @@ class MdMessage extends StatelessWidget {
             child: Text(code, style: const TextStyle(fontFamily: 'monospace')),
           );
         }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
-                InkWell(
-                  child: Icon(Icons.copy, size: 20),
-                  onTap: () => unawaited(copyToClipboard(code)),
-                ),
-              ],
-            ),
-            buildCodeContent(
-              SizedBox(
-                width: 1000,
-                child: HighlightView(
-                  code,
-                  language: name,
-                  theme: isDark
-                      ? {
-                          ...atomOneDarkTheme,
-                          'root': TextStyle(
-                            color: Color(0xffabb2bf),
-                            backgroundColor: Colors.transparent,
-                          ),
-                        }
-                      : {
-                          ...atomOneLightTheme,
-                          'root': TextStyle(
-                            color: Color(0xff383a42),
-                            backgroundColor: Colors.transparent,
-                          ),
-                        },
-                  padding: const EdgeInsets.all(12),
-                  textStyle: const TextStyle(fontSize: 12),
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isDark
+                ? Colors.grey.shade800.withAlpha(180)
+                : Colors.grey.shade300.withAlpha(180),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ).copyWith(top: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      name.capitalize(),
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    InkWell(
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedCopy01,
+                        size: 20,
+                      ),
+                      onTap: () => unawaited(copyToClipboard(code)),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              buildCodeContent(
+                SizedBox(
+                  child: HighlightView(
+                    code,
+                    language: name,
+                    theme: isDark
+                        ? {
+                            ...a11yDarkTheme,
+                            'root': TextStyle(
+                              color: Color(0xffabb2bf),
+                              backgroundColor: Colors.transparent,
+                            ),
+                          }
+                        : {
+                            ...a11yLightTheme,
+                            'root': TextStyle(
+                              color: Color(0xff383a42),
+                              backgroundColor: Colors.transparent,
+                            ),
+                          },
+                    padding: const EdgeInsets.all(12),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

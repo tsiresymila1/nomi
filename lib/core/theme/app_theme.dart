@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const double _defaultFontSize = 13;
-  static const double _materialBaseBodySize = 14;
+  static const double _materialBaseBodySize = 16;
   static const double _fontScale = _defaultFontSize / _materialBaseBodySize;
 
   static TextTheme _scaledTextTheme(TextTheme source) {

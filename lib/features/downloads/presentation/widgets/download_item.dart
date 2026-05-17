@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DownloadItem extends StatelessWidget {
   final ModelInfo model;
@@ -28,8 +28,8 @@ class DownloadItem extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: Icon(
-          LucideIcons.cpu,
+        leading: HugeIcon(
+          icon: HugeIcons.strokeRoundedCpu,
           color: Theme.of(context).colorScheme.primary,
         ),
         title: Text(
@@ -91,7 +91,8 @@ class DownloadItem extends StatelessWidget {
                 ),
               )
             else if (isInstalled)
-              const Icon(Icons.check_circle, color: Colors.green)
+              const HugeIcon(
+                  icon: HugeIcons.strokeRoundedCheckmarkCircle03, color: Colors.green)
             else if (isNetworkSource)
               IconButton(
                 icon: const Icon(Icons.download),
@@ -100,12 +101,13 @@ class DownloadItem extends StatelessWidget {
               )
             else
               IconButton(
-                icon: const Icon(Icons.install_desktop_outlined),
+                icon: const HugeIcon(icon: HugeIcons.strokeRoundedComputerAdd),
                 tooltip: 'Install model',
                 onPressed: onDownload,
               ),
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon:  HugeIcon(
+                  icon: HugeIcons.strokeRoundedDelete02),
               tooltip: 'Remove model',
               onPressed: () => _confirmRemove(context),
             ),

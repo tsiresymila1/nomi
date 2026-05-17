@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_history_list.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatDrawer extends ConsumerWidget {
   const ChatDrawer({super.key});
@@ -18,10 +18,18 @@ class ChatDrawer extends ConsumerWidget {
               padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
-                  const Expanded(
-                    child: Text(
-                      'Gena',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                   Expanded(
+                    child: Row(
+                      children: [
+                        Image.asset("assets/images/logo.png", width: 50,),
+                        Text(
+                          'Nomi',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -32,23 +40,8 @@ class ChatDrawer extends ConsumerWidget {
                         context.pop();
                       }
                     },
-                    icon: const Icon(LucideIcons.squarePen500, size: 20),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedPencilEdit02),
                   ),
-                  IconButton(
-                    icon:  Icon(LucideIcons.cpu, color: Theme.of(context).colorScheme.primary,),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.pushNamed('download');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.pushNamed('setting');
-                    },
-                  ),
-
                 ],
               ),
             ),
@@ -58,10 +51,27 @@ class ChatDrawer extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
-                spacing: 8,
+                spacing: 12,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-
+                  TextButton.icon(
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedCpu,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('download');
+                    },
+                    label: Text("Models"),
+                  ),
+                  IconButton(
+                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings02),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('setting');
+                    },
+                  ),
                 ],
               ),
             ),

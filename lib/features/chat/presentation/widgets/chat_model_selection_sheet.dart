@@ -58,12 +58,9 @@ class ChatModelSelectionSheet extends ConsumerWidget {
                         subtitle: Text(model.description),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () async {
+                          final actions = ref.read(chatPageActionsProvider);
                           Navigator.of(context).pop();
-                          unawaited(
-                            ref
-                                .read(chatPageActionsProvider)
-                                .installModel(model),
-                          );
+                          unawaited(actions.installModel(model));
                         },
                       )
                       .animate()

@@ -18,6 +18,7 @@ Future<void> showAddModelSheet(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     transitionAnimationController: transitionAnimationController,
     sheetAnimationStyle:
         sheetAnimationStyle ??
@@ -193,6 +194,7 @@ class _AddModelSheetState extends State<_AddModelSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: Padding(
@@ -232,7 +234,30 @@ class _AddModelSheetState extends State<_AddModelSheet> {
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 initialValue: _modelType,
-                decoration: const InputDecoration(hintText: 'Model type'),
+                dropdownColor: colorScheme.surfaceContainer,
+                decoration: InputDecoration(
+                  hintText: 'Model type',
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHigh,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outlineVariant,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outlineVariant,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
                 items: ModelType.values
                     .map(
                       (type) => DropdownMenuItem<String>(

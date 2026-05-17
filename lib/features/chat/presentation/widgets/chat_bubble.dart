@@ -2,16 +2,19 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/a11y-dark.dart';
 import 'package:flutter_highlight/themes/a11y-light.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullscreen_image_viewer/fullscreen_image_viewer.dart';
 import 'package:gena/core/extension.dart';
 import 'package:gena/core/utils.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:shimmer/shimmer.dart';
 
-class ChatBubble extends ConsumerWidget {
+class ChatBubble extends ConsumerStatefulWidget {
   final String message;
   final bool isUser;
   final String kind;
@@ -26,10 +29,24 @@ class ChatBubble extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, ref) {
+  ConsumerState<ChatBubble> createState() => _ChatBubbleState();
+}
+
+class _ChatBubbleState extends ConsumerState<ChatBubble> {
+  bool _isThinkingExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = widget.message;
+    final isUser = widget.isUser;
+    final kind = widget.kind;
+    final mediaPath = widget.mediaPath;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isThinking = kind == 'thinking' && !isUser;
     return Column(
-      mainAxisAlignment: isUser ? MainAxisAlignment.end: MainAxisAlignment.start,
+      mainAxisAlignment: isUser
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Align(
@@ -43,19 +60,96 @@ class ChatBubble extends ConsumerWidget {
                   : MediaQuery.of(context).size.width,
             ),
             decoration: BoxDecoration(
-              color: isUser ? Colors.green[900] : Colors.transparent,
-              // : isDark
-              // ? Colors.grey[800]?.withAlpha(100)
-              // : Colors.grey[200],
+              color: isUser
+                  ? Colors.green[900]
+                  : isThinking
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withAlpha(isDark ? 20 : 170)
+                  : Colors.transparent,
+              border: null,
               borderRadius: BorderRadius.circular(16).copyWith(
                 bottomRight: isUser ? const Radius.circular(4) : null,
                 bottomLeft: !isUser ? const Radius.circular(4) : null,
               ),
             ),
-            child: (kind == 'image' && mediaPath != null)
+            child: isThinking
+                ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Shimmer.fromColors(
+                      baseColor: Colors.grey.shade900,
+                      highlightColor: Colors.grey.shade200,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () {
+                          setState(() {
+                            _isThinkingExpanded = !_isThinkingExpanded;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.psychology_outlined, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Reasoning',
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                _isThinkingExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    ClipRect(
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        child: _isThinkingExpanded
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 100,
+                                  ),
+                                  child: Scrollbar(
+                                    thumbVisibility: true,
+                                    child: SingleChildScrollView(
+                                      child: MdMessage(
+                                        key: const ValueKey(
+                                          'thinking-expanded-content',
+                                        ),
+                                        message: message,
+                                        isUser: false,
+                                        isDark: isDark,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                )
+                : (kind == 'image' && mediaPath != null)
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: isUser? MainAxisAlignment.end: MainAxisAlignment.start,
+                    mainAxisAlignment: isUser
+                        ? MainAxisAlignment.end
+                        : MainAxisAlignment.start,
                     crossAxisAlignment: isUser
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
@@ -68,19 +162,31 @@ class ChatBubble extends ConsumerWidget {
                           isUser: isUser,
                           isDark: isDark,
                         ),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(mediaPath!),
-                          fit: BoxFit.cover,
-                          width: 180,
-                          height: 220,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const SizedBox(
-                              height: 120,
-                              child: Center(child: Text('Image unavailable')),
-                            );
-                          },
+                      InkWell(
+                        onTap: (){
+                          FullscreenImageViewer.open(
+                            context: context,
+                            child: Hero(
+                              tag: 'md-image-$isDark-${message.hashCode}',
+                              child: Image.file( File(mediaPath),),
+                            ).animate().fade(duration: 300.ms),
+                            closeWidget: HugeIcon(icon: HugeIcons.strokeRoundedCancel01)
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(mediaPath),
+                            fit: BoxFit.cover,
+                            width: 180,
+                            height: 220,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const SizedBox(
+                                height: 120,
+                                child: Center(child: Text('Image unavailable')),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -93,7 +199,7 @@ class ChatBubble extends ConsumerWidget {
                   ),
           ),
         ),
-        if (!isUser)
+        if (!isUser && !isThinking)
           Row(
             children: [
               IconButton(

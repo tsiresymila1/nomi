@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -16,7 +17,16 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
     final modelsAsync = ref.watch(modelRepositoryProvider);
-    final modelLabel = _resolveModelLabel(modelsAsync, activeGemmaChat);
+    final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
+    final hasActiveInstall = ref.watch(activeModelInstallProvider) != null;
+    final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
+    final modelLabel = _resolveModelLabel(
+      modelsAsync,
+      activeGemmaChat,
+      activeRuntime,
+      isSwitchingModel: isSwitchingModel,
+      hasActiveInstall: hasActiveInstall,
+    );
     final modelColor = activeGemmaChat.maybeWhen(
       data: (session) => session == null ? Colors.red : null,
       orElse: () => null,
@@ -113,7 +123,18 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   String _resolveModelLabel(
     AsyncValue<dynamic> modelsAsync,
     AsyncValue<GemmaChatSession?> activeGemmaChat,
-  ) {
+    AsyncValue<ActiveGemmaModelRuntime?> activeRuntime, {
+    required bool isSwitchingModel,
+    required bool hasActiveInstall,
+  }) {
+    if (isSwitchingModel || hasActiveInstall || activeRuntime.isLoading) {
+      return 'Model loading...';
+    }
+    final runtime = activeRuntime.asData?.value;
+    if (runtime == null) {
+      return 'No active model';
+    }
+
     final activeSpec =
         gemma.FlutterGemmaPlugin.instance.modelManager.activeInferenceModel;
     final activeModelId = activeSpec is gemma.InferenceModelSpec

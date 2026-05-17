@@ -14,7 +14,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
     _hydrate();
-    return ThemeMode.light;
+    return ThemeMode.dark;
   }
 
   Future<void> _hydrate() async {

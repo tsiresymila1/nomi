@@ -97,6 +97,10 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (context) {
         return const SafeArea(child: ChatModelSelectionSheet());
       },

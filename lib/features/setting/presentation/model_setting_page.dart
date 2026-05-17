@@ -255,8 +255,9 @@ class _ModelSettingsPageState extends ConsumerState<ModelSettingsPage> {
       ),
       child: Scaffold(
         appBar: AppBar(
-          elevation: 2,
-          scrolledUnderElevation: 2,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
           title: const Text(
             'Model Settings',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),

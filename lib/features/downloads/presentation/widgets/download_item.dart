@@ -27,7 +27,9 @@ class DownloadItem extends StatelessWidget {
         model.source.startsWith('https://');
 
     return Card(
+      elevation: 0,
       child: ListTile(
+        contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         leading: HugeIcon(
           icon: HugeIcons.strokeRoundedCpu,
           color: Theme.of(context).colorScheme.primary,

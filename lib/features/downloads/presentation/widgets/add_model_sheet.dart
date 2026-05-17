@@ -9,10 +9,22 @@ import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<void> showAddModelSheet(BuildContext context, WidgetRef ref) async {
+Future<void> showAddModelSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  AnimationController? transitionAnimationController,
+  AnimationStyle? sheetAnimationStyle,
+}) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    transitionAnimationController: transitionAnimationController,
+    sheetAnimationStyle:
+        sheetAnimationStyle ??
+        const AnimationStyle(
+          duration: Duration(milliseconds: 500),
+          reverseDuration: Duration(milliseconds: 250),
+        ),
     builder: (_) => _AddModelSheet(
       onSave: (model) async {
         await ref
@@ -187,7 +199,7 @@ class _AddModelSheetState extends State<_AddModelSheet> {
         padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + bottomInset),
         child: SingleChildScrollView(
           child: Column(
-            spacing: 6,
+            spacing: 2,
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -196,16 +208,28 @@ class _AddModelSheetState extends State<_AddModelSheet> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
+              const Text('Name', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(hintText: 'Name'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              const Text(
+                'Description',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
               TextField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(hintText: 'Description'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              const Text(
+                'Model type',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 initialValue: _modelType,
                 decoration: const InputDecoration(hintText: 'Model type'),
@@ -221,7 +245,7 @@ class _AddModelSheetState extends State<_AddModelSheet> {
                   if (value != null) setState(() => _modelType = value);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               SegmentedButton<String>(
                 segments: const [
                   ButtonSegment<String>(value: 'network', label: Text('URL')),
@@ -233,40 +257,58 @@ class _AddModelSheetState extends State<_AddModelSheet> {
                   _sourceController.clear();
                 },
               ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _supportImage,
-                title: const Text('Support image'),
-                onChanged: (value) {
-                  setState(() => _supportImage = value);
-                },
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _supportImage,
+                      title: const Text('Support image'),
+                      onChanged: (value) {
+                        setState(() => _supportImage = value);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _supportAudio,
+                      title: const Text('Support audio'),
+                      onChanged: (value) {
+                        setState(() => _supportAudio = value);
+                      },
+                    ),
+                  ),
+                ],
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _supportAudio,
-                title: const Text('Support audio'),
-                onChanged: (value) {
-                  setState(() => _supportAudio = value);
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _supportsFunctionCalls,
+                      title: const Text('Function calls'),
+                      onChanged: (value) {
+                        setState(() => _supportsFunctionCalls = value);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _isThinking,
+                      title: const Text('Thinking mode'),
+                      onChanged: (value) {
+                        setState(() => _isThinking = value);
+                      },
+                    ),
+                  ),
+                ],
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _supportsFunctionCalls,
-                title: const Text('Support function calls'),
-                onChanged: (value) {
-                  setState(() => _supportsFunctionCalls = value);
-                },
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _isThinking,
-                title: const Text('Enable thinking mode'),
-                onChanged: (value) {
-                  setState(() => _isThinking = value);
-                },
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(

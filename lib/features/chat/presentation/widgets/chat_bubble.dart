@@ -9,7 +9,6 @@ import 'package:flutter_highlight/themes/a11y-light.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/extension.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -29,8 +28,7 @@ class ChatBubble extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -60,7 +58,12 @@ class ChatBubble extends ConsumerWidget {
                 spacing: 12,
                 children: [
                   if (message.isNotEmpty)
-                    MdMessage(message: message, isUser: isUser, isDark: isDark),
+                    MdMessage(
+                      key: ValueKey('md-image-$isDark-${message.hashCode}'),
+                      message: message,
+                      isUser: isUser,
+                      isDark: isDark,
+                    ),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.file(
@@ -78,7 +81,12 @@ class ChatBubble extends ConsumerWidget {
                   ),
                 ],
               )
-            : MdMessage(message: message, isUser: isUser, isDark: isDark),
+            : MdMessage(
+                key: ValueKey('md-$isDark-${message.hashCode}'),
+                message: message,
+                isUser: isUser,
+                isDark: isDark,
+              ),
       ),
     );
   }

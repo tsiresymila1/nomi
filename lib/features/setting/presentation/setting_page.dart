@@ -20,6 +20,7 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
       body: ListView(
+        padding:  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
           ListTile(
             title: const Text('Model settings'),

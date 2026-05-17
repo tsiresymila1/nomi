@@ -12,22 +12,20 @@ class DownloadPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 2,
-        scrolledUnderElevation: 2,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: const Text(
           'Models',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedAddCircle),
-            tooltip: 'Add model',
-            onPressed: () => showAddModelSheet(context, ref),
-          ),
-        ],
       ),
       body: const Stack(
         children: [DownloadModelsList(), ActiveModelInstallOverlay()],
+      ),
+      floatingActionButton: FloatingActionButton(
+        mini: true,
+        onPressed: () => showAddModelSheet(context, ref),
+        child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01),
       ),
     );
   }

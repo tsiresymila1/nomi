@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
@@ -17,8 +18,8 @@ class ChatHistoryTile extends ConsumerWidget {
     final isSelected = selectedChatId == chat.id;
 
     return ListTile(
-      leading: HugeIcon(icon:
-        isSelected
+      leading: HugeIcon(
+        icon: isSelected
             ? HugeIcons.strokeRoundedMessageDone01
             : HugeIcons.strokeRoundedMessage01,
       ),
@@ -33,7 +34,7 @@ class ChatHistoryTile extends ConsumerWidget {
         onPressed: () => _onArchivePressed(context, ref),
       ),
       selected: isSelected,
-      onTap: ()  {
+      onTap: () {
         unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
         if (context.mounted) {
           Navigator.pop(context);
@@ -70,7 +71,7 @@ class ChatHistoryTile extends ConsumerWidget {
               child: const Text('Archive'),
             ),
           ],
-        );
+        ).animate().fade(duration: 240.ms).slideY(begin: 0.08, end: 0);
       },
     );
 

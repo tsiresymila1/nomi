@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTheme {
   static const double _defaultFontSize = 13;
@@ -41,6 +42,8 @@ class AppTheme {
       // errorBorder: _noBorder,
       // focusedErrorBorder: _noBorder,
       // disabledBorder: _noBorder,
+      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      hintStyle: TextStyle(fontSize: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide.none,
@@ -64,26 +67,53 @@ class AppTheme {
     );
   }
 
+  static AppBarTheme _appBarTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return AppBarTheme(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      systemOverlayStyle: isDark
+          ? SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light,
+              statusBarBrightness: Brightness.dark,
+            )
+          : SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              statusBarBrightness: Brightness.light,
+            ),
+    );
+  }
+
+  static DrawerThemeData _drawerTheme(Color backgroundColor) {
+    return DrawerThemeData(
+      backgroundColor: backgroundColor,
+      surfaceTintColor: backgroundColor,
+    );
+  }
+
   static ThemeData light() {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.teal,
+        seedColor: Colors.green.shade900,
         brightness: Brightness.light,
       ),
     );
-    final robotoTextTheme = _scaledTextTheme(
-      base.textTheme,
-    );
-    final robotoPrimaryTextTheme = _scaledTextTheme(
-      base.primaryTextTheme,
-    );
+    final robotoTextTheme = _scaledTextTheme(base.textTheme);
+    final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
     return base.copyWith(
       textTheme: robotoTextTheme,
       primaryTextTheme: robotoPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
+      appBarTheme: _appBarTheme(Brightness.light),
+      drawerTheme: _drawerTheme(base.colorScheme.surface),
     );
   }
 
@@ -91,23 +121,23 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.teal,
+        seedColor: Colors.green.shade700,
         brightness: Brightness.dark,
+        surface: Colors.black54,
+        surfaceTint: Colors.black54,
       ),
       outlinedButtonTheme: _outlinedButtonTheme(),
     );
-    final robotoTextTheme = _scaledTextTheme(
-      base.textTheme,
-    );
-    final robotoPrimaryTextTheme = _scaledTextTheme(
-      base.primaryTextTheme,
-    );
+    final robotoTextTheme = _scaledTextTheme(base.textTheme);
+    final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
     return base.copyWith(
       textTheme: robotoTextTheme,
       primaryTextTheme: robotoPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
+      appBarTheme: _appBarTheme(Brightness.dark),
+      // drawerTheme: _drawerTheme(base.colorScheme.surface),
     );
   }
 }

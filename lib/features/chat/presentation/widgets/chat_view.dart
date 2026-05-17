@@ -100,9 +100,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
         if (totalCount == 0) {
           const quickPrompts = <String>[
-            'Help me get started with this app',
-            'Summarize our previous context',
-            'Give me 3 ideas I can work on now',
+            'Who are you ?',
+            'What can you help me with?',
+            'Help me write something',
+            'Give me ideas to try',
           ];
           return reveal(
             Center(
@@ -110,10 +111,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  spacing: 16,
+                  spacing: 24,
                   children: [
                     Text(
-                          'Start with a quick prompt',
+                          'Quick prompt',
                           style: Theme.of(context).textTheme.titleMedium,
                           textAlign: TextAlign.center,
                         )

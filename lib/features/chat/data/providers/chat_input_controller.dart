@@ -1,15 +1,17 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 final chatInputControllerProvider =
     NotifierProvider<ChatInputController, ChatInputState>(
       ChatInputController.new,
     );
+
+enum ChatAttachmentSource { camera, gallery }
 
 class ChatInputState {
   final String? selectedImagePath;
@@ -32,17 +34,21 @@ class ChatInputState {
 }
 
 class ChatInputController extends Notifier<ChatInputState> {
+  final ImagePicker _imagePicker = ImagePicker();
+
   @override
   ChatInputState build() => const ChatInputState();
 
-  Future<void> pickImageFromDevice() async {
+  Future<void> pickImage({required ChatAttachmentSource source}) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
-        type: FileType.image,
-        dialogTitle: 'Select image',
+      final pickedFile = await _imagePicker.pickImage(
+        source: switch (source) {
+          ChatAttachmentSource.camera => ImageSource.camera,
+          ChatAttachmentSource.gallery => ImageSource.gallery,
+        },
+        imageQuality: 95,
       );
-      final pickedPath = result?.files.single.path;
+      final pickedPath = pickedFile?.path;
       if (pickedPath == null) return;
 
       final copiedPath = await _copyImageToAppSupport(pickedPath);
@@ -50,11 +56,19 @@ class ChatInputController extends Notifier<ChatInputState> {
         selectedImagePath: copiedPath,
         updateSelectedImagePath: true,
       );
-      await FilePicker.platform.clearTemporaryFiles();
-      await AppToast.show('Image selected', type: AppToastType.success);
+      final message = switch (source) {
+        ChatAttachmentSource.camera => 'Photo captured',
+        ChatAttachmentSource.gallery => 'Image selected',
+      };
+      await AppToast.show(message, type: AppToastType.success);
     } catch (e) {
       await AppToast.show('Image pick failed: $e', type: AppToastType.error);
     }
+  }
+
+  @Deprecated('Use pickImage(source: ChatAttachmentSource.gallery) instead.')
+  Future<void> pickImageFromDevice() {
+    return pickImage(source: ChatAttachmentSource.gallery);
   }
 
   void clearSelectedImage() {

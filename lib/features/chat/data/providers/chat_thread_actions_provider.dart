@@ -8,6 +8,7 @@ import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
+import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
@@ -61,10 +62,11 @@ class ChatThreadActions {
           ),
         );
 
-    final storedMessages = await (database.select(database.messages)
-          ..where((t) => t.chat.equals(parsedChatId))
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .get();
+    final storedMessages =
+        await (database.select(database.messages)
+              ..where((t) => t.chat.equals(parsedChatId))
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
 
     final contextPlan = await _planContextWindow(
       chat: session.chat,
@@ -72,7 +74,9 @@ class ChatThreadActions {
       settingsMaxTokens: settings.maxTokens,
       requestedOutputReserve: settings.tokenBuffer,
     );
-    ref.read(chatContextWindowProvider.notifier).update(
+    ref
+        .read(chatContextWindowProvider.notifier)
+        .update(
           ChatContextWindowState(
             maxTokens: settings.maxTokens,
             reservedOutputTokens: contextPlan.reservedOutputTokens,
@@ -103,21 +107,43 @@ class ChatThreadActions {
 
     final responseBuffer = StringBuffer();
     final thinkingBuffer = StringBuffer();
+    var toolTurns = 0;
+    const maxToolTurns = 4;
     try {
-      await for (final response in session.chat.generateChatResponseAsync()) {
-        if (response is gemma.TextResponse) {
-          responseBuffer.write(response.token);
+      while (true) {
+        final turnResult = await _runStreamingTurn(
+          chat: session.chat,
+          responseBuffer: responseBuffer,
+          thinkingBuffer: thinkingBuffer,
+          shouldHandleThinking: shouldHandleThinking,
+        );
+
+        if (turnResult.toolCalls.isEmpty) {
+          break;
+        }
+
+        if (toolTurns >= maxToolTurns) {
+          final fallbackMessage =
+              'I could not complete the request because too many consecutive tool calls were generated.';
+          if (responseBuffer.isNotEmpty) {
+            responseBuffer.write('\n\n');
+          }
+          responseBuffer.write(fallbackMessage);
           ref
               .read(chatDraftResponseProvider.notifier)
               .setDraft(responseBuffer.toString());
-          continue;
+          break;
         }
+        toolTurns += 1;
 
-        if (response is gemma.ThinkingResponse && shouldHandleThinking) {
-          thinkingBuffer.write(response.content);
-          ref
-              .read(chatDraftThinkingProvider.notifier)
-              .setDraft(thinkingBuffer.toString());
+        for (final call in turnResult.toolCalls) {
+          final toolResult = await executeChatTool(call);
+          await session.chat.addQueryChunk(
+            gemma.Message.toolResponse(
+              toolName: call.name,
+              response: toolResult,
+            ),
+          );
         }
       }
     } finally {
@@ -181,7 +207,8 @@ class ChatThreadActions {
     var compactedMessages = 0;
     const minMessagesToKeep = 2;
 
-    while (totalPromptTokens > promptBudget && entries.length > minMessagesToKeep) {
+    while (totalPromptTokens > promptBudget &&
+        entries.length > minMessagesToKeep) {
       final removed = entries.removeAt(0);
       totalPromptTokens -= removed.tokens;
       compactedMessages += 1;
@@ -199,10 +226,7 @@ class ChatThreadActions {
     );
   }
 
-  int _resolveOutputReserve({
-    required int maxTokens,
-    required int requested,
-  }) {
+  int _resolveOutputReserve({required int maxTokens, required int requested}) {
     if (maxTokens <= 2) return 1;
     return requested.clamp(1, maxTokens - 1);
   }
@@ -219,11 +243,7 @@ class ChatThreadActions {
     if (text.isEmpty) {
       return gemma.Message.imageOnly(imageBytes: bytes, isUser: true);
     }
-    return gemma.Message.withImage(
-      text: text,
-      imageBytes: bytes,
-      isUser: true,
-    );
+    return gemma.Message.withImage(text: text, imageBytes: bytes, isUser: true);
   }
 
   Future<gemma.Message> _toReplayMessage(db.Message row) async {
@@ -246,10 +266,7 @@ class ChatThreadActions {
       }
     }
 
-    return gemma.Message.text(
-      text: row.content,
-      isUser: row.role == 'user',
-    );
+    return gemma.Message.text(text: row.content, isUser: row.role == 'user');
   }
 
   Future<int> _estimateTokens({
@@ -289,16 +306,56 @@ class ChatThreadActions {
       _ => false,
     };
   }
+
+  Future<_StreamingTurnResult> _runStreamingTurn({
+    required gemma.InferenceChat chat,
+    required StringBuffer responseBuffer,
+    required StringBuffer thinkingBuffer,
+    required bool shouldHandleThinking,
+  }) async {
+    final turnTextBuffer = StringBuffer();
+    final toolCalls = <gemma.FunctionCallResponse>[];
+
+    await for (final response in chat.generateChatResponseAsync()) {
+      if (response is gemma.TextResponse) {
+        turnTextBuffer.write(response.token);
+        ref
+            .read(chatDraftResponseProvider.notifier)
+            .setDraft(responseBuffer.toString() + turnTextBuffer.toString());
+        continue;
+      }
+
+      if (response is gemma.ThinkingResponse && shouldHandleThinking) {
+        thinkingBuffer.write(response.content);
+        ref
+            .read(chatDraftThinkingProvider.notifier)
+            .setDraft(thinkingBuffer.toString());
+        continue;
+      }
+
+      if (response is gemma.FunctionCallResponse) {
+        toolCalls.add(response);
+        continue;
+      }
+
+      if (response is gemma.ParallelFunctionCallResponse) {
+        toolCalls.addAll(response.calls);
+      }
+    }
+
+    responseBuffer.write(turnTextBuffer.toString());
+    ref
+        .read(chatDraftResponseProvider.notifier)
+        .setDraft(responseBuffer.toString());
+    return _StreamingTurnResult(toolCalls: toolCalls);
+  }
 }
 
 class _ReplayEntry {
   final gemma.Message message;
   final int tokens;
 
-  const _ReplayEntry({
-    required this.message,
-    required this.tokens,
-  });
+  const _ReplayEntry({required this.message, required this.tokens});
 }
 
 class _ContextWindowPlan {
@@ -315,4 +372,10 @@ class _ContextWindowPlan {
     required this.remainingTokens,
     required this.compactedMessages,
   });
+}
+
+class _StreamingTurnResult {
+  final List<gemma.FunctionCallResponse> toolCalls;
+
+  const _StreamingTurnResult({required this.toolCalls});
 }

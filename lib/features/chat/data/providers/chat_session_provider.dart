@@ -9,6 +9,7 @@ import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
+import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
 import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
 
@@ -113,8 +114,12 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
 
   try {
     final systemPrompt = chatSettings.systemPrompt.trim();
+    final systemInstruction = _buildSystemInstruction(systemPrompt);
     final effectiveThinking =
         chatSettings.isThinkingOverride ?? modelRuntime.defaultIsThinking;
+    final tools = buildChatTools(
+      supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
+    );
     final chat = await modelRuntime.model.createChat(
       temperature: chatSettings.temperature,
       randomSeed: chatSettings.randomSeed,
@@ -124,9 +129,10 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
       supportImage: modelRuntime.supportImage,
       supportAudio: modelRuntime.supportAudio,
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
+      tools: tools,
       isThinking: effectiveThinking,
       modelType: modelRuntime.modelType,
-      systemInstruction: systemPrompt.isEmpty ? null : systemPrompt,
+      systemInstruction: systemInstruction.isEmpty ? null : systemInstruction,
     );
 
     final storedMessages =
@@ -375,4 +381,30 @@ String _modelSpecNameFromSource(String source) {
   final dotIndex = filename.lastIndexOf('.');
   if (dotIndex <= 0) return filename;
   return filename.substring(0, dotIndex);
+}
+
+String _buildSystemInstruction(String basePrompt) {
+  final now = DateTime.now();
+  final month = now.month.toString().padLeft(2, '0');
+  final day = now.day.toString().padLeft(2, '0');
+  const weekdayNames = <String>[
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  final weekday = weekdayNames[now.weekday - 1];
+  final dateContext = [
+    'CURRENT LOCAL DATE CONTEXT',
+    '- Today is $weekday, ${now.year}-$month-$day.',
+    '- Local timezone: ${now.timeZoneName}.',
+  ].join('\n');
+
+  if (basePrompt.trim().isEmpty) {
+    return dateContext;
+  }
+  return '${basePrompt.trim()}\n\n$dateContext';
 }

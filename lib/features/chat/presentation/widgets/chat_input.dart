@@ -55,6 +55,70 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     await ref.read(chatInputControllerProvider.notifier).stopGeneration();
   }
 
+  Future<void> _openAttachmentMenu({
+    required BuildContext context,
+    required bool canAttachImage,
+    required bool hasSelectedImage,
+  }) async {
+    if (hasSelectedImage) {
+      ref.read(chatInputControllerProvider.notifier).clearSelectedImage();
+      return;
+    }
+
+    final options = _buildAttachmentOptions(canAttachImage: canAttachImage);
+    if (options.isEmpty) {
+      await AppToast.show('No attachments available for this model.');
+      return;
+    }
+
+    final selectedSource = await showModalBottomSheet<ChatAttachmentSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options
+                .map(
+                  (option) => ListTile(
+                    leading: Icon(option.icon),
+                    title: Text(option.label),
+                    onTap: () => Navigator.of(sheetContext).pop(option.source),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+    );
+
+    if (selectedSource == null) return;
+    await ref
+        .read(chatInputControllerProvider.notifier)
+        .pickImage(source: selectedSource);
+  }
+
+  List<_AttachmentOption> _buildAttachmentOptions({
+    required bool canAttachImage,
+  }) {
+    final options = <_AttachmentOption>[];
+    if (canAttachImage) {
+      options.addAll(const <_AttachmentOption>[
+        _AttachmentOption(
+          source: ChatAttachmentSource.camera,
+          label: 'Camera',
+          icon: Icons.camera_alt_outlined,
+        ),
+        _AttachmentOption(
+          source: ChatAttachmentSource.gallery,
+          label: 'Gallery',
+          icon: Icons.photo_library_outlined,
+        ),
+      ]);
+    }
+    return options;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isGenerating = ref.watch(chatGeneratingProvider);
@@ -122,17 +186,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                     onPressed: isGenerating
                         ? null
-                        : () {
-                            if (hasSelectedImage) {
-                              ref
-                                  .read(chatInputControllerProvider.notifier)
-                                  .clearSelectedImage();
-                            } else {
-                              ref
-                                  .read(chatInputControllerProvider.notifier)
-                                  .pickImageFromDevice();
-                            }
-                          },
+                        : () => _openAttachmentMenu(
+                            context: context,
+                            canAttachImage: canAttachImage,
+                            hasSelectedImage: hasSelectedImage,
+                          ),
                     icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01),
                   ),
                 Flexible(
@@ -224,23 +282,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                               : null,
                                           onPressed: isGenerating
                                               ? null
-                                              : () {
-                                                  if (hasSelectedImage) {
-                                                    ref
-                                                        .read(
-                                                          chatInputControllerProvider
-                                                              .notifier,
-                                                        )
-                                                        .clearSelectedImage();
-                                                  } else {
-                                                    ref
-                                                        .read(
-                                                          chatInputControllerProvider
-                                                              .notifier,
-                                                        )
-                                                        .pickImageFromDevice();
-                                                  }
-                                                },
+                                              : () => _openAttachmentMenu(
+                                                  context: context,
+                                                  canAttachImage:
+                                                      canAttachImage,
+                                                  hasSelectedImage:
+                                                      hasSelectedImage,
+                                                ),
                                           tooltip: hasSelectedImage
                                               ? 'Remove selected image'
                                               : 'Add image',
@@ -311,4 +359,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       ),
     );
   }
+}
+
+class _AttachmentOption {
+  final ChatAttachmentSource source;
+  final String label;
+  final IconData icon;
+
+  const _AttachmentOption({
+    required this.source,
+    required this.label,
+    required this.icon,
+  });
 }

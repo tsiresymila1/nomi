@@ -20,6 +20,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final ScrollController _scrollController = ScrollController();
   int _lastMessageCount = 0;
   String _lastDraft = '';
+  String _lastThinkingDraft = '';
   bool _lastWaitingIndicator = false;
 
   @override
@@ -31,6 +32,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   void _autoScrollToEndIfNeeded({
     required int messageCount,
     required String draft,
+    required String thinkingDraft,
     required bool waitingIndicator,
     bool forceAutoScroll = false,
   }) {
@@ -38,9 +40,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final changed =
         messageCount != _lastMessageCount ||
         (draft.isNotEmpty && draft != _lastDraft) ||
+        (thinkingDraft.isNotEmpty && thinkingDraft != _lastThinkingDraft) ||
         waitingIndicator != _lastWaitingIndicator;
     _lastMessageCount = messageCount;
     _lastDraft = draft;
+    _lastThinkingDraft = thinkingDraft;
     _lastWaitingIndicator = waitingIndicator;
     if (!changed || !shouldAutoScroll) return;
 
@@ -79,21 +83,28 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
     final draft = ref.watch(chatDraftResponseProvider);
+    final thinkingDraft = ref.watch(chatDraftThinkingProvider);
     final isGenerating = ref.watch(chatGeneratingProvider);
 
     return messagesAsync.when(
       data: (messages) {
         final hasDraft = draft != null && draft.isNotEmpty;
-        final waitingIndicator = isGenerating && !hasDraft;
+        final hasThinkingDraft =
+            thinkingDraft != null && thinkingDraft.isNotEmpty;
+        final waitingIndicator = isGenerating && !hasDraft && !hasThinkingDraft;
         final forceAutoScrollOnUserSend =
             messages.length > _lastMessageCount &&
             messages.isNotEmpty &&
             messages.last.role == 'user';
         final totalCount =
-            messages.length + (hasDraft ? 1 : 0) + (waitingIndicator ? 1 : 0);
+            messages.length +
+            (hasThinkingDraft ? 1 : 0) +
+            (hasDraft ? 1 : 0) +
+            (waitingIndicator ? 1 : 0);
         _autoScrollToEndIfNeeded(
           messageCount: messages.length,
           draft: draft ?? '',
+          thinkingDraft: thinkingDraft ?? '',
           waitingIndicator: waitingIndicator,
           forceAutoScroll: forceAutoScrollOnUserSend,
         );
@@ -238,12 +249,19 @@ class _ChatViewState extends ConsumerState<ChatView> {
               );
             }
 
-            return reveal(
-              ChatBubble(
-                key: const ValueKey('chat-draft-response'),
-                message: draft ?? '',
+            if (hasThinkingDraft && index == messages.length) {
+              return ChatBubble(
+                key: const ValueKey('chat-draft-thinking'),
+                message: thinkingDraft,
                 isUser: false,
-              ),
+                kind: 'thinking',
+              );
+            }
+
+            return ChatBubble(
+              key: const ValueKey('chat-draft-response'),
+              message: draft ?? '',
+              isUser: false,
             );
           },
         );

@@ -29,10 +29,7 @@ class ChatPageActions {
   Future<void> installModel(ModelInfo model) async {
     final hasActiveInstall = ref.read(activeModelInstallProvider) != null;
     final isSwitching = ref.read(chatModelSwitchingProvider);
-    final isRuntimeLoading = ref
-        .read(activeGemmaModelRuntimeProvider)
-        .isLoading;
-    if (hasActiveInstall || isSwitching || isRuntimeLoading) {
+    if (hasActiveInstall || isSwitching) {
       await AppToast.show(
         'Model is already installing/loading. Please wait.',
         type: AppToastType.info,
@@ -47,6 +44,12 @@ class ChatPageActions {
       ref.invalidate(activeModelInfoProvider);
       ref.invalidate(activeGemmaModelRuntimeProvider);
       ref.invalidate(activeGemmaChatProvider);
+    } catch (e) {
+      await AppToast.show(
+        'Failed to install model: $e',
+        type: AppToastType.error,
+      );
+      rethrow;
     } finally {
       ref.read(chatModelSwitchingProvider.notifier).stop();
     }

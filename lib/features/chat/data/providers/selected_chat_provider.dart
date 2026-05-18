@@ -29,7 +29,10 @@ class SelectedChatIdNotifier extends Notifier<String?> {
             .getSingleOrNull();
     if (firstChat != null) {
       state = firstChat.id.toString();
+      return;
     }
+
+    await createNewThread();
   }
 
   Future<String> createNewThread() async {

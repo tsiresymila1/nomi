@@ -31,6 +31,7 @@ dependencies:
   shimmer: ^3.0.0
   flutter_native_splash: ^2.4.7
   hugeicons: ^1.1.7
+  fullscreen_image_viewer: ^1.2.0
 
 dev_dependencies:
   flutter_test:

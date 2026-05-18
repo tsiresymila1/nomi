@@ -66,6 +66,13 @@ final activeGemmaModelRuntimeProvider =
         supportImage: supportImage,
         supportAudio: supportAudio,
       );
+      if (model == null) {
+        logger.e(
+          'Unable to load active model after recovery/fallback attempts. '
+          'Returning null runtime to avoid crash.',
+        );
+        return null;
+      }
 
       ref.onDispose(() {
         unawaited(model.close());
@@ -129,11 +136,8 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
             .get();
     for (var i = 0; i < storedMessages.length; i++) {
       final message = storedMessages[i];
-      final isLastMessage = i == storedMessages.length - 1;
 
-      if (isLastMessage &&
-          message.kind == 'image' &&
-          message.mediaPath != null) {
+      if (message.kind == 'image' && message.mediaPath != null) {
         final imageFile = File(message.mediaPath!);
         if (await imageFile.exists()) {
           final bytes = await imageFile.readAsBytes();
@@ -179,7 +183,7 @@ gemma.ModelFileType _inferFileTypeFromSource(String source) {
   return gemma.ModelFileType.binary;
 }
 
-Future<gemma.InferenceModel> _loadActiveModelWithRecovery({
+Future<gemma.InferenceModel?> _loadActiveModelWithRecovery({
   required List<String> installedModels,
   required List<db.Model> catalogModels,
   required ChatModelSettings settings,
@@ -187,7 +191,7 @@ Future<gemma.InferenceModel> _loadActiveModelWithRecovery({
   required bool supportAudio,
 }) async {
   try {
-    return await gemma.FlutterGemma.getActiveModel(
+    return await _getActiveModelWithBackendFallbacks(
       maxTokens: settings.maxTokens,
       preferredBackend: settings.backend,
       supportImage: supportImage,
@@ -199,21 +203,95 @@ Future<gemma.InferenceModel> _loadActiveModelWithRecovery({
         message.contains('Active model is no longer installed') ||
         message.contains('No active inference model set');
 
-    if (!isRecoverable || installedModels.isEmpty) rethrow;
+    if (!isRecoverable || installedModels.isEmpty) {
+      logger.e(
+        'Failed to create model runtime. '
+        'Likely model file is invalid/corrupted or backend is unsupported.',
+        error: e,
+      );
+      return null;
+    }
 
     final recovered = await _recoverActiveModelFromCatalog(
       installedModels: installedModels,
       catalogModels: catalogModels,
     );
-    if (!recovered) rethrow;
+    if (!recovered) {
+      logger.e(
+        'Active model recovery failed: no installed catalog entry matched.',
+        error: e,
+      );
+      return null;
+    }
 
-    return await gemma.FlutterGemma.getActiveModel(
-      maxTokens: settings.maxTokens,
-      preferredBackend: settings.backend,
-      supportImage: supportImage,
-      supportAudio: supportAudio,
-    );
+    try {
+      return await _getActiveModelWithBackendFallbacks(
+        maxTokens: settings.maxTokens,
+        preferredBackend: settings.backend,
+        supportImage: supportImage,
+        supportAudio: supportAudio,
+      );
+    } catch (retryError) {
+      logger.e(
+        'Model load still failing after active model recovery.',
+        error: retryError,
+      );
+      return null;
+    }
   }
+}
+
+Future<gemma.InferenceModel> _getActiveModelWithBackendFallbacks({
+  required int maxTokens,
+  required gemma.PreferredBackend? preferredBackend,
+  required bool supportImage,
+  required bool supportAudio,
+}) async {
+  final backends = <gemma.PreferredBackend?>[];
+
+  void addBackend(gemma.PreferredBackend? backend) {
+    if (backends.contains(backend)) return;
+    backends.add(backend);
+  }
+
+  addBackend(preferredBackend);
+  addBackend(null); // Let flutter_gemma auto-detect optimal backend
+  addBackend(gemma.PreferredBackend.cpu);
+  addBackend(gemma.PreferredBackend.gpu);
+  addBackend(gemma.PreferredBackend.npu);
+
+  Object? lastError;
+  for (final backend in backends) {
+    try {
+      final model = await gemma.FlutterGemma.getActiveModel(
+        maxTokens: maxTokens,
+        preferredBackend: backend,
+        supportImage: supportImage,
+        supportAudio: supportAudio,
+      );
+      if (backend != preferredBackend) {
+        logger.w(
+          'Model loaded with fallback backend: ${_backendName(backend)} '
+          '(preferred: ${_backendName(preferredBackend)}).',
+        );
+      }
+      return model;
+    } catch (e) {
+      lastError = e;
+      logger.w(
+        'Backend attempt failed: ${_backendName(backend)}. Trying next fallback.',
+      );
+    }
+  }
+
+  throw Exception(
+    'Failed to create engine on all backend attempts. Last error: $lastError',
+  );
+}
+
+String _backendName(gemma.PreferredBackend? backend) {
+  if (backend == null) return 'auto';
+  return backend.name;
 }
 
 Future<bool> _recoverActiveModelFromCatalog({

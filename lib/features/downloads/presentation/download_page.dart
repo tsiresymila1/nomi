@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/downloads/presentation/widgets/active_model_install_overlay.dart';
-import 'package:gena/features/downloads/presentation/widgets/add_model_sheet.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_models_list.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class DownloadPage extends ConsumerWidget {
@@ -24,7 +24,7 @@ class DownloadPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         mini: true,
-        onPressed: () => showAddModelSheet(context, ref),
+        onPressed: () => context.pushNamed('add-model'),
         child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.d
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
 
 final chatPageActionsProvider = Provider<ChatPageActions>(
   (ref) => ChatPageActions(ref),
@@ -21,9 +22,25 @@ class ChatPageActions {
     await ref.read(selectedChatIdProvider.notifier).createNewThread();
   }
 
+  Future<void> createNewThreadInWorkspace(String workspaceId) async {
+    await ref.read(chatThreadActionsProvider).stopGeneration();
+    ref.read(selectedWorkspaceIdProvider.notifier).selectWorkspace(workspaceId);
+    await ref
+        .read(selectedChatIdProvider.notifier)
+        .createNewThread(workspaceId: workspaceId);
+  }
+
   Future<void> selectChat(String chatId) async {
     await ref.read(chatThreadActionsProvider).stopGeneration();
     ref.read(selectedChatIdProvider.notifier).selectChat(chatId);
+  }
+
+  Future<void> selectWorkspace(String workspaceId) async {
+    await ref.read(chatThreadActionsProvider).stopGeneration();
+    ref.read(selectedWorkspaceIdProvider.notifier).selectWorkspace(workspaceId);
+    await ref
+        .read(selectedChatIdProvider.notifier)
+        .ensureSelectionForWorkspace(workspaceId);
   }
 
   Future<void> installModel(ModelInfo model) async {

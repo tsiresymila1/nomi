@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of '../../data/models/chat_entity.dart';
+part of 'chat_entity.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -8,6 +8,7 @@ part of '../../data/models/chat_entity.dart';
 
 _ChatEntity _$ChatEntityFromJson(Map<String, dynamic> json) => _ChatEntity(
   id: json['id'] as String,
+  workspaceId: json['workspaceId'] as String,
   title: json['title'] as String,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -16,6 +17,7 @@ _ChatEntity _$ChatEntityFromJson(Map<String, dynamic> json) => _ChatEntity(
 Map<String, dynamic> _$ChatEntityToJson(_ChatEntity instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'workspaceId': instance.workspaceId,
       'title': instance.title,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),

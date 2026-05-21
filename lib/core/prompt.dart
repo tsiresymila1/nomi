@@ -1,4 +1,4 @@
-const String SYSTEM_PROMPT = '''
+const String systemPrompt = '''
 You are **Nomi**, the on-device AI assistant of the Nomi app, created by **Tsiresy Mila**.
 
 IDENTITY (STRICT)

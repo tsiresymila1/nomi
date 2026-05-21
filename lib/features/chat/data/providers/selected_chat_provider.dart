@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/features/workspace/data/providers/selected_workspace_provider.dart';
 
 final selectedChatIdProvider =
     NotifierProvider<SelectedChatIdNotifier, String?>(
@@ -9,37 +10,83 @@ final selectedChatIdProvider =
     );
 
 class SelectedChatIdNotifier extends Notifier<String?> {
-  bool _initialized = false;
+  bool _syncInProgress = false;
 
   @override
   String? build() {
-    _hydrateInitialSelection();
+    final workspaceId = ref.watch(selectedWorkspaceIdProvider);
+    _syncSelectionForWorkspace(workspaceId);
     return null;
   }
 
-  Future<void> _hydrateInitialSelection() async {
-    if (_initialized) return;
-    _initialized = true;
-
-    final database = ref.read(genaDatabaseProvider);
-    final firstChat =
-        await (database.select(database.chats)
-              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-              ..limit(1))
-            .getSingleOrNull();
-    if (firstChat != null) {
-      state = firstChat.id.toString();
-      return;
-    }
-
-    await createNewThread();
+  Future<void> ensureSelectionForWorkspace(String workspaceId) {
+    return _syncSelectionForWorkspace(workspaceId);
   }
 
-  Future<String> createNewThread() async {
+  Future<void> _syncSelectionForWorkspace(String? workspaceId) async {
+    if (_syncInProgress || workspaceId == null) return;
+
+    final parsedWorkspaceId = int.tryParse(workspaceId);
+    if (parsedWorkspaceId == null) return;
+
+    _syncInProgress = true;
+    try {
+      final database = ref.read(genaDatabaseProvider);
+      final currentChatId = state;
+      if (currentChatId != null) {
+        final parsedCurrentChatId = int.tryParse(currentChatId);
+        if (parsedCurrentChatId != null) {
+          final currentChat =
+              await (database.select(database.chats)
+                    ..where(
+                      (t) =>
+                          t.id.equals(parsedCurrentChatId) &
+                          t.workspace.equals(parsedWorkspaceId),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
+          if (currentChat != null) {
+            return;
+          }
+        }
+      }
+
+      final firstChatInWorkspace =
+          await (database.select(database.chats)
+                ..where((t) => t.workspace.equals(parsedWorkspaceId))
+                ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+                ..limit(1))
+              .getSingleOrNull();
+
+      if (firstChatInWorkspace != null) {
+        state = firstChatInWorkspace.id.toString();
+        return;
+      }
+
+      await createNewThread(workspaceId: workspaceId);
+    } finally {
+      _syncInProgress = false;
+    }
+  }
+
+  Future<String> createNewThread({String? workspaceId}) async {
+    final resolvedWorkspaceId =
+        workspaceId ??
+        await ref.read(selectedWorkspaceIdProvider.notifier).ensureWorkspace();
+    final parsedWorkspaceId = int.tryParse(resolvedWorkspaceId);
+    if (parsedWorkspaceId == null) {
+      throw StateError('Invalid workspace id: $resolvedWorkspaceId');
+    }
+
     final database = ref.read(genaDatabaseProvider);
     final createdId = await database
         .into(database.chats)
-        .insert(db.ChatsCompanion.insert(title: 'New chat'));
+        .insert(
+          db.ChatsCompanion.insert(
+            title: 'New chat',
+            workspace: parsedWorkspaceId,
+          ),
+        );
 
     final selectedId = createdId.toString();
     state = selectedId;
@@ -49,5 +96,9 @@ class SelectedChatIdNotifier extends Notifier<String?> {
   void selectChat(String? chatId) {
     if (chatId == state) return;
     state = chatId;
+  }
+
+  void clearSelection() {
+    state = null;
   }
 }

@@ -1,9 +1,7 @@
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
-import 'package:gena/core/prompt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatModelSettings {
-  final String systemPrompt;
   final double temperature;
   final int topK;
   final double topP;
@@ -14,7 +12,6 @@ class ChatModelSettings {
   final bool? isThinkingOverride;
 
   const ChatModelSettings({
-    required this.systemPrompt,
     required this.temperature,
     required this.topK,
     required this.topP,
@@ -27,7 +24,6 @@ class ChatModelSettings {
 
   factory ChatModelSettings.defaults() {
     return const ChatModelSettings(
-      systemPrompt: SYSTEM_PROMPT,
       temperature: 0.8,
       topK: 40,
       topP: 0.95,
@@ -40,7 +36,6 @@ class ChatModelSettings {
   }
 
   ChatModelSettings copyWith({
-    String? systemPrompt,
     double? temperature,
     int? topK,
     double? topP,
@@ -52,7 +47,6 @@ class ChatModelSettings {
     bool updateIsThinkingOverride = false,
   }) {
     return ChatModelSettings(
-      systemPrompt: systemPrompt ?? this.systemPrompt,
       temperature: temperature ?? this.temperature,
       topK: topK ?? this.topK,
       topP: topP ?? this.topP,
@@ -78,8 +72,6 @@ class ChatModelSettings {
   factory ChatModelSettings.fromPrefs(SharedPreferences prefs) {
     final defaults = ChatModelSettings.defaults();
     return ChatModelSettings(
-      systemPrompt:
-          prefs.getString(_Keys.systemPrompt) ?? defaults.systemPrompt,
       temperature: prefs.getDouble(_Keys.temperature) ?? defaults.temperature,
       topK: prefs.getInt(_Keys.topK) ?? defaults.topK,
       topP: prefs.getDouble(_Keys.topP) ?? defaults.topP,
@@ -93,7 +85,6 @@ class ChatModelSettings {
   }
 
   Future<void> saveToPrefs(SharedPreferences prefs) async {
-    await prefs.setString(_Keys.systemPrompt, systemPrompt);
     await prefs.setDouble(_Keys.temperature, temperature);
     await prefs.setInt(_Keys.topK, topK);
     await prefs.setDouble(_Keys.topP, topP);
@@ -122,7 +113,6 @@ class ChatModelSettings {
 }
 
 class _Keys {
-  static const systemPrompt = 'chat_settings_system_prompt';
   static const temperature = 'chat_settings_temperature';
   static const topK = 'chat_settings_top_k';
   static const topP = 'chat_settings_top_p';

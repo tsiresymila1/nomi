@@ -111,7 +111,7 @@ Future<Map<String, dynamic>> executeChatTool(
         call.args['max_content_pages'],
         fallback: 2,
       );
-      return WebSearchService.search(
+      return await WebSearchService.search(
         query: query,
         maxResults: maxResults,
         maxContentPages: maxContentPages,

@@ -30,6 +30,7 @@ class ChatPage extends ConsumerWidget {
 
     final selectedChat = ref.watch(selectedChatIdProvider);
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
+    final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
     final activeInstall = ref.watch(activeModelInstallProvider);
     final downloadState = ref.watch(downloadProvider);
@@ -39,7 +40,10 @@ class ChatPage extends ConsumerWidget {
     final isDark = themeMode == ThemeMode.dark;
     final gradColor = isDark ? Colors.black : Colors.white70;
 
-    final body = isSwitchingModel
+    final isModelLoading =
+        isSwitchingModel || activeInstall != null || activeRuntime.isLoading;
+
+    final body = isModelLoading
         ? reveal(
             Center(
               child: Column(

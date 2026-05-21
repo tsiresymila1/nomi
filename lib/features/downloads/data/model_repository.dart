@@ -23,6 +23,13 @@ final modelRepositoryProvider = StreamProvider<List<ModelInfo>>((ref) {
             supportAudio: row.supportAudio,
             supportsFunctionCalls: row.supportsFunctionCalls,
             isThinking: row.isThinking,
+            temperature: row.temperature,
+            topK: row.topK,
+            topP: row.topP,
+            maxTokens: row.maxTokens,
+            tokenBuffer: row.tokenBuffer,
+            randomSeed: row.randomSeed,
+            preferredBackend: row.preferredBackend,
             sourceType: row.sourceType,
             source: row.source,
           ),
@@ -51,6 +58,13 @@ class ModelRepositoryActions {
     required bool supportAudio,
     required bool supportsFunctionCalls,
     required bool isThinking,
+    required double temperature,
+    required int topK,
+    required double topP,
+    required int maxTokens,
+    required int tokenBuffer,
+    required int randomSeed,
+    required String preferredBackend,
     required String sourceType,
     required String source,
   }) async {
@@ -67,10 +81,87 @@ class ModelRepositoryActions {
             supportAudio: Value(supportAudio),
             supportsFunctionCalls: Value(supportsFunctionCalls),
             isThinking: Value(isThinking),
+            temperature: Value(temperature),
+            topK: Value(topK),
+            topP: Value(topP),
+            maxTokens: Value(maxTokens),
+            tokenBuffer: Value(tokenBuffer),
+            randomSeed: Value(randomSeed),
+            preferredBackend: Value(preferredBackend),
             sourceType: sourceType,
             source: source,
           ),
         );
+  }
+
+  Future<void> updateModelSettings({
+    required int id,
+    required double temperature,
+    required int topK,
+    required double topP,
+    required int maxTokens,
+    required int tokenBuffer,
+    required int randomSeed,
+    required String preferredBackend,
+  }) async {
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(
+      database.models,
+    )..where((t) => t.id.equals(id))).write(
+      db.ModelsCompanion(
+        temperature: Value(temperature),
+        topK: Value(topK),
+        topP: Value(topP),
+        maxTokens: Value(maxTokens),
+        tokenBuffer: Value(tokenBuffer),
+        randomSeed: Value(randomSeed),
+        preferredBackend: Value(preferredBackend),
+      ),
+    );
+  }
+
+  Future<void> updateModel({
+    required int id,
+    required String name,
+    required String description,
+    required String modelType,
+    required bool supportImage,
+    required bool supportAudio,
+    required bool supportsFunctionCalls,
+    required bool isThinking,
+    required double temperature,
+    required int topK,
+    required double topP,
+    required int maxTokens,
+    required int tokenBuffer,
+    required int randomSeed,
+    required String preferredBackend,
+    required String sourceType,
+    required String source,
+  }) async {
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(
+      database.models,
+    )..where((t) => t.id.equals(id))).write(
+      db.ModelsCompanion(
+        name: Value(name),
+        description: Value(description),
+        modelType: Value(modelType),
+        supportImage: Value(supportImage),
+        supportAudio: Value(supportAudio),
+        supportsFunctionCalls: Value(supportsFunctionCalls),
+        isThinking: Value(isThinking),
+        temperature: Value(temperature),
+        topK: Value(topK),
+        topP: Value(topP),
+        maxTokens: Value(maxTokens),
+        tokenBuffer: Value(tokenBuffer),
+        randomSeed: Value(randomSeed),
+        preferredBackend: Value(preferredBackend),
+        sourceType: Value(sourceType),
+        source: Value(source),
+      ),
+    );
   }
 
   Future<void> deleteModel(int id) async {

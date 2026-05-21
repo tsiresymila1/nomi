@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item.dart';
+import 'package:go_router/go_router.dart';
 
 class DownloadModelsList extends ConsumerWidget {
   const DownloadModelsList({super.key});
@@ -54,6 +55,9 @@ class DownloadModelsList extends ConsumerWidget {
                             ref
                                 .read(downloadProvider.notifier)
                                 .installModel(model);
+                          },
+                          onEdit: () {
+                            context.pushNamed('add-model', extra: model);
                           },
                           onRemove: () {
                             ref

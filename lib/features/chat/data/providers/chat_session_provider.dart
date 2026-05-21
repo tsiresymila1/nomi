@@ -10,8 +10,7 @@ import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
-import 'package:gena/features/setting/data/chat_model_settings.dart';
-import 'package:gena/features/setting/data/providers/chat_model_settings_provider.dart';
+import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
 
 class ActiveGemmaModelRuntime {
   final gemma.InferenceModel model;
@@ -20,6 +19,13 @@ class ActiveGemmaModelRuntime {
   final bool supportsFunctionCalls;
   final bool defaultIsThinking;
   final gemma.ModelType modelType;
+  final double temperature;
+  final int topK;
+  final double topP;
+  final int maxTokens;
+  final int tokenBuffer;
+  final int randomSeed;
+  final gemma.PreferredBackend? preferredBackend;
 
   const ActiveGemmaModelRuntime({
     required this.model,
@@ -28,6 +34,13 @@ class ActiveGemmaModelRuntime {
     required this.supportsFunctionCalls,
     required this.defaultIsThinking,
     required this.modelType,
+    required this.temperature,
+    required this.topK,
+    required this.topP,
+    required this.maxTokens,
+    required this.tokenBuffer,
+    required this.randomSeed,
+    required this.preferredBackend,
   });
 }
 
@@ -39,8 +52,6 @@ final activeGemmaModelRuntimeProvider =
       }
 
       final database = ref.watch(genaDatabaseProvider);
-      final chatSettings = ref.read(chatModelSettingsProvider);
-
       final catalogModels = await (database.select(
         database.models,
       )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
@@ -59,11 +70,21 @@ final activeGemmaModelRuntimeProvider =
           activeCatalogModel?.supportsFunctionCalls ?? false;
       final defaultIsThinking = activeCatalogModel?.isThinking ?? false;
       final modelTypeString = activeCatalogModel?.modelType ?? 'gemmaIt';
+      final temperature = activeCatalogModel?.temperature ?? 0.8;
+      final topK = activeCatalogModel?.topK ?? 40;
+      final topP = activeCatalogModel?.topP ?? 0.95;
+      final maxTokens = activeCatalogModel?.maxTokens ?? 2048;
+      final tokenBuffer = activeCatalogModel?.tokenBuffer ?? 256;
+      final randomSeed = activeCatalogModel?.randomSeed ?? 1;
+      final preferredBackend = _parsePreferredBackend(
+        activeCatalogModel?.preferredBackend,
+      );
 
       final model = await _loadActiveModelWithRecovery(
         installedModels: installedModels,
         catalogModels: catalogModels,
-        settings: chatSettings,
+        maxTokens: maxTokens,
+        preferredBackend: preferredBackend,
         supportImage: supportImage,
         supportAudio: supportAudio,
       );
@@ -86,6 +107,13 @@ final activeGemmaModelRuntimeProvider =
         supportsFunctionCalls: supportsFunctionCalls,
         defaultIsThinking: defaultIsThinking,
         modelType: _parseModelType(modelTypeString),
+        temperature: temperature,
+        topK: topK,
+        topP: topP,
+        maxTokens: maxTokens,
+        tokenBuffer: tokenBuffer,
+        randomSeed: randomSeed,
+        preferredBackend: preferredBackend,
       );
     });
 
@@ -99,7 +127,7 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
   }
 
   final selectedChatId = ref.watch(selectedChatIdProvider);
-  final chatSettings = ref.watch(chatModelSettingsProvider);
+  final activeWorkspace = ref.watch(activeWorkspaceProvider);
   if (selectedChatId == null) {
     yield null;
     return;
@@ -113,19 +141,18 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
   }
 
   try {
-    final systemPrompt = chatSettings.systemPrompt.trim();
+    final systemPrompt = activeWorkspace?.generalInstruction.trim() ?? '';
     final systemInstruction = _buildSystemInstruction(systemPrompt);
-    final effectiveThinking =
-        chatSettings.isThinkingOverride ?? modelRuntime.defaultIsThinking;
+    final effectiveThinking = modelRuntime.defaultIsThinking;
     final tools = buildChatTools(
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
     );
     final chat = await modelRuntime.model.createChat(
-      temperature: chatSettings.temperature,
-      randomSeed: chatSettings.randomSeed,
-      topK: chatSettings.topK,
-      topP: chatSettings.topP,
-      tokenBuffer: chatSettings.tokenBuffer,
+      temperature: modelRuntime.temperature,
+      randomSeed: modelRuntime.randomSeed,
+      topK: modelRuntime.topK,
+      topP: modelRuntime.topP,
+      tokenBuffer: modelRuntime.tokenBuffer,
       supportImage: modelRuntime.supportImage,
       supportAudio: modelRuntime.supportAudio,
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
@@ -192,14 +219,15 @@ gemma.ModelFileType _inferFileTypeFromSource(String source) {
 Future<gemma.InferenceModel?> _loadActiveModelWithRecovery({
   required List<String> installedModels,
   required List<db.Model> catalogModels,
-  required ChatModelSettings settings,
+  required int maxTokens,
+  required gemma.PreferredBackend? preferredBackend,
   required bool supportImage,
   required bool supportAudio,
 }) async {
   try {
     return await _getActiveModelWithBackendFallbacks(
-      maxTokens: settings.maxTokens,
-      preferredBackend: settings.backend,
+      maxTokens: maxTokens,
+      preferredBackend: preferredBackend,
       supportImage: supportImage,
       supportAudio: supportAudio,
     );
@@ -232,8 +260,8 @@ Future<gemma.InferenceModel?> _loadActiveModelWithRecovery({
 
     try {
       return await _getActiveModelWithBackendFallbacks(
-        maxTokens: settings.maxTokens,
-        preferredBackend: settings.backend,
+        maxTokens: maxTokens,
+        preferredBackend: preferredBackend,
         supportImage: supportImage,
         supportAudio: supportAudio,
       );
@@ -245,6 +273,15 @@ Future<gemma.InferenceModel?> _loadActiveModelWithRecovery({
       return null;
     }
   }
+}
+
+gemma.PreferredBackend? _parsePreferredBackend(String? value) {
+  return switch (value) {
+    'cpu' => gemma.PreferredBackend.cpu,
+    'gpu' => gemma.PreferredBackend.gpu,
+    'npu' => gemma.PreferredBackend.npu,
+    _ => null,
+  };
 }
 
 Future<gemma.InferenceModel> _getActiveModelWithBackendFallbacks({

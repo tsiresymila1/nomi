@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
-import 'package:gena/features/chat/presentation/widgets/chat_history_list.dart';
+import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
+import 'package:gena/features/workspace/presentation/widgets/workspace_chat_section.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -10,6 +14,8 @@ class ChatDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final groupsAsync = ref.watch(workspaceChatGroupsProvider);
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -21,8 +27,8 @@ class ChatDrawer extends ConsumerWidget {
                   Expanded(
                     child: Row(
                       children: [
-                        Image.asset("assets/images/logo.png", width: 50),
-                        Text(
+                        Image.asset('assets/images/logo.png', width: 50),
+                        const Text(
                           'Nomi',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -34,19 +40,42 @@ class ChatDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
+                    tooltip: 'New workspace',
+                    onPressed: () => _showCreateWorkspaceDialog(context, ref),
+                    icon: const Icon(Icons.create_new_folder_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'New thread',
                     onPressed: () async {
                       await ref.read(chatPageActionsProvider).createNewThread();
                       if (context.mounted) {
                         context.pop();
                       }
                     },
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedPencilEdit02),
+                    icon: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedPencilEdit02,
+                    ),
                   ),
                 ],
               ),
             ),
             const Divider(),
-            const Expanded(child: ChatHistoryList()),
+            Expanded(
+              child: groupsAsync.when(
+                data: (groups) {
+                  if (groups.isEmpty) {
+                    return const Center(child: Text('No workspace'));
+                  }
+                  return ListView.builder(
+                    itemCount: groups.length,
+                    itemBuilder: (context, index) =>
+                        WorkspaceChatSection(group: groups[index]),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('Error: $error')),
+              ),
+            ),
             const Divider(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -62,17 +91,25 @@ class ChatDrawer extends ConsumerWidget {
                           icon: HugeIcons.strokeRoundedCpu,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
+                          await ref
+                              .read(chatThreadActionsProvider)
+                              .stopGeneration();
+                          if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('download');
                         },
-                        label: Text("Models"),
+                        label: const Text('Models'),
                       ),
                       IconButton(
                         icon: const HugeIcon(
                           icon: HugeIcons.strokeRoundedSettings02,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
+                          await ref
+                              .read(chatThreadActionsProvider)
+                              .stopGeneration();
+                          if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('setting');
                         },
@@ -81,22 +118,15 @@ class ChatDrawer extends ConsumerWidget {
                   ),
                   Opacity(
                     opacity: 0.5,
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Text('Power by ', style: TextStyle(fontSize: 12)),
                         Text(
-                          "Power by ",
-                          style: TextStyle(
-                            fontSize: 12,
-                            // color: Colors.green.shade500,
-                          ),
-                        ),
-                        Text(
-                          "Tsiresy Milà",
+                          'Tsiresy Milà',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            // color: Colors.green.shade500,
                           ),
                         ),
                       ],
@@ -109,5 +139,41 @@ class ChatDrawer extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showCreateWorkspaceDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final controller = TextEditingController();
+    final shouldCreate = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New workspace'),
+        content: TextField(
+          controller: controller,
+          maxLength: 64,
+          decoration: const InputDecoration(hintText: 'Workspace name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCreate != true) return;
+
+    try {
+      await ref.read(workspaceActionsProvider).createWorkspace(controller.text);
+    } on WorkspaceGuardException catch (e) {
+      await AppToast.show(e.message, type: AppToastType.error);
+    }
   }
 }

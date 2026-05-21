@@ -123,8 +123,8 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: Colors.green.shade700,
         brightness: Brightness.dark,
-        surface: Colors.black54,
-        surfaceTint: Colors.black54,
+        surface: Colors.black,
+        surfaceTint: Colors.black,
       ),
       outlinedButtonTheme: _outlinedButtonTheme(),
     );

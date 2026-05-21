@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/chat/presentation/chat_page.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/presentation/add_model_page.dart';
 import 'package:gena/features/downloads/presentation/download_page.dart';
-import 'package:gena/features/setting/presentation/model_setting_page.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/setting/presentation/setting_page.dart';
+import '../features/workspace/presentation/workspace_config_page.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -28,16 +30,33 @@ final router = GoRouter(
           _buildTransitionPage(state: state, child: const DownloadPage()),
     ),
     GoRoute(
+      path: '/download/add-model',
+      name: 'add-model',
+      pageBuilder: (context, state) {
+        final extra = state.extra;
+        final initialModel = extra is ModelInfo ? extra : null;
+        return _buildTransitionPage(
+          state: state,
+          child: AddModelPage(initialModel: initialModel),
+        );
+      },
+    ),
+    GoRoute(
       path: '/settings',
       name: "setting",
       pageBuilder: (context, state) =>
           _buildTransitionPage(state: state, child: const SettingsPage()),
     ),
     GoRoute(
-      path: '/settings/model',
-      name: "model-setting",
-      pageBuilder: (context, state) =>
-          _buildTransitionPage(state: state, child: const ModelSettingsPage()),
+      path: '/settings/workspace/:workspaceId/config',
+      name: "workspace-config",
+      pageBuilder: (context, state) {
+        final workspaceId = state.pathParameters['workspaceId'];
+        return _buildTransitionPage(
+          state: state,
+          child: WorkspaceConfigPage(workspaceId: workspaceId!),
+        );
+      },
     ),
   ],
 );

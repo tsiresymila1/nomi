@@ -3,10 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
 import 'package:gena/features/chat/data/models/message_entity.dart';
+import 'package:gena/features/workspace/data/providers/selected_workspace_provider.dart';
 
 final chatListProvider = StreamProvider<List<ChatEntity>>((ref) {
   final database = ref.watch(genaDatabaseProvider);
+  final selectedWorkspaceId = ref.watch(selectedWorkspaceIdProvider);
+  final parsedWorkspaceId = int.tryParse(selectedWorkspaceId ?? '');
+  if (parsedWorkspaceId == null) {
+    return Stream.value(const <ChatEntity>[]);
+  }
+
   final query = database.select(database.chats)
+    ..where((t) => t.workspace.equals(parsedWorkspaceId))
     ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]);
 
   return query.watch().map(
@@ -14,6 +22,7 @@ final chatListProvider = StreamProvider<List<ChatEntity>>((ref) {
         .map(
           (row) => ChatEntity(
             id: row.id.toString(),
+            workspaceId: row.workspace.toString(),
             title: row.title,
             createdAt: row.createdAt,
             updatedAt: row.createdAt,

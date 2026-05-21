@@ -8,6 +8,7 @@ class DownloadItem extends StatelessWidget {
   final bool isInstalled;
   final VoidCallback onDownload;
   final VoidCallback onRemove;
+  final VoidCallback onEdit;
 
   const DownloadItem({
     super.key,
@@ -16,6 +17,7 @@ class DownloadItem extends StatelessWidget {
     required this.isInstalled,
     required this.onDownload,
     required this.onRemove,
+    required this.onEdit,
   });
 
   @override
@@ -109,6 +111,11 @@ class DownloadItem extends StatelessWidget {
                 tooltip: 'Install model',
                 onPressed: onDownload,
               ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit model',
+              onPressed: onEdit,
+            ),
             IconButton(
               icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02),
               tooltip: 'Remove model',

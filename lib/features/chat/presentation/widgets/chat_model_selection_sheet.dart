@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatModelSelectionSheet extends ConsumerWidget {
   const ChatModelSelectionSheet({super.key});
@@ -32,9 +33,23 @@ class ChatModelSelectionSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
         children: [
-          Text(
-            "Models",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          Row(
+            children: [
+              Text(
+                "Models",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  final router = GoRouter.of(context);
+                  Navigator.of(context).pop();
+                  router.pushNamed('download');
+                },
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Manage'),
+              ),
+            ],
           ),
           modelsAsync.when(
             data: (models) {

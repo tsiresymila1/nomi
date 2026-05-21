@@ -7,6 +7,5 @@ export 'chat_input_controller.dart';
 export 'chat_session_provider.dart';
 export 'chat_thread_actions_provider.dart';
 export 'chat_ui_state_provider.dart';
-export 'model_settings_actions_provider.dart';
 export '../models/gemma_chat_session.dart';
 export 'selected_chat_provider.dart';

@@ -5,7 +5,6 @@ import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -20,6 +19,11 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final hasActiveInstall = ref.watch(activeModelInstallProvider) != null;
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
+    final isModelLoading =
+        isSwitchingModel ||
+        hasActiveInstall ||
+        activeRuntime.isLoading ||
+        activeGemmaChat.isLoading;
     final modelLabel = _resolveModelLabel(
       modelsAsync,
       activeGemmaChat,
@@ -28,7 +32,8 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       hasActiveInstall: hasActiveInstall,
     );
     final modelColor = activeGemmaChat.maybeWhen(
-      data: (session) => session == null ? Colors.red : null,
+      data: (session) =>
+          isModelLoading ? null : (session == null ? Colors.red : null),
       orElse: () => null,
     );
 
@@ -91,13 +96,6 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
             size: 28,
           ),
           onPressed: () => ref.read(chatPageActionsProvider).createNewThread(),
-        ),
-        IconButton(
-          icon: const HugeIcon(
-            icon: HugeIcons.strokeRoundedSlidersHorizontal,
-            size: 28,
-          ),
-          onPressed: () => context.pushNamed('model-setting'),
         ),
       ],
     );

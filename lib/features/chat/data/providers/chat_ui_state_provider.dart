@@ -82,3 +82,21 @@ class ChatGeneratingNotifier extends Notifier<bool> {
     state = value;
   }
 }
+
+final chatToolWaitingProvider =
+    NotifierProvider<ChatToolWaitingNotifier, String?>(
+      ChatToolWaitingNotifier.new,
+    );
+
+class ChatToolWaitingNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setWaitingTool(String toolName) {
+    state = toolName;
+  }
+
+  void clear() {
+    state = null;
+  }
+}

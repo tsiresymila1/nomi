@@ -3,6 +3,316 @@
 part of 'gena_database.dart';
 
 // ignore_for_file: type=lint
+class $WorkspacesTable extends Workspaces
+    with TableInfo<$WorkspacesTable, Workspace> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorkspacesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 64,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generalInstructionMeta =
+      const VerificationMeta('generalInstruction');
+  @override
+  late final GeneratedColumn<String> generalInstruction =
+      GeneratedColumn<String>(
+        'general_instruction',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: Constant(systemPrompt),
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    name,
+    generalInstruction,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'workspaces';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Workspace> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('general_instruction')) {
+      context.handle(
+        _generalInstructionMeta,
+        generalInstruction.isAcceptableOrUnknown(
+          data['general_instruction']!,
+          _generalInstructionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Workspace map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Workspace(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      generalInstruction: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}general_instruction'],
+      )!,
+    );
+  }
+
+  @override
+  $WorkspacesTable createAlias(String alias) {
+    return $WorkspacesTable(attachedDatabase, alias);
+  }
+}
+
+class Workspace extends DataClass implements Insertable<Workspace> {
+  final int id;
+  final DateTime createdAt;
+  final String name;
+  final String generalInstruction;
+  const Workspace({
+    required this.id,
+    required this.createdAt,
+    required this.name,
+    required this.generalInstruction,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['name'] = Variable<String>(name);
+    map['general_instruction'] = Variable<String>(generalInstruction);
+    return map;
+  }
+
+  WorkspacesCompanion toCompanion(bool nullToAbsent) {
+    return WorkspacesCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      name: Value(name),
+      generalInstruction: Value(generalInstruction),
+    );
+  }
+
+  factory Workspace.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Workspace(
+      id: serializer.fromJson<int>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      name: serializer.fromJson<String>(json['name']),
+      generalInstruction: serializer.fromJson<String>(
+        json['generalInstruction'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'name': serializer.toJson<String>(name),
+      'generalInstruction': serializer.toJson<String>(generalInstruction),
+    };
+  }
+
+  Workspace copyWith({
+    int? id,
+    DateTime? createdAt,
+    String? name,
+    String? generalInstruction,
+  }) => Workspace(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    name: name ?? this.name,
+    generalInstruction: generalInstruction ?? this.generalInstruction,
+  );
+  Workspace copyWithCompanion(WorkspacesCompanion data) {
+    return Workspace(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      name: data.name.present ? data.name.value : this.name,
+      generalInstruction: data.generalInstruction.present
+          ? data.generalInstruction.value
+          : this.generalInstruction,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Workspace(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('name: $name, ')
+          ..write('generalInstruction: $generalInstruction')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, createdAt, name, generalInstruction);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Workspace &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.name == this.name &&
+          other.generalInstruction == this.generalInstruction);
+}
+
+class WorkspacesCompanion extends UpdateCompanion<Workspace> {
+  final Value<int> id;
+  final Value<DateTime> createdAt;
+  final Value<String> name;
+  final Value<String> generalInstruction;
+  const WorkspacesCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.generalInstruction = const Value.absent(),
+  });
+  WorkspacesCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    required String name,
+    this.generalInstruction = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<Workspace> custom({
+    Expression<int>? id,
+    Expression<DateTime>? createdAt,
+    Expression<String>? name,
+    Expression<String>? generalInstruction,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (name != null) 'name': name,
+      if (generalInstruction != null) 'general_instruction': generalInstruction,
+    });
+  }
+
+  WorkspacesCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? createdAt,
+    Value<String>? name,
+    Value<String>? generalInstruction,
+  }) {
+    return WorkspacesCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      name: name ?? this.name,
+      generalInstruction: generalInstruction ?? this.generalInstruction,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (generalInstruction.present) {
+      map['general_instruction'] = Variable<String>(generalInstruction.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkspacesCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('name: $name, ')
+          ..write('generalInstruction: $generalInstruction')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -33,6 +343,20 @@ class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _workspaceMeta = const VerificationMeta(
+    'workspace',
+  );
+  @override
+  late final GeneratedColumn<int> workspace = GeneratedColumn<int>(
+    'workspace',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspaces (id)',
+    ),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -47,7 +371,7 @@ class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, createdAt, title];
+  List<GeneratedColumn> get $columns => [id, createdAt, workspace, title];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -68,6 +392,14 @@ class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
         _createdAtMeta,
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
+    }
+    if (data.containsKey('workspace')) {
+      context.handle(
+        _workspaceMeta,
+        workspace.isAcceptableOrUnknown(data['workspace']!, _workspaceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_workspaceMeta);
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -94,6 +426,10 @@ class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      workspace: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}workspace'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -110,13 +446,20 @@ class $ChatsTable extends Chats with TableInfo<$ChatsTable, Chat> {
 class Chat extends DataClass implements Insertable<Chat> {
   final int id;
   final DateTime createdAt;
+  final int workspace;
   final String title;
-  const Chat({required this.id, required this.createdAt, required this.title});
+  const Chat({
+    required this.id,
+    required this.createdAt,
+    required this.workspace,
+    required this.title,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['workspace'] = Variable<int>(workspace);
     map['title'] = Variable<String>(title);
     return map;
   }
@@ -125,6 +468,7 @@ class Chat extends DataClass implements Insertable<Chat> {
     return ChatsCompanion(
       id: Value(id),
       createdAt: Value(createdAt),
+      workspace: Value(workspace),
       title: Value(title),
     );
   }
@@ -137,6 +481,7 @@ class Chat extends DataClass implements Insertable<Chat> {
     return Chat(
       id: serializer.fromJson<int>(json['id']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      workspace: serializer.fromJson<int>(json['workspace']),
       title: serializer.fromJson<String>(json['title']),
     );
   }
@@ -146,19 +491,27 @@ class Chat extends DataClass implements Insertable<Chat> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'workspace': serializer.toJson<int>(workspace),
       'title': serializer.toJson<String>(title),
     };
   }
 
-  Chat copyWith({int? id, DateTime? createdAt, String? title}) => Chat(
+  Chat copyWith({
+    int? id,
+    DateTime? createdAt,
+    int? workspace,
+    String? title,
+  }) => Chat(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
+    workspace: workspace ?? this.workspace,
     title: title ?? this.title,
   );
   Chat copyWithCompanion(ChatsCompanion data) {
     return Chat(
       id: data.id.present ? data.id.value : this.id,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      workspace: data.workspace.present ? data.workspace.value : this.workspace,
       title: data.title.present ? data.title.value : this.title,
     );
   }
@@ -168,44 +521,52 @@ class Chat extends DataClass implements Insertable<Chat> {
     return (StringBuffer('Chat(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
           ..write('title: $title')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, createdAt, title);
+  int get hashCode => Object.hash(id, createdAt, workspace, title);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Chat &&
           other.id == this.id &&
           other.createdAt == this.createdAt &&
+          other.workspace == this.workspace &&
           other.title == this.title);
 }
 
 class ChatsCompanion extends UpdateCompanion<Chat> {
   final Value<int> id;
   final Value<DateTime> createdAt;
+  final Value<int> workspace;
   final Value<String> title;
   const ChatsCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.workspace = const Value.absent(),
     this.title = const Value.absent(),
   });
   ChatsCompanion.insert({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
+    required int workspace,
     required String title,
-  }) : title = Value(title);
+  }) : workspace = Value(workspace),
+       title = Value(title);
   static Insertable<Chat> custom({
     Expression<int>? id,
     Expression<DateTime>? createdAt,
+    Expression<int>? workspace,
     Expression<String>? title,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
+      if (workspace != null) 'workspace': workspace,
       if (title != null) 'title': title,
     });
   }
@@ -213,11 +574,13 @@ class ChatsCompanion extends UpdateCompanion<Chat> {
   ChatsCompanion copyWith({
     Value<int>? id,
     Value<DateTime>? createdAt,
+    Value<int>? workspace,
     Value<String>? title,
   }) {
     return ChatsCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
+      workspace: workspace ?? this.workspace,
       title: title ?? this.title,
     );
   }
@@ -231,6 +594,9 @@ class ChatsCompanion extends UpdateCompanion<Chat> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (workspace.present) {
+      map['workspace'] = Variable<int>(workspace.value);
+    }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
@@ -242,6 +608,7 @@ class ChatsCompanion extends UpdateCompanion<Chat> {
     return (StringBuffer('ChatsCompanion(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
           ..write('title: $title')
           ..write(')'))
         .toString();
@@ -824,6 +1191,86 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _temperatureMeta = const VerificationMeta(
+    'temperature',
+  );
+  @override
+  late final GeneratedColumn<double> temperature = GeneratedColumn<double>(
+    'temperature',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.8),
+  );
+  static const VerificationMeta _topKMeta = const VerificationMeta('topK');
+  @override
+  late final GeneratedColumn<int> topK = GeneratedColumn<int>(
+    'top_k',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(40),
+  );
+  static const VerificationMeta _topPMeta = const VerificationMeta('topP');
+  @override
+  late final GeneratedColumn<double> topP = GeneratedColumn<double>(
+    'top_p',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.95),
+  );
+  static const VerificationMeta _maxTokensMeta = const VerificationMeta(
+    'maxTokens',
+  );
+  @override
+  late final GeneratedColumn<int> maxTokens = GeneratedColumn<int>(
+    'max_tokens',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(2048),
+  );
+  static const VerificationMeta _tokenBufferMeta = const VerificationMeta(
+    'tokenBuffer',
+  );
+  @override
+  late final GeneratedColumn<int> tokenBuffer = GeneratedColumn<int>(
+    'token_buffer',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(256),
+  );
+  static const VerificationMeta _randomSeedMeta = const VerificationMeta(
+    'randomSeed',
+  );
+  @override
+  late final GeneratedColumn<int> randomSeed = GeneratedColumn<int>(
+    'random_seed',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _preferredBackendMeta = const VerificationMeta(
+    'preferredBackend',
+  );
+  @override
+  late final GeneratedColumn<String> preferredBackend = GeneratedColumn<String>(
+    'preferred_backend',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('gpu'),
+  );
   static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
     'sourceType',
   );
@@ -856,6 +1303,13 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     supportAudio,
     supportsFunctionCalls,
     isThinking,
+    temperature,
+    topK,
+    topP,
+    maxTokens,
+    tokenBuffer,
+    randomSeed,
+    preferredBackend,
     sourceType,
     source,
   ];
@@ -946,6 +1400,57 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
         isThinking.isAcceptableOrUnknown(data['is_thinking']!, _isThinkingMeta),
       );
     }
+    if (data.containsKey('temperature')) {
+      context.handle(
+        _temperatureMeta,
+        temperature.isAcceptableOrUnknown(
+          data['temperature']!,
+          _temperatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('top_k')) {
+      context.handle(
+        _topKMeta,
+        topK.isAcceptableOrUnknown(data['top_k']!, _topKMeta),
+      );
+    }
+    if (data.containsKey('top_p')) {
+      context.handle(
+        _topPMeta,
+        topP.isAcceptableOrUnknown(data['top_p']!, _topPMeta),
+      );
+    }
+    if (data.containsKey('max_tokens')) {
+      context.handle(
+        _maxTokensMeta,
+        maxTokens.isAcceptableOrUnknown(data['max_tokens']!, _maxTokensMeta),
+      );
+    }
+    if (data.containsKey('token_buffer')) {
+      context.handle(
+        _tokenBufferMeta,
+        tokenBuffer.isAcceptableOrUnknown(
+          data['token_buffer']!,
+          _tokenBufferMeta,
+        ),
+      );
+    }
+    if (data.containsKey('random_seed')) {
+      context.handle(
+        _randomSeedMeta,
+        randomSeed.isAcceptableOrUnknown(data['random_seed']!, _randomSeedMeta),
+      );
+    }
+    if (data.containsKey('preferred_backend')) {
+      context.handle(
+        _preferredBackendMeta,
+        preferredBackend.isAcceptableOrUnknown(
+          data['preferred_backend']!,
+          _preferredBackendMeta,
+        ),
+      );
+    }
     if (data.containsKey('source_type')) {
       context.handle(
         _sourceTypeMeta,
@@ -1011,6 +1516,34 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_thinking'],
       )!,
+      temperature: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}temperature'],
+      )!,
+      topK: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}top_k'],
+      )!,
+      topP: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}top_p'],
+      )!,
+      maxTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_tokens'],
+      )!,
+      tokenBuffer: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}token_buffer'],
+      )!,
+      randomSeed: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}random_seed'],
+      )!,
+      preferredBackend: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred_backend'],
+      )!,
       sourceType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}source_type'],
@@ -1039,6 +1572,13 @@ class Model extends DataClass implements Insertable<Model> {
   final bool supportAudio;
   final bool supportsFunctionCalls;
   final bool isThinking;
+  final double temperature;
+  final int topK;
+  final double topP;
+  final int maxTokens;
+  final int tokenBuffer;
+  final int randomSeed;
+  final String preferredBackend;
   final String sourceType;
   final String source;
   const Model({
@@ -1052,6 +1592,13 @@ class Model extends DataClass implements Insertable<Model> {
     required this.supportAudio,
     required this.supportsFunctionCalls,
     required this.isThinking,
+    required this.temperature,
+    required this.topK,
+    required this.topP,
+    required this.maxTokens,
+    required this.tokenBuffer,
+    required this.randomSeed,
+    required this.preferredBackend,
     required this.sourceType,
     required this.source,
   });
@@ -1070,6 +1617,13 @@ class Model extends DataClass implements Insertable<Model> {
     map['support_audio'] = Variable<bool>(supportAudio);
     map['supports_function_calls'] = Variable<bool>(supportsFunctionCalls);
     map['is_thinking'] = Variable<bool>(isThinking);
+    map['temperature'] = Variable<double>(temperature);
+    map['top_k'] = Variable<int>(topK);
+    map['top_p'] = Variable<double>(topP);
+    map['max_tokens'] = Variable<int>(maxTokens);
+    map['token_buffer'] = Variable<int>(tokenBuffer);
+    map['random_seed'] = Variable<int>(randomSeed);
+    map['preferred_backend'] = Variable<String>(preferredBackend);
     map['source_type'] = Variable<String>(sourceType);
     map['source'] = Variable<String>(source);
     return map;
@@ -1089,6 +1643,13 @@ class Model extends DataClass implements Insertable<Model> {
       supportAudio: Value(supportAudio),
       supportsFunctionCalls: Value(supportsFunctionCalls),
       isThinking: Value(isThinking),
+      temperature: Value(temperature),
+      topK: Value(topK),
+      topP: Value(topP),
+      maxTokens: Value(maxTokens),
+      tokenBuffer: Value(tokenBuffer),
+      randomSeed: Value(randomSeed),
+      preferredBackend: Value(preferredBackend),
       sourceType: Value(sourceType),
       source: Value(source),
     );
@@ -1112,6 +1673,13 @@ class Model extends DataClass implements Insertable<Model> {
         json['supportsFunctionCalls'],
       ),
       isThinking: serializer.fromJson<bool>(json['isThinking']),
+      temperature: serializer.fromJson<double>(json['temperature']),
+      topK: serializer.fromJson<int>(json['topK']),
+      topP: serializer.fromJson<double>(json['topP']),
+      maxTokens: serializer.fromJson<int>(json['maxTokens']),
+      tokenBuffer: serializer.fromJson<int>(json['tokenBuffer']),
+      randomSeed: serializer.fromJson<int>(json['randomSeed']),
+      preferredBackend: serializer.fromJson<String>(json['preferredBackend']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
       source: serializer.fromJson<String>(json['source']),
     );
@@ -1130,6 +1698,13 @@ class Model extends DataClass implements Insertable<Model> {
       'supportAudio': serializer.toJson<bool>(supportAudio),
       'supportsFunctionCalls': serializer.toJson<bool>(supportsFunctionCalls),
       'isThinking': serializer.toJson<bool>(isThinking),
+      'temperature': serializer.toJson<double>(temperature),
+      'topK': serializer.toJson<int>(topK),
+      'topP': serializer.toJson<double>(topP),
+      'maxTokens': serializer.toJson<int>(maxTokens),
+      'tokenBuffer': serializer.toJson<int>(tokenBuffer),
+      'randomSeed': serializer.toJson<int>(randomSeed),
+      'preferredBackend': serializer.toJson<String>(preferredBackend),
       'sourceType': serializer.toJson<String>(sourceType),
       'source': serializer.toJson<String>(source),
     };
@@ -1146,6 +1721,13 @@ class Model extends DataClass implements Insertable<Model> {
     bool? supportAudio,
     bool? supportsFunctionCalls,
     bool? isThinking,
+    double? temperature,
+    int? topK,
+    double? topP,
+    int? maxTokens,
+    int? tokenBuffer,
+    int? randomSeed,
+    String? preferredBackend,
     String? sourceType,
     String? source,
   }) => Model(
@@ -1159,6 +1741,13 @@ class Model extends DataClass implements Insertable<Model> {
     supportAudio: supportAudio ?? this.supportAudio,
     supportsFunctionCalls: supportsFunctionCalls ?? this.supportsFunctionCalls,
     isThinking: isThinking ?? this.isThinking,
+    temperature: temperature ?? this.temperature,
+    topK: topK ?? this.topK,
+    topP: topP ?? this.topP,
+    maxTokens: maxTokens ?? this.maxTokens,
+    tokenBuffer: tokenBuffer ?? this.tokenBuffer,
+    randomSeed: randomSeed ?? this.randomSeed,
+    preferredBackend: preferredBackend ?? this.preferredBackend,
     sourceType: sourceType ?? this.sourceType,
     source: source ?? this.source,
   );
@@ -1184,6 +1773,21 @@ class Model extends DataClass implements Insertable<Model> {
       isThinking: data.isThinking.present
           ? data.isThinking.value
           : this.isThinking,
+      temperature: data.temperature.present
+          ? data.temperature.value
+          : this.temperature,
+      topK: data.topK.present ? data.topK.value : this.topK,
+      topP: data.topP.present ? data.topP.value : this.topP,
+      maxTokens: data.maxTokens.present ? data.maxTokens.value : this.maxTokens,
+      tokenBuffer: data.tokenBuffer.present
+          ? data.tokenBuffer.value
+          : this.tokenBuffer,
+      randomSeed: data.randomSeed.present
+          ? data.randomSeed.value
+          : this.randomSeed,
+      preferredBackend: data.preferredBackend.present
+          ? data.preferredBackend.value
+          : this.preferredBackend,
       sourceType: data.sourceType.present
           ? data.sourceType.value
           : this.sourceType,
@@ -1204,6 +1808,13 @@ class Model extends DataClass implements Insertable<Model> {
           ..write('supportAudio: $supportAudio, ')
           ..write('supportsFunctionCalls: $supportsFunctionCalls, ')
           ..write('isThinking: $isThinking, ')
+          ..write('temperature: $temperature, ')
+          ..write('topK: $topK, ')
+          ..write('topP: $topP, ')
+          ..write('maxTokens: $maxTokens, ')
+          ..write('tokenBuffer: $tokenBuffer, ')
+          ..write('randomSeed: $randomSeed, ')
+          ..write('preferredBackend: $preferredBackend, ')
           ..write('sourceType: $sourceType, ')
           ..write('source: $source')
           ..write(')'))
@@ -1222,6 +1833,13 @@ class Model extends DataClass implements Insertable<Model> {
     supportAudio,
     supportsFunctionCalls,
     isThinking,
+    temperature,
+    topK,
+    topP,
+    maxTokens,
+    tokenBuffer,
+    randomSeed,
+    preferredBackend,
     sourceType,
     source,
   );
@@ -1239,6 +1857,13 @@ class Model extends DataClass implements Insertable<Model> {
           other.supportAudio == this.supportAudio &&
           other.supportsFunctionCalls == this.supportsFunctionCalls &&
           other.isThinking == this.isThinking &&
+          other.temperature == this.temperature &&
+          other.topK == this.topK &&
+          other.topP == this.topP &&
+          other.maxTokens == this.maxTokens &&
+          other.tokenBuffer == this.tokenBuffer &&
+          other.randomSeed == this.randomSeed &&
+          other.preferredBackend == this.preferredBackend &&
           other.sourceType == this.sourceType &&
           other.source == this.source);
 }
@@ -1254,6 +1879,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
   final Value<bool> supportAudio;
   final Value<bool> supportsFunctionCalls;
   final Value<bool> isThinking;
+  final Value<double> temperature;
+  final Value<int> topK;
+  final Value<double> topP;
+  final Value<int> maxTokens;
+  final Value<int> tokenBuffer;
+  final Value<int> randomSeed;
+  final Value<String> preferredBackend;
   final Value<String> sourceType;
   final Value<String> source;
   const ModelsCompanion({
@@ -1267,6 +1899,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.supportAudio = const Value.absent(),
     this.supportsFunctionCalls = const Value.absent(),
     this.isThinking = const Value.absent(),
+    this.temperature = const Value.absent(),
+    this.topK = const Value.absent(),
+    this.topP = const Value.absent(),
+    this.maxTokens = const Value.absent(),
+    this.tokenBuffer = const Value.absent(),
+    this.randomSeed = const Value.absent(),
+    this.preferredBackend = const Value.absent(),
     this.sourceType = const Value.absent(),
     this.source = const Value.absent(),
   });
@@ -1281,6 +1920,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.supportAudio = const Value.absent(),
     this.supportsFunctionCalls = const Value.absent(),
     this.isThinking = const Value.absent(),
+    this.temperature = const Value.absent(),
+    this.topK = const Value.absent(),
+    this.topP = const Value.absent(),
+    this.maxTokens = const Value.absent(),
+    this.tokenBuffer = const Value.absent(),
+    this.randomSeed = const Value.absent(),
+    this.preferredBackend = const Value.absent(),
     required String sourceType,
     required String source,
   }) : name = Value(name),
@@ -1299,6 +1945,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Expression<bool>? supportAudio,
     Expression<bool>? supportsFunctionCalls,
     Expression<bool>? isThinking,
+    Expression<double>? temperature,
+    Expression<int>? topK,
+    Expression<double>? topP,
+    Expression<int>? maxTokens,
+    Expression<int>? tokenBuffer,
+    Expression<int>? randomSeed,
+    Expression<String>? preferredBackend,
     Expression<String>? sourceType,
     Expression<String>? source,
   }) {
@@ -1314,6 +1967,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       if (supportsFunctionCalls != null)
         'supports_function_calls': supportsFunctionCalls,
       if (isThinking != null) 'is_thinking': isThinking,
+      if (temperature != null) 'temperature': temperature,
+      if (topK != null) 'top_k': topK,
+      if (topP != null) 'top_p': topP,
+      if (maxTokens != null) 'max_tokens': maxTokens,
+      if (tokenBuffer != null) 'token_buffer': tokenBuffer,
+      if (randomSeed != null) 'random_seed': randomSeed,
+      if (preferredBackend != null) 'preferred_backend': preferredBackend,
       if (sourceType != null) 'source_type': sourceType,
       if (source != null) 'source': source,
     });
@@ -1330,6 +1990,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Value<bool>? supportAudio,
     Value<bool>? supportsFunctionCalls,
     Value<bool>? isThinking,
+    Value<double>? temperature,
+    Value<int>? topK,
+    Value<double>? topP,
+    Value<int>? maxTokens,
+    Value<int>? tokenBuffer,
+    Value<int>? randomSeed,
+    Value<String>? preferredBackend,
     Value<String>? sourceType,
     Value<String>? source,
   }) {
@@ -1345,6 +2012,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       supportsFunctionCalls:
           supportsFunctionCalls ?? this.supportsFunctionCalls,
       isThinking: isThinking ?? this.isThinking,
+      temperature: temperature ?? this.temperature,
+      topK: topK ?? this.topK,
+      topP: topP ?? this.topP,
+      maxTokens: maxTokens ?? this.maxTokens,
+      tokenBuffer: tokenBuffer ?? this.tokenBuffer,
+      randomSeed: randomSeed ?? this.randomSeed,
+      preferredBackend: preferredBackend ?? this.preferredBackend,
       sourceType: sourceType ?? this.sourceType,
       source: source ?? this.source,
     );
@@ -1385,6 +2059,27 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     if (isThinking.present) {
       map['is_thinking'] = Variable<bool>(isThinking.value);
     }
+    if (temperature.present) {
+      map['temperature'] = Variable<double>(temperature.value);
+    }
+    if (topK.present) {
+      map['top_k'] = Variable<int>(topK.value);
+    }
+    if (topP.present) {
+      map['top_p'] = Variable<double>(topP.value);
+    }
+    if (maxTokens.present) {
+      map['max_tokens'] = Variable<int>(maxTokens.value);
+    }
+    if (tokenBuffer.present) {
+      map['token_buffer'] = Variable<int>(tokenBuffer.value);
+    }
+    if (randomSeed.present) {
+      map['random_seed'] = Variable<int>(randomSeed.value);
+    }
+    if (preferredBackend.present) {
+      map['preferred_backend'] = Variable<String>(preferredBackend.value);
+    }
     if (sourceType.present) {
       map['source_type'] = Variable<String>(sourceType.value);
     }
@@ -1407,6 +2102,13 @@ class ModelsCompanion extends UpdateCompanion<Model> {
           ..write('supportAudio: $supportAudio, ')
           ..write('supportsFunctionCalls: $supportsFunctionCalls, ')
           ..write('isThinking: $isThinking, ')
+          ..write('temperature: $temperature, ')
+          ..write('topK: $topK, ')
+          ..write('topP: $topP, ')
+          ..write('maxTokens: $maxTokens, ')
+          ..write('tokenBuffer: $tokenBuffer, ')
+          ..write('randomSeed: $randomSeed, ')
+          ..write('preferredBackend: $preferredBackend, ')
           ..write('sourceType: $sourceType, ')
           ..write('source: $source')
           ..write(')'))
@@ -1417,6 +2119,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
 abstract class _$GenaDatabase extends GeneratedDatabase {
   _$GenaDatabase(QueryExecutor e) : super(e);
   $GenaDatabaseManager get managers => $GenaDatabaseManager(this);
+  late final $WorkspacesTable workspaces = $WorkspacesTable(this);
   late final $ChatsTable chats = $ChatsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $ModelsTable models = $ModelsTable(this);
@@ -1424,25 +2127,324 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [chats, messages, models];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    workspaces,
+    chats,
+    messages,
+    models,
+  ];
 }
 
+typedef $$WorkspacesTableCreateCompanionBuilder =
+    WorkspacesCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      required String name,
+      Value<String> generalInstruction,
+    });
+typedef $$WorkspacesTableUpdateCompanionBuilder =
+    WorkspacesCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      Value<String> name,
+      Value<String> generalInstruction,
+    });
+
+final class $$WorkspacesTableReferences
+    extends BaseReferences<_$GenaDatabase, $WorkspacesTable, Workspace> {
+  $$WorkspacesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ChatsTable, List<Chat>> _chatsRefsTable(
+    _$GenaDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.chats,
+    aliasName: $_aliasNameGenerator(db.workspaces.id, db.chats.workspace),
+  );
+
+  $$ChatsTableProcessedTableManager get chatsRefs {
+    final manager = $$ChatsTableTableManager(
+      $_db,
+      $_db.chats,
+    ).filter((f) => f.workspace.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_chatsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$WorkspacesTableFilterComposer
+    extends Composer<_$GenaDatabase, $WorkspacesTable> {
+  $$WorkspacesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get generalInstruction => $composableBuilder(
+    column: $table.generalInstruction,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> chatsRefs(
+    Expression<bool> Function($$ChatsTableFilterComposer f) f,
+  ) {
+    final $$ChatsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.chats,
+      getReferencedColumn: (t) => t.workspace,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChatsTableFilterComposer(
+            $db: $db,
+            $table: $db.chats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WorkspacesTableOrderingComposer
+    extends Composer<_$GenaDatabase, $WorkspacesTable> {
+  $$WorkspacesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get generalInstruction => $composableBuilder(
+    column: $table.generalInstruction,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WorkspacesTableAnnotationComposer
+    extends Composer<_$GenaDatabase, $WorkspacesTable> {
+  $$WorkspacesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get generalInstruction => $composableBuilder(
+    column: $table.generalInstruction,
+    builder: (column) => column,
+  );
+
+  Expression<T> chatsRefs<T extends Object>(
+    Expression<T> Function($$ChatsTableAnnotationComposer a) f,
+  ) {
+    final $$ChatsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.chats,
+      getReferencedColumn: (t) => t.workspace,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChatsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.chats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WorkspacesTableTableManager
+    extends
+        RootTableManager<
+          _$GenaDatabase,
+          $WorkspacesTable,
+          Workspace,
+          $$WorkspacesTableFilterComposer,
+          $$WorkspacesTableOrderingComposer,
+          $$WorkspacesTableAnnotationComposer,
+          $$WorkspacesTableCreateCompanionBuilder,
+          $$WorkspacesTableUpdateCompanionBuilder,
+          (Workspace, $$WorkspacesTableReferences),
+          Workspace,
+          PrefetchHooks Function({bool chatsRefs})
+        > {
+  $$WorkspacesTableTableManager(_$GenaDatabase db, $WorkspacesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorkspacesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorkspacesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorkspacesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> generalInstruction = const Value.absent(),
+              }) => WorkspacesCompanion(
+                id: id,
+                createdAt: createdAt,
+                name: name,
+                generalInstruction: generalInstruction,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                required String name,
+                Value<String> generalInstruction = const Value.absent(),
+              }) => WorkspacesCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                name: name,
+                generalInstruction: generalInstruction,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WorkspacesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({chatsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (chatsRefs) db.chats],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (chatsRefs)
+                    await $_getPrefetchedData<
+                      Workspace,
+                      $WorkspacesTable,
+                      Chat
+                    >(
+                      currentTable: table,
+                      referencedTable: $$WorkspacesTableReferences
+                          ._chatsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$WorkspacesTableReferences(db, table, p0).chatsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.workspace == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WorkspacesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GenaDatabase,
+      $WorkspacesTable,
+      Workspace,
+      $$WorkspacesTableFilterComposer,
+      $$WorkspacesTableOrderingComposer,
+      $$WorkspacesTableAnnotationComposer,
+      $$WorkspacesTableCreateCompanionBuilder,
+      $$WorkspacesTableUpdateCompanionBuilder,
+      (Workspace, $$WorkspacesTableReferences),
+      Workspace,
+      PrefetchHooks Function({bool chatsRefs})
+    >;
 typedef $$ChatsTableCreateCompanionBuilder =
     ChatsCompanion Function({
       Value<int> id,
       Value<DateTime> createdAt,
+      required int workspace,
       required String title,
     });
 typedef $$ChatsTableUpdateCompanionBuilder =
     ChatsCompanion Function({
       Value<int> id,
       Value<DateTime> createdAt,
+      Value<int> workspace,
       Value<String> title,
     });
 
 final class $$ChatsTableReferences
     extends BaseReferences<_$GenaDatabase, $ChatsTable, Chat> {
   $$ChatsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $WorkspacesTable _workspaceTable(_$GenaDatabase db) => db.workspaces
+      .createAlias($_aliasNameGenerator(db.chats.workspace, db.workspaces.id));
+
+  $$WorkspacesTableProcessedTableManager get workspace {
+    final $_column = $_itemColumn<int>('workspace')!;
+
+    final manager = $$WorkspacesTableTableManager(
+      $_db,
+      $_db.workspaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static MultiTypedResultKey<$MessagesTable, List<Message>> _messagesRefsTable(
     _$GenaDatabase db,
@@ -1486,6 +2488,29 @@ class $$ChatsTableFilterComposer extends Composer<_$GenaDatabase, $ChatsTable> {
     column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$WorkspacesTableFilterComposer get workspace {
+    final $$WorkspacesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   Expression<bool> messagesRefs(
     Expression<bool> Function($$MessagesTableFilterComposer f) f,
@@ -1536,6 +2561,29 @@ class $$ChatsTableOrderingComposer
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$WorkspacesTableOrderingComposer get workspace {
+    final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$ChatsTableAnnotationComposer
@@ -1555,6 +2603,29 @@ class $$ChatsTableAnnotationComposer
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
+
+  $$WorkspacesTableAnnotationComposer get workspace {
+    final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   Expression<T> messagesRefs<T extends Object>(
     Expression<T> Function($$MessagesTableAnnotationComposer a) f,
@@ -1595,7 +2666,7 @@ class $$ChatsTableTableManager
           $$ChatsTableUpdateCompanionBuilder,
           (Chat, $$ChatsTableReferences),
           Chat,
-          PrefetchHooks Function({bool messagesRefs})
+          PrefetchHooks Function({bool workspace, bool messagesRefs})
         > {
   $$ChatsTableTableManager(_$GenaDatabase db, $ChatsTable table)
     : super(
@@ -1612,16 +2683,24 @@ class $$ChatsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> workspace = const Value.absent(),
                 Value<String> title = const Value.absent(),
-              }) => ChatsCompanion(id: id, createdAt: createdAt, title: title),
+              }) => ChatsCompanion(
+                id: id,
+                createdAt: createdAt,
+                workspace: workspace,
+                title: title,
+              ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                required int workspace,
                 required String title,
               }) => ChatsCompanion.insert(
                 id: id,
                 createdAt: createdAt,
+                workspace: workspace,
                 title: title,
               ),
           withReferenceMapper: (p0) => p0
@@ -1630,11 +2709,42 @@ class $$ChatsTableTableManager
                     (e.readTable(table), $$ChatsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({messagesRefs = false}) {
+          prefetchHooksCallback: ({workspace = false, messagesRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [if (messagesRefs) db.messages],
-              addJoins: null,
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (workspace) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.workspace,
+                                referencedTable: $$ChatsTableReferences
+                                    ._workspaceTable(db),
+                                referencedColumn: $$ChatsTableReferences
+                                    ._workspaceTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (messagesRefs)
@@ -1668,7 +2778,7 @@ typedef $$ChatsTableProcessedTableManager =
       $$ChatsTableUpdateCompanionBuilder,
       (Chat, $$ChatsTableReferences),
       Chat,
-      PrefetchHooks Function({bool messagesRefs})
+      PrefetchHooks Function({bool workspace, bool messagesRefs})
     >;
 typedef $$MessagesTableCreateCompanionBuilder =
     MessagesCompanion Function({
@@ -2031,6 +3141,13 @@ typedef $$ModelsTableCreateCompanionBuilder =
       Value<bool> supportAudio,
       Value<bool> supportsFunctionCalls,
       Value<bool> isThinking,
+      Value<double> temperature,
+      Value<int> topK,
+      Value<double> topP,
+      Value<int> maxTokens,
+      Value<int> tokenBuffer,
+      Value<int> randomSeed,
+      Value<String> preferredBackend,
       required String sourceType,
       required String source,
     });
@@ -2046,6 +3163,13 @@ typedef $$ModelsTableUpdateCompanionBuilder =
       Value<bool> supportAudio,
       Value<bool> supportsFunctionCalls,
       Value<bool> isThinking,
+      Value<double> temperature,
+      Value<int> topK,
+      Value<double> topP,
+      Value<int> maxTokens,
+      Value<int> tokenBuffer,
+      Value<int> randomSeed,
+      Value<String> preferredBackend,
       Value<String> sourceType,
       Value<String> source,
     });
@@ -2106,6 +3230,41 @@ class $$ModelsTableFilterComposer
 
   ColumnFilters<bool> get isThinking => $composableBuilder(
     column: $table.isThinking,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get temperature => $composableBuilder(
+    column: $table.temperature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get topK => $composableBuilder(
+    column: $table.topK,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get topP => $composableBuilder(
+    column: $table.topP,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxTokens => $composableBuilder(
+    column: $table.maxTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tokenBuffer => $composableBuilder(
+    column: $table.tokenBuffer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get randomSeed => $composableBuilder(
+    column: $table.randomSeed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferredBackend => $composableBuilder(
+    column: $table.preferredBackend,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2179,6 +3338,41 @@ class $$ModelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get temperature => $composableBuilder(
+    column: $table.temperature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get topK => $composableBuilder(
+    column: $table.topK,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get topP => $composableBuilder(
+    column: $table.topP,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxTokens => $composableBuilder(
+    column: $table.maxTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tokenBuffer => $composableBuilder(
+    column: $table.tokenBuffer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get randomSeed => $composableBuilder(
+    column: $table.randomSeed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get preferredBackend => $composableBuilder(
+    column: $table.preferredBackend,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get sourceType => $composableBuilder(
     column: $table.sourceType,
     builder: (column) => ColumnOrderings(column),
@@ -2239,6 +3433,35 @@ class $$ModelsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get temperature => $composableBuilder(
+    column: $table.temperature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get topK =>
+      $composableBuilder(column: $table.topK, builder: (column) => column);
+
+  GeneratedColumn<double> get topP =>
+      $composableBuilder(column: $table.topP, builder: (column) => column);
+
+  GeneratedColumn<int> get maxTokens =>
+      $composableBuilder(column: $table.maxTokens, builder: (column) => column);
+
+  GeneratedColumn<int> get tokenBuffer => $composableBuilder(
+    column: $table.tokenBuffer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get randomSeed => $composableBuilder(
+    column: $table.randomSeed,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preferredBackend => $composableBuilder(
+    column: $table.preferredBackend,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get sourceType => $composableBuilder(
     column: $table.sourceType,
     builder: (column) => column,
@@ -2286,6 +3509,13 @@ class $$ModelsTableTableManager
                 Value<bool> supportAudio = const Value.absent(),
                 Value<bool> supportsFunctionCalls = const Value.absent(),
                 Value<bool> isThinking = const Value.absent(),
+                Value<double> temperature = const Value.absent(),
+                Value<int> topK = const Value.absent(),
+                Value<double> topP = const Value.absent(),
+                Value<int> maxTokens = const Value.absent(),
+                Value<int> tokenBuffer = const Value.absent(),
+                Value<int> randomSeed = const Value.absent(),
+                Value<String> preferredBackend = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
                 Value<String> source = const Value.absent(),
               }) => ModelsCompanion(
@@ -2299,6 +3529,13 @@ class $$ModelsTableTableManager
                 supportAudio: supportAudio,
                 supportsFunctionCalls: supportsFunctionCalls,
                 isThinking: isThinking,
+                temperature: temperature,
+                topK: topK,
+                topP: topP,
+                maxTokens: maxTokens,
+                tokenBuffer: tokenBuffer,
+                randomSeed: randomSeed,
+                preferredBackend: preferredBackend,
                 sourceType: sourceType,
                 source: source,
               ),
@@ -2314,6 +3551,13 @@ class $$ModelsTableTableManager
                 Value<bool> supportAudio = const Value.absent(),
                 Value<bool> supportsFunctionCalls = const Value.absent(),
                 Value<bool> isThinking = const Value.absent(),
+                Value<double> temperature = const Value.absent(),
+                Value<int> topK = const Value.absent(),
+                Value<double> topP = const Value.absent(),
+                Value<int> maxTokens = const Value.absent(),
+                Value<int> tokenBuffer = const Value.absent(),
+                Value<int> randomSeed = const Value.absent(),
+                Value<String> preferredBackend = const Value.absent(),
                 required String sourceType,
                 required String source,
               }) => ModelsCompanion.insert(
@@ -2327,6 +3571,13 @@ class $$ModelsTableTableManager
                 supportAudio: supportAudio,
                 supportsFunctionCalls: supportsFunctionCalls,
                 isThinking: isThinking,
+                temperature: temperature,
+                topK: topK,
+                topP: topP,
+                maxTokens: maxTokens,
+                tokenBuffer: tokenBuffer,
+                randomSeed: randomSeed,
+                preferredBackend: preferredBackend,
                 sourceType: sourceType,
                 source: source,
               ),
@@ -2356,6 +3607,8 @@ typedef $$ModelsTableProcessedTableManager =
 class $GenaDatabaseManager {
   final _$GenaDatabase _db;
   $GenaDatabaseManager(this._db);
+  $$WorkspacesTableTableManager get workspaces =>
+      $$WorkspacesTableTableManager(_db, _db.workspaces);
   $$ChatsTableTableManager get chats =>
       $$ChatsTableTableManager(_db, _db.chats);
   $$MessagesTableTableManager get messages =>

@@ -18,6 +18,12 @@ class ChatHistoryActions {
     final selectedChatId = ref.read(selectedChatIdProvider);
     final isActiveChat = selectedChatId == chatId;
     final database = ref.read(genaDatabaseProvider);
+    final chat =
+        await (database.select(database.chats)
+              ..where((t) => t.id.equals(parsedChatId))
+              ..limit(1))
+            .getSingleOrNull();
+    if (chat == null) return;
 
     await database.transaction(() async {
       await (database.delete(
@@ -30,7 +36,9 @@ class ChatHistoryActions {
 
     if (isActiveChat) {
       await ref.read(chatThreadActionsProvider).stopGeneration();
-      await ref.read(selectedChatIdProvider.notifier).createNewThread();
+      await ref
+          .read(selectedChatIdProvider.notifier)
+          .ensureSelectionForWorkspace(chat.workspace.toString());
     }
   }
 }

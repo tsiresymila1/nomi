@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
-import 'package:go_router/go_router.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -22,13 +21,6 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
-          ListTile(
-            title: const Text('Model settings'),
-            subtitle: const Text('Prompt, temperature, tokens, backend'),
-            leading: const Icon(Icons.tune),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.pushNamed('model-setting'),
-          ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.08, end: 0),
           SwitchListTile(
                 title: const Text('Dark mode'),
                 subtitle: Text(

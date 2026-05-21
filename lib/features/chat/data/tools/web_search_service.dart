@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:ddgs/ddgs.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -33,6 +32,7 @@ class WebSearchService {
         backend: 'duckduckgo',
         maxResults: maxResults.clamp(1, 10),
       );
+      logger.i(rawResults);
 
       final parsedResults = <Map<String, dynamic>>[];
       for (final item in rawResults) {
@@ -104,8 +104,8 @@ class WebSearchService {
     html ??= await _fetchHtmlWithHttpClient(uri);
     if (html == null || html.trim().isEmpty) return null;
     final nonNullHtml = html;
-
-    return Isolate.run(() => _convertHtmlToMarkdown(nonNullHtml));
+    logger.i(nonNullHtml);
+    return _convertHtmlToMarkdown(nonNullHtml);
   }
 
   static Future<String?> _fetchHtmlWithHttpClient(Uri uri) async {

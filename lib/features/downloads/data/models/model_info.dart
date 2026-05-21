@@ -15,6 +15,13 @@ abstract class ModelInfo with _$ModelInfo {
     required bool supportAudio,
     required bool supportsFunctionCalls,
     required bool isThinking,
+    required double temperature,
+    required int topK,
+    required double topP,
+    required int maxTokens,
+    required int tokenBuffer,
+    required int randomSeed,
+    required String preferredBackend,
     required String sourceType,
     required String source,
   }) = _ModelInfo;

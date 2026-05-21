@@ -12,7 +12,6 @@ import 'package:gena/core/extension.dart';
 import 'package:gena/core/utils.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:shimmer/shimmer.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
   final String message;
@@ -34,6 +33,7 @@ class ChatBubble extends ConsumerStatefulWidget {
 
 class _ChatBubbleState extends ConsumerState<ChatBubble> {
   bool _isThinkingExpanded = false;
+  bool _isToolTraceExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +43,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final mediaPath = widget.mediaPath;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isThinking = kind == 'thinking' && !isUser;
+    final isToolTraceKind =
+        kind == 'tool_trace' || kind == 'tool_call' || kind == 'tool_result';
+    final isToolTrace = isToolTraceKind && !isUser;
     return Column(
       mainAxisAlignment: isUser
           ? MainAxisAlignment.end
@@ -53,7 +56,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: isToolTrace || isToolTraceKind || isThinking
+                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 0)
+                : const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             constraints: BoxConstraints(
               maxWidth: isUser
                   ? MediaQuery.of(context).size.width * 0.80
@@ -65,6 +70,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   : isThinking
                   ? Theme.of(context).colorScheme.surfaceContainerHighest
                         .withAlpha(isDark ? 20 : 170)
+                  : isToolTrace
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withAlpha(isDark ? 30 : 140)
                   : Colors.transparent,
               border: null,
               borderRadius: BorderRadius.circular(16).copyWith(
@@ -74,14 +82,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             ),
             child: isThinking
                 ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Shimmer.fromColors(
-                      baseColor: Colors.grey.shade900,
-                      highlightColor: Colors.grey.shade200,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(10),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
                         onTap: () {
                           setState(() {
                             _isThinkingExpanded = !_isThinkingExpanded;
@@ -93,6 +97,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             vertical: 2,
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.psychology_outlined, size: 16),
                               const SizedBox(width: 6),
@@ -101,7 +106,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                 style: Theme.of(context).textTheme.labelMedium
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
-                              const Spacer(),
                               Icon(
                                 _isThinkingExpanded
                                     ? Icons.keyboard_arrow_up_rounded
@@ -112,38 +116,38 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           ),
                         ),
                       ),
-                    ),
-                    ClipRect(
-                      child: AnimatedSize(
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.easeOut,
-                        child: _isThinkingExpanded
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 100,
-                                  ),
-                                  child: Scrollbar(
-                                    thumbVisibility: true,
-                                    child: SingleChildScrollView(
-                                      child: MdMessage(
-                                        key: const ValueKey(
-                                          'thinking-expanded-content',
+                      ClipRect(
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 150),
+                          curve: Curves.easeOut,
+                          child: _isThinkingExpanded
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 100,
+                                    ),
+                                    child: Scrollbar(
+                                      thumbVisibility: true,
+                                      child: SingleChildScrollView(
+                                        child: MdMessage(
+                                          fontSize: 11,
+                                          key: const ValueKey(
+                                            'thinking-expanded-content',
+                                          ),
+                                          message: message,
+                                          isUser: false,
+                                          isDark: isDark,
                                         ),
-                                        message: message,
-                                        isUser: false,
-                                        isDark: isDark,
                                       ),
                                     ),
                                   ),
-                                ),
-                              )
-                            : const SizedBox.shrink(),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ),
-                    ),
-                  ],
-                )
+                    ],
+                  )
                 : (kind == 'image' && mediaPath != null)
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
@@ -163,14 +167,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           isDark: isDark,
                         ),
                       InkWell(
-                        onTap: (){
+                        onTap: () {
                           FullscreenImageViewer.open(
                             context: context,
                             child: Hero(
                               tag: 'md-image-$isDark-${message.hashCode}',
-                              child: Image.file( File(mediaPath),),
+                              child: Image.file(File(mediaPath)),
                             ).animate().fade(duration: 300.ms),
-                            closeWidget: HugeIcon(icon: HugeIcons.strokeRoundedCancel01)
+                            closeWidget: HugeIcon(
+                              icon: HugeIcons.strokeRoundedCancel01,
+                            ),
                           );
                         },
                         child: ClipRRect(
@@ -191,6 +197,60 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       ),
                     ],
                   )
+                : isToolTrace
+                ? GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isToolTraceExpanded = !_isToolTraceExpanded;
+                      });
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.settings_ethernet, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Function trace',
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              _isToolTraceExpanded
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                        ClipRect(
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                            child: _isToolTraceExpanded
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: MdMessage(
+                                      key: ValueKey(
+                                        'md-tool-$isDark-${message.hashCode}',
+                                      ),
+                                      message: message,
+                                      isUser: false,
+                                      isDark: isDark,
+                                      fontSize: 11,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 : MdMessage(
                     key: ValueKey('md-$isDark-${message.hashCode}'),
                     message: message,
@@ -199,7 +259,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   ),
           ),
         ),
-        if (!isUser && !isThinking)
+        if (!isUser && !isThinking && !isToolTrace && isToolTraceKind)
           Row(
             children: [
               IconButton(
@@ -219,11 +279,30 @@ class MdMessage extends StatelessWidget {
     required this.message,
     required this.isUser,
     required this.isDark,
+    this.fontSize = 14,
   });
 
   final String message;
   final bool isUser;
   final bool isDark;
+  final double fontSize;
+
+  Widget buildCodeContent(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,32 +312,13 @@ class MdMessage extends StatelessWidget {
         message,
         style: TextStyle(
           color: isUser ? Colors.white : null,
-          fontSize: 14,
+          fontSize: fontSize,
           height: 1.4,
         ),
         textAlign: TextAlign.left,
         followLinkColor: true,
         useDollarSignsForLatex: true,
         codeBuilder: (context, name, code, closed) {
-          Widget buildCodeContent(Widget child) {
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: constraints.maxWidth,
-                      ),
-                      child: child,
-                    ),
-                  ),
-                );
-              },
-            );
-          }
-
           if (!closed) {
             Container(
               padding: const EdgeInsets.all(12),

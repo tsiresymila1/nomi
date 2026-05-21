@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:gena/core/prompt.dart';
 part 'gena_database.g.dart';
 
 mixin TableMixin on Table {
@@ -7,7 +8,13 @@ mixin TableMixin on Table {
 }
 
 class Chats extends Table with TableMixin {
+  late final workspace = integer().references(Workspaces, #id)();
   late final title = text().withLength(min: 6, max: 32)();
+}
+
+class Workspaces extends Table with TableMixin {
+  late final name = text().withLength(min: 1, max: 64)();
+  late final generalInstruction = text().withDefault(Constant(systemPrompt))();
 }
 
 class Messages extends Table with TableMixin {
@@ -29,16 +36,23 @@ class Models extends Table with TableMixin {
     const Constant(false),
   )();
   late final isThinking = boolean().withDefault(const Constant(false))();
+  late final temperature = real().withDefault(const Constant(0.8))();
+  late final topK = integer().withDefault(const Constant(40))();
+  late final topP = real().withDefault(const Constant(0.95))();
+  late final maxTokens = integer().withDefault(const Constant(2048))();
+  late final tokenBuffer = integer().withDefault(const Constant(256))();
+  late final randomSeed = integer().withDefault(const Constant(1))();
+  late final preferredBackend = text().withDefault(const Constant('gpu'))();
   late final sourceType = text()();
   late final source = text()();
 }
 
-@DriftDatabase(tables: [Chats, Messages, Models])
+@DriftDatabase(tables: [Workspaces, Chats, Messages, Models])
 class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -59,6 +73,29 @@ class GenaDatabase extends _$GenaDatabase {
       }
       if (from < 5) {
         await m.addColumn(models, models.modelId);
+      }
+      if (from < 6) {
+        await m.createTable(workspaces);
+        await m.addColumn(chats, chats.workspace);
+        final workspaceId = await into(workspaces).insert(
+          WorkspacesCompanion.insert(
+            name: 'My workspace',
+            generalInstruction: const Value(systemPrompt),
+          ),
+        );
+        await customStatement(
+          'UPDATE chats SET workspace = ? WHERE workspace IS NULL',
+          [workspaceId],
+        );
+      }
+      if (from < 7) {
+        await m.addColumn(models, models.temperature);
+        await m.addColumn(models, models.topK);
+        await m.addColumn(models, models.topP);
+        await m.addColumn(models, models.maxTokens);
+        await m.addColumn(models, models.tokenBuffer);
+        await m.addColumn(models, models.randomSeed);
+        await m.addColumn(models, models.preferredBackend);
       }
     },
   );

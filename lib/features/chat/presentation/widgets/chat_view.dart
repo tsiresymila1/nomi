@@ -22,6 +22,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   String _lastDraft = '';
   String _lastThinkingDraft = '';
   bool _lastWaitingIndicator = false;
+  String _lastToolWaitingName = '';
 
   @override
   void dispose() {
@@ -34,6 +35,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
     required String draft,
     required String thinkingDraft,
     required bool waitingIndicator,
+    required String toolWaitingName,
     bool forceAutoScroll = false,
   }) {
     final shouldAutoScroll = forceAutoScroll || _isNearBottom();
@@ -41,11 +43,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
         messageCount != _lastMessageCount ||
         (draft.isNotEmpty && draft != _lastDraft) ||
         (thinkingDraft.isNotEmpty && thinkingDraft != _lastThinkingDraft) ||
-        waitingIndicator != _lastWaitingIndicator;
+        waitingIndicator != _lastWaitingIndicator ||
+        toolWaitingName != _lastToolWaitingName;
     _lastMessageCount = messageCount;
     _lastDraft = draft;
     _lastThinkingDraft = thinkingDraft;
     _lastWaitingIndicator = waitingIndicator;
+    _lastToolWaitingName = toolWaitingName;
     if (!changed || !shouldAutoScroll) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -85,19 +89,26 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final draft = ref.watch(chatDraftResponseProvider);
     final thinkingDraft = ref.watch(chatDraftThinkingProvider);
     final isGenerating = ref.watch(chatGeneratingProvider);
+    final waitingToolName = ref.watch(chatToolWaitingProvider) ?? '';
 
     return messagesAsync.when(
       data: (messages) {
         final hasDraft = draft != null && draft.isNotEmpty;
         final hasThinkingDraft =
             thinkingDraft != null && thinkingDraft.isNotEmpty;
-        final waitingIndicator = isGenerating && !hasDraft && !hasThinkingDraft;
+        final hasToolWaitingName = waitingToolName.trim().isNotEmpty;
+        final waitingIndicator =
+            isGenerating &&
+            !hasDraft &&
+            !hasThinkingDraft &&
+            !hasToolWaitingName;
         final forceAutoScrollOnUserSend =
             messages.length > _lastMessageCount &&
             messages.isNotEmpty &&
             messages.last.role == 'user';
         final totalCount =
             messages.length +
+            (hasToolWaitingName ? 1 : 0) +
             (hasThinkingDraft ? 1 : 0) +
             (hasDraft ? 1 : 0) +
             (waitingIndicator ? 1 : 0);
@@ -106,6 +117,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
           draft: draft ?? '',
           thinkingDraft: thinkingDraft ?? '',
           waitingIndicator: waitingIndicator,
+          toolWaitingName: waitingToolName,
           forceAutoScroll: forceAutoScrollOnUserSend,
         );
 
@@ -249,7 +261,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
               );
             }
 
-            if (hasThinkingDraft && index == messages.length) {
+            if (hasToolWaitingName && index == messages.length) {
+              return ChatBubble(
+                key: const ValueKey('chat-waiting-tool'),
+                message: 'Waiting for function tool: $waitingToolName',
+                isUser: false,
+              );
+            }
+
+            if (hasThinkingDraft &&
+                index == messages.length + (hasToolWaitingName ? 1 : 0)) {
               return ChatBubble(
                 key: const ValueKey('chat-draft-thinking'),
                 message: thinkingDraft,

@@ -6,6 +6,7 @@ part 'chat_entity.freezed.dart';
 abstract class ChatEntity with _$ChatEntity {
   const factory ChatEntity({
     required String id,
+    required String workspaceId,
     required String title,
     required DateTime createdAt,
     required DateTime updatedAt,

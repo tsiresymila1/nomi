@@ -34,8 +34,8 @@ Nomi is an on-device chat app created by **Tsiresy Milà**, focused on private i
   - `supportAudio`
   - `supportsFunctionCalls`
   - `isThinking`
-- Model settings controls:
-  - system prompt
+- Workspace config controls:
+  - workspace prompt
   - temperature, top-k, top-p
   - max tokens, token buffer, random seed
   - backend preference
@@ -68,7 +68,8 @@ Nomi is an on-device chat app created by **Tsiresy Milà**, focused on private i
 |---|---|
 | `lib/features/chat` | Chat page, history, input, providers |
 | `lib/features/downloads` | Model catalog, add/install/remove flow |
-| `lib/features/setting` | App and model settings |
+| `lib/features/setting` | App settings |
+| `lib/features/workspace` | Workspace management and config |
 | `lib/core` | Router, theme, database, logging, prompt, toast |
 
 ## Database

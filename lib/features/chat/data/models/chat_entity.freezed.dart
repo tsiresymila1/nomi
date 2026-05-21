@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChatEntity {
 
- String get id; String get title; DateTime get createdAt; DateTime get updatedAt;
+ String get id; String get workspaceId; String get title; DateTime get createdAt; DateTime get updatedAt;
 /// Create a copy of ChatEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ChatEntityCopyWith<ChatEntity> get copyWith => _$ChatEntityCopyWithImpl<ChatEnt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.title, title) || other.title == title)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,workspaceId,title,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'ChatEntity(id: $id, title: $title, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'ChatEntity(id: $id, workspaceId: $workspaceId, title: $title, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ChatEntityCopyWith<$Res>  {
   factory $ChatEntityCopyWith(ChatEntity value, $Res Function(ChatEntity) _then) = _$ChatEntityCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, DateTime createdAt, DateTime updatedAt
+ String id, String workspaceId, String title, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -65,9 +65,10 @@ class _$ChatEntityCopyWithImpl<$Res>
 
 /// Create a copy of ChatEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? workspaceId = null,Object? title = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,workspaceId: null == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -156,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String workspaceId,  String title,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ChatEntity() when $default != null:
-return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.workspaceId,_that.title,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -177,10 +178,10 @@ return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String workspaceId,  String title,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _ChatEntity():
-return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.workspaceId,_that.title,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +198,10 @@ return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String workspaceId,  String title,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ChatEntity() when $default != null:
-return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.workspaceId,_that.title,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -212,10 +213,11 @@ return $default(_that.id,_that.title,_that.createdAt,_that.updatedAt);case _:
 @JsonSerializable()
 
 class _ChatEntity implements ChatEntity {
-  const _ChatEntity({required this.id, required this.title, required this.createdAt, required this.updatedAt});
+  const _ChatEntity({required this.id, required this.workspaceId, required this.title, required this.createdAt, required this.updatedAt});
   factory _ChatEntity.fromJson(Map<String, dynamic> json) => _$ChatEntityFromJson(json);
 
 @override final  String id;
+@override final  String workspaceId;
 @override final  String title;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;
@@ -233,16 +235,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.title, title) || other.title == title)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,workspaceId,title,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'ChatEntity(id: $id, title: $title, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'ChatEntity(id: $id, workspaceId: $workspaceId, title: $title, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -253,7 +255,7 @@ abstract mixin class _$ChatEntityCopyWith<$Res> implements $ChatEntityCopyWith<$
   factory _$ChatEntityCopyWith(_ChatEntity value, $Res Function(_ChatEntity) _then) = __$ChatEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, DateTime createdAt, DateTime updatedAt
+ String id, String workspaceId, String title, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -270,9 +272,10 @@ class __$ChatEntityCopyWithImpl<$Res>
 
 /// Create a copy of ChatEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? workspaceId = null,Object? title = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_ChatEntity(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,workspaceId: null == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable

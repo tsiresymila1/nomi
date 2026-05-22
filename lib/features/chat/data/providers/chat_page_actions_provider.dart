@@ -6,6 +6,7 @@ import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
 
@@ -57,7 +58,10 @@ class ChatPageActions {
     ref.read(chatModelSwitchingProvider.notifier).start();
     try {
       await ref.read(chatThreadActionsProvider).stopGeneration();
-      await ref.read(downloadProvider.notifier).installModel(model);
+      if (model.provider == ModelProviderType.local) {
+        await ref.read(downloadProvider.notifier).installModel(model);
+      }
+      await ref.read(selectedModelIdProvider.notifier).selectModel(model.id);
       ref.invalidate(activeModelInfoProvider);
       ref.invalidate(activeGemmaModelRuntimeProvider);
       ref.invalidate(activeGemmaChatProvider);

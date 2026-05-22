@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item.dart';
 import 'package:go_router/go_router.dart';
@@ -46,7 +47,9 @@ class DownloadModelsList extends ConsumerWidget {
                       model,
                     );
                     final isInstalled =
-                        installed.contains(installedId) || progress == 1.0;
+                        model.provider == ModelProviderType.remote ||
+                        installed.contains(installedId) ||
+                        progress == 1.0;
                     return DownloadItem(
                           model: model,
                           progress: progress,

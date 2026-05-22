@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
+import 'package:openai_dart/openai_dart.dart' as openai;
 
 const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
@@ -201,6 +202,184 @@ List<gemma.Tool> buildChatTools({
   return tools;
 }
 
+List<openai.Tool> buildRemoteChatTools({
+  required bool supportsFunctionCalls,
+  required bool enableRagTool,
+  required bool enableNativeOpenUrlTool,
+  required bool enableNativeOpenAppTool,
+  required bool enableNativeSendEmailTool,
+  required bool enableNativeFlashlightTool,
+}) {
+  if (!supportsFunctionCalls) return const <openai.Tool>[];
+
+  final tools = <openai.Tool>[
+    openai.Tool.function(
+      name: getCurrentDayToolName,
+      description:
+          'Get the current local day and date from the device clock. Use this when the user asks what day it is or asks for today date.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      },
+    ),
+    openai.Tool.function(
+      name: getDeviceInfoToolName,
+      description:
+          'Get basic device and runtime information from the current device. Use this when the user asks about device details or system info.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      },
+    ),
+    openai.Tool.function(
+      name: webSearchToolName,
+      description:
+          'Search the web and return top results plus extracted markdown from pages. Use this when the user asks for recent or external information.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{
+          'query': <String, dynamic>{
+            'type': 'string',
+            'description': 'Search query text.',
+          },
+          'max_results': <String, dynamic>{
+            'type': 'integer',
+            'description': 'Maximum number of search results to return (1-10).',
+          },
+          'max_content_pages': <String, dynamic>{
+            'type': 'integer',
+            'description':
+                'Maximum number of pages to fetch content from (1-5).',
+          },
+        },
+        'required': <String>['query'],
+      },
+    ),
+  ];
+
+  if (enableRagTool) {
+    tools.add(
+      openai.Tool.function(
+        name: ragSearchToolName,
+        description:
+            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. Use this when the user asks about facts likely present in workspace documents.',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'Question or search query against workspace documents.',
+            },
+            'top_k': <String, dynamic>{
+              'type': 'integer',
+              'description': 'Max snippets to return (1-8).',
+            },
+            'threshold': <String, dynamic>{
+              'type': 'number',
+              'description': 'Similarity threshold between 0.0 and 1.0.',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeOpenUrlTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativeOpenUrlToolName,
+        description:
+            'Open an external URL on the device browser. Requires explicit user approval before execution.',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'url': <String, dynamic>{
+              'type': 'string',
+              'description': 'HTTP/HTTPS URL to open.',
+            },
+          },
+          'required': <String>['url'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeOpenAppTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativeOpenAppToolName,
+        description:
+            'Open another app through a deep link URI on the device. Requires explicit user approval before execution.',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'uri': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'URI/deep-link to launch (for example tel:, maps:, custom app scheme).',
+            },
+          },
+          'required': <String>['uri'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeSendEmailTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativeSendEmailToolName,
+        description:
+            'Compose an email in the user email app. Requires explicit user approval before execution.',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'to': <String, dynamic>{
+              'type': 'string',
+              'description': 'Recipient email address.',
+            },
+            'subject': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email subject.',
+            },
+            'body': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email body.',
+            },
+          },
+          'required': <String>['to'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeFlashlightTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativeFlashlightToolName,
+        description:
+            'Turn the device flashlight on or off. Requires explicit user approval before execution.',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'mode': <String, dynamic>{
+              'type': 'string',
+              'description': 'Use "on" or "off".',
+            },
+          },
+          'required': <String>['mode'],
+        },
+      ),
+    );
+  }
+
+  return tools;
+}
+
 Future<Map<String, dynamic>> executeChatTool(
   gemma.FunctionCallResponse call, {
   Future<Map<String, dynamic>> Function(
@@ -217,7 +396,32 @@ Future<Map<String, dynamic>> executeChatTool(
 }) async {
   logger.i(call.name);
   logger.i(call.args);
-  switch (call.name) {
+  return executeChatToolByName(
+    call.name,
+    _toArgsMap(call.args),
+    ragToolHandler: ragToolHandler,
+    nativeToolHandler: nativeToolHandler,
+  );
+}
+
+Future<Map<String, dynamic>> executeChatToolByName(
+  String toolName,
+  Map<String, dynamic> args, {
+  Future<Map<String, dynamic>> Function(
+    String query, {
+    int topK,
+    double threshold,
+  })?
+  ragToolHandler,
+  Future<Map<String, dynamic>> Function(
+    String toolName,
+    Map<String, dynamic> args,
+  )?
+  nativeToolHandler,
+}) async {
+  logger.i(toolName);
+  logger.i(args);
+  switch (toolName) {
     case getCurrentDayToolName:
       final now = DateTime.now();
       final month = now.month.toString().padLeft(2, '0');
@@ -248,12 +452,9 @@ Future<Map<String, dynamic>> executeChatTool(
         'timestamp': now.toIso8601String(),
       };
     case webSearchToolName:
-      final query = (call.args['query'] ?? '').toString();
-      final maxResults = _toInt(call.args['max_results'], fallback: 5);
-      final maxContentPages = _toInt(
-        call.args['max_content_pages'],
-        fallback: 2,
-      );
+      final query = (args['query'] ?? '').toString();
+      final maxResults = _toInt(args['max_results'], fallback: 5);
+      final maxContentPages = _toInt(args['max_content_pages'], fallback: 2);
       return await WebSearchService.search(
         query: query,
         maxResults: maxResults,
@@ -267,10 +468,10 @@ Future<Map<String, dynamic>> executeChatTool(
           'message': 'Workspace RAG tool is not available in this session.',
         };
       }
-      final query = (call.args['query'] ?? '').toString().trim();
-      final topK = _toInt(call.args['top_k'], fallback: 4).clamp(1, 8);
+      final query = (args['query'] ?? '').toString().trim();
+      final topK = _toInt(args['top_k'], fallback: 4).clamp(1, 8);
       final threshold = _toDouble(
-        call.args['threshold'],
+        args['threshold'],
         fallback: 0.15,
       ).clamp(0.0, 1.0);
       return await ragToolHandler(query, topK: topK, threshold: threshold);
@@ -285,13 +486,12 @@ Future<Map<String, dynamic>> executeChatTool(
           'message': 'Native action tools are not available in this workspace.',
         };
       }
-      final args = _toArgsMap(call.args);
-      return nativeToolHandler(call.name, args);
+      return nativeToolHandler(toolName, args);
     default:
       return <String, dynamic>{
         'status': 'error',
         'error': 'unknown_tool',
-        'message': 'Tool "${call.name}" is not supported by this app.',
+        'message': 'Tool "$toolName" is not supported by this app.',
       };
   }
 }

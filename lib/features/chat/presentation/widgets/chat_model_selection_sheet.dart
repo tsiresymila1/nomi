@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:go_router/go_router.dart';
 
 class ChatModelSelectionSheet extends ConsumerWidget {
@@ -70,7 +71,9 @@ class ChatModelSelectionSheet extends ConsumerWidget {
                   final model = models[index];
                   return ListTile(
                         title: Text(model.name),
-                        subtitle: Text(model.description),
+                        subtitle: Text(
+                          '${model.provider == ModelProviderType.remote ? "Remote API" : "Local"} · ${model.description}',
+                        ),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () async {
                           final actions = ref.read(chatPageActionsProvider);

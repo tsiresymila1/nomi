@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
@@ -8,9 +7,8 @@ import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
 class ChatView extends ConsumerStatefulWidget {
   final String chatId;
-  final InferenceChat chat;
 
-  const ChatView({super.key, required this.chatId, required this.chat});
+  const ChatView({super.key, required this.chatId});
 
   @override
   ConsumerState<ChatView> createState() => _ChatViewState();

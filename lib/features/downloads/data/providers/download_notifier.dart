@@ -6,6 +6,7 @@ import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 
 class ActiveModelInstall {
   final String key;
@@ -46,6 +47,9 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
   }
 
   Future<void> installModel(ModelInfo model) async {
+    if (model.provider == ModelProviderType.remote) {
+      return;
+    }
     final currentInstall = ref.read(activeModelInstallProvider);
     if (_installInProgress || currentInstall != null) {
       await AppToast.show(
@@ -96,6 +100,10 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
   }
 
   Future<void> removeModel(ModelInfo model) async {
+    if (model.provider == ModelProviderType.remote) {
+      await ref.read(modelRepositoryActionsProvider).deleteModel(model.id);
+      return;
+    }
     final installKey = _installKey(model);
     final installedId = _installedModelId(model);
 

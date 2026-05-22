@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
-import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -14,28 +13,25 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeModel = ref.watch(activeModelInfoProvider);
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
-    final modelsAsync = ref.watch(modelRepositoryProvider);
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final hasActiveInstall = ref.watch(activeModelInstallProvider) != null;
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
+    final usesLocalRuntime = activeModel?.provider == 'local';
     final isModelLoading =
         isSwitchingModel ||
         hasActiveInstall ||
-        activeRuntime.isLoading ||
-        activeGemmaChat.isLoading;
-    final modelLabel = _resolveModelLabel(
-      modelsAsync,
-      activeGemmaChat,
-      activeRuntime,
-      isSwitchingModel: isSwitchingModel,
-      hasActiveInstall: hasActiveInstall,
-    );
-    final modelColor = activeGemmaChat.maybeWhen(
-      data: (session) =>
-          isModelLoading ? null : (session == null ? Colors.red : null),
-      orElse: () => null,
-    );
+        (usesLocalRuntime &&
+            (activeRuntime.isLoading || activeGemmaChat.isLoading));
+    final modelLabel = _resolveModelLabel(activeModel, isModelLoading);
+    final modelColor = usesLocalRuntime
+        ? activeGemmaChat.maybeWhen(
+            data: (session) =>
+                isModelLoading ? null : (session == null ? Colors.red : null),
+            orElse: () => null,
+          )
+        : null;
 
     return AppBar(
       scrolledUnderElevation: 0,
@@ -118,61 +114,14 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
-  String _resolveModelLabel(
-    AsyncValue<dynamic> modelsAsync,
-    AsyncValue<GemmaChatSession?> activeGemmaChat,
-    AsyncValue<ActiveGemmaModelRuntime?> activeRuntime, {
-    required bool isSwitchingModel,
-    required bool hasActiveInstall,
-  }) {
-    if (isSwitchingModel || hasActiveInstall || activeRuntime.isLoading) {
+  String _resolveModelLabel(ModelInfo? activeModel, bool isModelLoading) {
+    if (isModelLoading) {
       return 'Model loading...';
     }
-    final runtime = activeRuntime.asData?.value;
-    if (runtime == null) {
+    if (activeModel == null) {
       return 'No active model';
     }
-
-    final activeSpec =
-        gemma.FlutterGemmaPlugin.instance.modelManager.activeInferenceModel;
-    final activeModelId = activeSpec is gemma.InferenceModelSpec
-        ? activeSpec.name
-        : null;
-
-    if (activeModelId == null) {
-      return activeGemmaChat.maybeWhen(
-        data: (session) =>
-            session == null ? 'Model not loaded' : 'Unknown model',
-        orElse: () => 'Model loading...',
-      );
-    }
-
-    return modelsAsync.when(
-      data: (models) {
-        for (final model in models) {
-          final modelId = (model.modelId ?? '').trim();
-          if (modelId.isNotEmpty &&
-              modelId.toLowerCase() == activeModelId.toLowerCase()) {
-            return model.name;
-          }
-
-          final installedId = _modelSpecNameFromSource(model.source);
-          if (installedId.toLowerCase() == activeModelId.toLowerCase()) {
-            return model.name;
-          }
-        }
-        return activeModelId;
-      },
-      loading: () => activeModelId,
-      error: (error, stackTrace) => activeModelId,
-    );
-  }
-
-  String _modelSpecNameFromSource(String source) {
-    final parts = source.split(RegExp(r'[/\\]'));
-    final filename = parts.isEmpty ? source : parts.last;
-    final dotIndex = filename.lastIndexOf('.');
-    if (dotIndex <= 0) return filename;
-    return filename.substring(0, dotIndex);
+    final providerLabel = activeModel.provider == 'remote' ? 'Remote' : 'Local';
+    return '$providerLabel · ${activeModel.name}';
   }
 }

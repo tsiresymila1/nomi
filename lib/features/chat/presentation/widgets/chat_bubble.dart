@@ -103,18 +103,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             : 'Waiting for function tool: $toolName';
                       }
 
-                      final content = Scrollbar(
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          child: MdMessage(
-                            key: ValueKey(
-                              'sheet-$title-$isDark-${liveMessage.hashCode}',
-                            ),
-                            message: liveMessage,
-                            isUser: false,
-                            isDark: isDark,
-                            fontSize: fontSize,
+                      final content = SingleChildScrollView(
+                        child: MdMessage(
+                          key: ValueKey(
+                            'sheet-$title-$isDark-${liveMessage.hashCode}',
                           ),
+                          message: liveMessage,
+                          isUser: false,
+                          isDark: isDark,
+                          fontSize: fontSize,
                         ),
                       );
 

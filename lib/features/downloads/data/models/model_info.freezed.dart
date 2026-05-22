@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ModelInfo {
 
- int get id; String get name; String get description; String? get modelId; String get modelType; bool get supportImage; bool get supportAudio; bool get supportsFunctionCalls; bool get isThinking; double get temperature; int get topK; double get topP; int get maxTokens; int get tokenBuffer; int get randomSeed; String get preferredBackend; String get sourceType; String get source;
+ int get id; String get name; String get description; String? get modelId; String get provider; String? get apiUrl; String? get apiToken; String get modelType; bool get supportImage; bool get supportAudio; bool get supportsFunctionCalls; bool get isThinking; double get temperature; int get topK; double get topP; int get maxTokens; int get tokenBuffer; int get randomSeed; String get preferredBackend; String get sourceType; String get source;
 /// Create a copy of ModelInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ModelInfoCopyWith<ModelInfo> get copyWith => _$ModelInfoCopyWithImpl<ModelInfo>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModelInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.modelId, modelId) || other.modelId == modelId)&&(identical(other.modelType, modelType) || other.modelType == modelType)&&(identical(other.supportImage, supportImage) || other.supportImage == supportImage)&&(identical(other.supportAudio, supportAudio) || other.supportAudio == supportAudio)&&(identical(other.supportsFunctionCalls, supportsFunctionCalls) || other.supportsFunctionCalls == supportsFunctionCalls)&&(identical(other.isThinking, isThinking) || other.isThinking == isThinking)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.topK, topK) || other.topK == topK)&&(identical(other.topP, topP) || other.topP == topP)&&(identical(other.maxTokens, maxTokens) || other.maxTokens == maxTokens)&&(identical(other.tokenBuffer, tokenBuffer) || other.tokenBuffer == tokenBuffer)&&(identical(other.randomSeed, randomSeed) || other.randomSeed == randomSeed)&&(identical(other.preferredBackend, preferredBackend) || other.preferredBackend == preferredBackend)&&(identical(other.sourceType, sourceType) || other.sourceType == sourceType)&&(identical(other.source, source) || other.source == source));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModelInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.modelId, modelId) || other.modelId == modelId)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.apiUrl, apiUrl) || other.apiUrl == apiUrl)&&(identical(other.apiToken, apiToken) || other.apiToken == apiToken)&&(identical(other.modelType, modelType) || other.modelType == modelType)&&(identical(other.supportImage, supportImage) || other.supportImage == supportImage)&&(identical(other.supportAudio, supportAudio) || other.supportAudio == supportAudio)&&(identical(other.supportsFunctionCalls, supportsFunctionCalls) || other.supportsFunctionCalls == supportsFunctionCalls)&&(identical(other.isThinking, isThinking) || other.isThinking == isThinking)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.topK, topK) || other.topK == topK)&&(identical(other.topP, topP) || other.topP == topP)&&(identical(other.maxTokens, maxTokens) || other.maxTokens == maxTokens)&&(identical(other.tokenBuffer, tokenBuffer) || other.tokenBuffer == tokenBuffer)&&(identical(other.randomSeed, randomSeed) || other.randomSeed == randomSeed)&&(identical(other.preferredBackend, preferredBackend) || other.preferredBackend == preferredBackend)&&(identical(other.sourceType, sourceType) || other.sourceType == sourceType)&&(identical(other.source, source) || other.source == source));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,modelId,modelType,supportImage,supportAudio,supportsFunctionCalls,isThinking,temperature,topK,topP,maxTokens,tokenBuffer,randomSeed,preferredBackend,sourceType,source);
+int get hashCode => Object.hashAll([runtimeType,id,name,description,modelId,provider,apiUrl,apiToken,modelType,supportImage,supportAudio,supportsFunctionCalls,isThinking,temperature,topK,topP,maxTokens,tokenBuffer,randomSeed,preferredBackend,sourceType,source]);
 
 @override
 String toString() {
-  return 'ModelInfo(id: $id, name: $name, description: $description, modelId: $modelId, modelType: $modelType, supportImage: $supportImage, supportAudio: $supportAudio, supportsFunctionCalls: $supportsFunctionCalls, isThinking: $isThinking, temperature: $temperature, topK: $topK, topP: $topP, maxTokens: $maxTokens, tokenBuffer: $tokenBuffer, randomSeed: $randomSeed, preferredBackend: $preferredBackend, sourceType: $sourceType, source: $source)';
+  return 'ModelInfo(id: $id, name: $name, description: $description, modelId: $modelId, provider: $provider, apiUrl: $apiUrl, apiToken: $apiToken, modelType: $modelType, supportImage: $supportImage, supportAudio: $supportAudio, supportsFunctionCalls: $supportsFunctionCalls, isThinking: $isThinking, temperature: $temperature, topK: $topK, topP: $topP, maxTokens: $maxTokens, tokenBuffer: $tokenBuffer, randomSeed: $randomSeed, preferredBackend: $preferredBackend, sourceType: $sourceType, source: $source)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ModelInfoCopyWith<$Res>  {
   factory $ModelInfoCopyWith(ModelInfo value, $Res Function(ModelInfo) _then) = _$ModelInfoCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, String description, String? modelId, String modelType, bool supportImage, bool supportAudio, bool supportsFunctionCalls, bool isThinking, double temperature, int topK, double topP, int maxTokens, int tokenBuffer, int randomSeed, String preferredBackend, String sourceType, String source
+ int id, String name, String description, String? modelId, String provider, String? apiUrl, String? apiToken, String modelType, bool supportImage, bool supportAudio, bool supportsFunctionCalls, bool isThinking, double temperature, int topK, double topP, int maxTokens, int tokenBuffer, int randomSeed, String preferredBackend, String sourceType, String source
 });
 
 
@@ -65,12 +65,15 @@ class _$ModelInfoCopyWithImpl<$Res>
 
 /// Create a copy of ModelInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? modelId = freezed,Object? modelType = null,Object? supportImage = null,Object? supportAudio = null,Object? supportsFunctionCalls = null,Object? isThinking = null,Object? temperature = null,Object? topK = null,Object? topP = null,Object? maxTokens = null,Object? tokenBuffer = null,Object? randomSeed = null,Object? preferredBackend = null,Object? sourceType = null,Object? source = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? modelId = freezed,Object? provider = null,Object? apiUrl = freezed,Object? apiToken = freezed,Object? modelType = null,Object? supportImage = null,Object? supportAudio = null,Object? supportsFunctionCalls = null,Object? isThinking = null,Object? temperature = null,Object? topK = null,Object? topP = null,Object? maxTokens = null,Object? tokenBuffer = null,Object? randomSeed = null,Object? preferredBackend = null,Object? sourceType = null,Object? source = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,modelId: freezed == modelId ? _self.modelId : modelId // ignore: cast_nullable_to_non_nullable
+as String?,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
+as String,apiUrl: freezed == apiUrl ? _self.apiUrl : apiUrl // ignore: cast_nullable_to_non_nullable
+as String?,apiToken: freezed == apiToken ? _self.apiToken : apiToken // ignore: cast_nullable_to_non_nullable
 as String?,modelType: null == modelType ? _self.modelType : modelType // ignore: cast_nullable_to_non_nullable
 as String,supportImage: null == supportImage ? _self.supportImage : supportImage // ignore: cast_nullable_to_non_nullable
 as bool,supportAudio: null == supportAudio ? _self.supportAudio : supportAudio // ignore: cast_nullable_to_non_nullable
@@ -170,10 +173,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? modelId,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? modelId,  String provider,  String? apiUrl,  String? apiToken,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ModelInfo() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
+return $default(_that.id,_that.name,_that.description,_that.modelId,_that.provider,_that.apiUrl,_that.apiToken,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
   return orElse();
 
 }
@@ -191,10 +194,10 @@ return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelT
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? modelId,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? modelId,  String provider,  String? apiUrl,  String? apiToken,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)  $default,) {final _that = this;
 switch (_that) {
 case _ModelInfo():
-return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
+return $default(_that.id,_that.name,_that.description,_that.modelId,_that.provider,_that.apiUrl,_that.apiToken,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +214,10 @@ return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelT
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  String? modelId,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  String? modelId,  String provider,  String? apiUrl,  String? apiToken,  String modelType,  bool supportImage,  bool supportAudio,  bool supportsFunctionCalls,  bool isThinking,  double temperature,  int topK,  double topP,  int maxTokens,  int tokenBuffer,  int randomSeed,  String preferredBackend,  String sourceType,  String source)?  $default,) {final _that = this;
 switch (_that) {
 case _ModelInfo() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
+return $default(_that.id,_that.name,_that.description,_that.modelId,_that.provider,_that.apiUrl,_that.apiToken,_that.modelType,_that.supportImage,_that.supportAudio,_that.supportsFunctionCalls,_that.isThinking,_that.temperature,_that.topK,_that.topP,_that.maxTokens,_that.tokenBuffer,_that.randomSeed,_that.preferredBackend,_that.sourceType,_that.source);case _:
   return null;
 
 }
@@ -226,13 +229,16 @@ return $default(_that.id,_that.name,_that.description,_that.modelId,_that.modelT
 @JsonSerializable()
 
 class _ModelInfo implements ModelInfo {
-  const _ModelInfo({required this.id, required this.name, required this.description, this.modelId, required this.modelType, required this.supportImage, required this.supportAudio, required this.supportsFunctionCalls, required this.isThinking, required this.temperature, required this.topK, required this.topP, required this.maxTokens, required this.tokenBuffer, required this.randomSeed, required this.preferredBackend, required this.sourceType, required this.source});
+  const _ModelInfo({required this.id, required this.name, required this.description, this.modelId, required this.provider, this.apiUrl, this.apiToken, required this.modelType, required this.supportImage, required this.supportAudio, required this.supportsFunctionCalls, required this.isThinking, required this.temperature, required this.topK, required this.topP, required this.maxTokens, required this.tokenBuffer, required this.randomSeed, required this.preferredBackend, required this.sourceType, required this.source});
   factory _ModelInfo.fromJson(Map<String, dynamic> json) => _$ModelInfoFromJson(json);
 
 @override final  int id;
 @override final  String name;
 @override final  String description;
 @override final  String? modelId;
+@override final  String provider;
+@override final  String? apiUrl;
+@override final  String? apiToken;
 @override final  String modelType;
 @override final  bool supportImage;
 @override final  bool supportAudio;
@@ -261,16 +267,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModelInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.modelId, modelId) || other.modelId == modelId)&&(identical(other.modelType, modelType) || other.modelType == modelType)&&(identical(other.supportImage, supportImage) || other.supportImage == supportImage)&&(identical(other.supportAudio, supportAudio) || other.supportAudio == supportAudio)&&(identical(other.supportsFunctionCalls, supportsFunctionCalls) || other.supportsFunctionCalls == supportsFunctionCalls)&&(identical(other.isThinking, isThinking) || other.isThinking == isThinking)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.topK, topK) || other.topK == topK)&&(identical(other.topP, topP) || other.topP == topP)&&(identical(other.maxTokens, maxTokens) || other.maxTokens == maxTokens)&&(identical(other.tokenBuffer, tokenBuffer) || other.tokenBuffer == tokenBuffer)&&(identical(other.randomSeed, randomSeed) || other.randomSeed == randomSeed)&&(identical(other.preferredBackend, preferredBackend) || other.preferredBackend == preferredBackend)&&(identical(other.sourceType, sourceType) || other.sourceType == sourceType)&&(identical(other.source, source) || other.source == source));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModelInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.modelId, modelId) || other.modelId == modelId)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.apiUrl, apiUrl) || other.apiUrl == apiUrl)&&(identical(other.apiToken, apiToken) || other.apiToken == apiToken)&&(identical(other.modelType, modelType) || other.modelType == modelType)&&(identical(other.supportImage, supportImage) || other.supportImage == supportImage)&&(identical(other.supportAudio, supportAudio) || other.supportAudio == supportAudio)&&(identical(other.supportsFunctionCalls, supportsFunctionCalls) || other.supportsFunctionCalls == supportsFunctionCalls)&&(identical(other.isThinking, isThinking) || other.isThinking == isThinking)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.topK, topK) || other.topK == topK)&&(identical(other.topP, topP) || other.topP == topP)&&(identical(other.maxTokens, maxTokens) || other.maxTokens == maxTokens)&&(identical(other.tokenBuffer, tokenBuffer) || other.tokenBuffer == tokenBuffer)&&(identical(other.randomSeed, randomSeed) || other.randomSeed == randomSeed)&&(identical(other.preferredBackend, preferredBackend) || other.preferredBackend == preferredBackend)&&(identical(other.sourceType, sourceType) || other.sourceType == sourceType)&&(identical(other.source, source) || other.source == source));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,modelId,modelType,supportImage,supportAudio,supportsFunctionCalls,isThinking,temperature,topK,topP,maxTokens,tokenBuffer,randomSeed,preferredBackend,sourceType,source);
+int get hashCode => Object.hashAll([runtimeType,id,name,description,modelId,provider,apiUrl,apiToken,modelType,supportImage,supportAudio,supportsFunctionCalls,isThinking,temperature,topK,topP,maxTokens,tokenBuffer,randomSeed,preferredBackend,sourceType,source]);
 
 @override
 String toString() {
-  return 'ModelInfo(id: $id, name: $name, description: $description, modelId: $modelId, modelType: $modelType, supportImage: $supportImage, supportAudio: $supportAudio, supportsFunctionCalls: $supportsFunctionCalls, isThinking: $isThinking, temperature: $temperature, topK: $topK, topP: $topP, maxTokens: $maxTokens, tokenBuffer: $tokenBuffer, randomSeed: $randomSeed, preferredBackend: $preferredBackend, sourceType: $sourceType, source: $source)';
+  return 'ModelInfo(id: $id, name: $name, description: $description, modelId: $modelId, provider: $provider, apiUrl: $apiUrl, apiToken: $apiToken, modelType: $modelType, supportImage: $supportImage, supportAudio: $supportAudio, supportsFunctionCalls: $supportsFunctionCalls, isThinking: $isThinking, temperature: $temperature, topK: $topK, topP: $topP, maxTokens: $maxTokens, tokenBuffer: $tokenBuffer, randomSeed: $randomSeed, preferredBackend: $preferredBackend, sourceType: $sourceType, source: $source)';
 }
 
 
@@ -281,7 +287,7 @@ abstract mixin class _$ModelInfoCopyWith<$Res> implements $ModelInfoCopyWith<$Re
   factory _$ModelInfoCopyWith(_ModelInfo value, $Res Function(_ModelInfo) _then) = __$ModelInfoCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, String description, String? modelId, String modelType, bool supportImage, bool supportAudio, bool supportsFunctionCalls, bool isThinking, double temperature, int topK, double topP, int maxTokens, int tokenBuffer, int randomSeed, String preferredBackend, String sourceType, String source
+ int id, String name, String description, String? modelId, String provider, String? apiUrl, String? apiToken, String modelType, bool supportImage, bool supportAudio, bool supportsFunctionCalls, bool isThinking, double temperature, int topK, double topP, int maxTokens, int tokenBuffer, int randomSeed, String preferredBackend, String sourceType, String source
 });
 
 
@@ -298,12 +304,15 @@ class __$ModelInfoCopyWithImpl<$Res>
 
 /// Create a copy of ModelInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? modelId = freezed,Object? modelType = null,Object? supportImage = null,Object? supportAudio = null,Object? supportsFunctionCalls = null,Object? isThinking = null,Object? temperature = null,Object? topK = null,Object? topP = null,Object? maxTokens = null,Object? tokenBuffer = null,Object? randomSeed = null,Object? preferredBackend = null,Object? sourceType = null,Object? source = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? modelId = freezed,Object? provider = null,Object? apiUrl = freezed,Object? apiToken = freezed,Object? modelType = null,Object? supportImage = null,Object? supportAudio = null,Object? supportsFunctionCalls = null,Object? isThinking = null,Object? temperature = null,Object? topK = null,Object? topP = null,Object? maxTokens = null,Object? tokenBuffer = null,Object? randomSeed = null,Object? preferredBackend = null,Object? sourceType = null,Object? source = null,}) {
   return _then(_ModelInfo(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,modelId: freezed == modelId ? _self.modelId : modelId // ignore: cast_nullable_to_non_nullable
+as String?,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
+as String,apiUrl: freezed == apiUrl ? _self.apiUrl : apiUrl // ignore: cast_nullable_to_non_nullable
+as String?,apiToken: freezed == apiToken ? _self.apiToken : apiToken // ignore: cast_nullable_to_non_nullable
 as String?,modelType: null == modelType ? _self.modelType : modelType // ignore: cast_nullable_to_non_nullable
 as String,supportImage: null == supportImage ? _self.supportImage : supportImage // ignore: cast_nullable_to_non_nullable
 as bool,supportAudio: null == supportAudio ? _self.supportAudio : supportAudio // ignore: cast_nullable_to_non_nullable

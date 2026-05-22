@@ -2087,6 +2087,38 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('local'),
+  );
+  static const VerificationMeta _apiUrlMeta = const VerificationMeta('apiUrl');
+  @override
+  late final GeneratedColumn<String> apiUrl = GeneratedColumn<String>(
+    'api_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _apiTokenMeta = const VerificationMeta(
+    'apiToken',
+  );
+  @override
+  late final GeneratedColumn<String> apiToken = GeneratedColumn<String>(
+    'api_token',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _modelTypeMeta = const VerificationMeta(
     'modelType',
   );
@@ -2265,6 +2297,9 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     name,
     description,
     modelId,
+    provider,
+    apiUrl,
+    apiToken,
     modelType,
     supportImage,
     supportAudio,
@@ -2324,6 +2359,24 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
       context.handle(
         _modelIdMeta,
         modelId.isAcceptableOrUnknown(data['model_id']!, _modelIdMeta),
+      );
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('api_url')) {
+      context.handle(
+        _apiUrlMeta,
+        apiUrl.isAcceptableOrUnknown(data['api_url']!, _apiUrlMeta),
+      );
+    }
+    if (data.containsKey('api_token')) {
+      context.handle(
+        _apiTokenMeta,
+        apiToken.isAcceptableOrUnknown(data['api_token']!, _apiTokenMeta),
       );
     }
     if (data.containsKey('model_type')) {
@@ -2463,6 +2516,18 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
         DriftSqlType.string,
         data['${effectivePrefix}model_id'],
       ),
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      )!,
+      apiUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}api_url'],
+      ),
+      apiToken: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}api_token'],
+      ),
       modelType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model_type'],
@@ -2534,6 +2599,9 @@ class Model extends DataClass implements Insertable<Model> {
   final String name;
   final String description;
   final String? modelId;
+  final String provider;
+  final String? apiUrl;
+  final String? apiToken;
   final String modelType;
   final bool supportImage;
   final bool supportAudio;
@@ -2554,6 +2622,9 @@ class Model extends DataClass implements Insertable<Model> {
     required this.name,
     required this.description,
     this.modelId,
+    required this.provider,
+    this.apiUrl,
+    this.apiToken,
     required this.modelType,
     required this.supportImage,
     required this.supportAudio,
@@ -2578,6 +2649,13 @@ class Model extends DataClass implements Insertable<Model> {
     map['description'] = Variable<String>(description);
     if (!nullToAbsent || modelId != null) {
       map['model_id'] = Variable<String>(modelId);
+    }
+    map['provider'] = Variable<String>(provider);
+    if (!nullToAbsent || apiUrl != null) {
+      map['api_url'] = Variable<String>(apiUrl);
+    }
+    if (!nullToAbsent || apiToken != null) {
+      map['api_token'] = Variable<String>(apiToken);
     }
     map['model_type'] = Variable<String>(modelType);
     map['support_image'] = Variable<bool>(supportImage);
@@ -2605,6 +2683,13 @@ class Model extends DataClass implements Insertable<Model> {
       modelId: modelId == null && nullToAbsent
           ? const Value.absent()
           : Value(modelId),
+      provider: Value(provider),
+      apiUrl: apiUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(apiUrl),
+      apiToken: apiToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(apiToken),
       modelType: Value(modelType),
       supportImage: Value(supportImage),
       supportAudio: Value(supportAudio),
@@ -2633,6 +2718,9 @@ class Model extends DataClass implements Insertable<Model> {
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String>(json['description']),
       modelId: serializer.fromJson<String?>(json['modelId']),
+      provider: serializer.fromJson<String>(json['provider']),
+      apiUrl: serializer.fromJson<String?>(json['apiUrl']),
+      apiToken: serializer.fromJson<String?>(json['apiToken']),
       modelType: serializer.fromJson<String>(json['modelType']),
       supportImage: serializer.fromJson<bool>(json['supportImage']),
       supportAudio: serializer.fromJson<bool>(json['supportAudio']),
@@ -2660,6 +2748,9 @@ class Model extends DataClass implements Insertable<Model> {
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String>(description),
       'modelId': serializer.toJson<String?>(modelId),
+      'provider': serializer.toJson<String>(provider),
+      'apiUrl': serializer.toJson<String?>(apiUrl),
+      'apiToken': serializer.toJson<String?>(apiToken),
       'modelType': serializer.toJson<String>(modelType),
       'supportImage': serializer.toJson<bool>(supportImage),
       'supportAudio': serializer.toJson<bool>(supportAudio),
@@ -2683,6 +2774,9 @@ class Model extends DataClass implements Insertable<Model> {
     String? name,
     String? description,
     Value<String?> modelId = const Value.absent(),
+    String? provider,
+    Value<String?> apiUrl = const Value.absent(),
+    Value<String?> apiToken = const Value.absent(),
     String? modelType,
     bool? supportImage,
     bool? supportAudio,
@@ -2703,6 +2797,9 @@ class Model extends DataClass implements Insertable<Model> {
     name: name ?? this.name,
     description: description ?? this.description,
     modelId: modelId.present ? modelId.value : this.modelId,
+    provider: provider ?? this.provider,
+    apiUrl: apiUrl.present ? apiUrl.value : this.apiUrl,
+    apiToken: apiToken.present ? apiToken.value : this.apiToken,
     modelType: modelType ?? this.modelType,
     supportImage: supportImage ?? this.supportImage,
     supportAudio: supportAudio ?? this.supportAudio,
@@ -2727,6 +2824,9 @@ class Model extends DataClass implements Insertable<Model> {
           ? data.description.value
           : this.description,
       modelId: data.modelId.present ? data.modelId.value : this.modelId,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      apiUrl: data.apiUrl.present ? data.apiUrl.value : this.apiUrl,
+      apiToken: data.apiToken.present ? data.apiToken.value : this.apiToken,
       modelType: data.modelType.present ? data.modelType.value : this.modelType,
       supportImage: data.supportImage.present
           ? data.supportImage.value
@@ -2770,6 +2870,9 @@ class Model extends DataClass implements Insertable<Model> {
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('modelId: $modelId, ')
+          ..write('provider: $provider, ')
+          ..write('apiUrl: $apiUrl, ')
+          ..write('apiToken: $apiToken, ')
           ..write('modelType: $modelType, ')
           ..write('supportImage: $supportImage, ')
           ..write('supportAudio: $supportAudio, ')
@@ -2789,12 +2892,15 @@ class Model extends DataClass implements Insertable<Model> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     createdAt,
     name,
     description,
     modelId,
+    provider,
+    apiUrl,
+    apiToken,
     modelType,
     supportImage,
     supportAudio,
@@ -2809,7 +2915,7 @@ class Model extends DataClass implements Insertable<Model> {
     preferredBackend,
     sourceType,
     source,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2819,6 +2925,9 @@ class Model extends DataClass implements Insertable<Model> {
           other.name == this.name &&
           other.description == this.description &&
           other.modelId == this.modelId &&
+          other.provider == this.provider &&
+          other.apiUrl == this.apiUrl &&
+          other.apiToken == this.apiToken &&
           other.modelType == this.modelType &&
           other.supportImage == this.supportImage &&
           other.supportAudio == this.supportAudio &&
@@ -2841,6 +2950,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
   final Value<String> name;
   final Value<String> description;
   final Value<String?> modelId;
+  final Value<String> provider;
+  final Value<String?> apiUrl;
+  final Value<String?> apiToken;
   final Value<String> modelType;
   final Value<bool> supportImage;
   final Value<bool> supportAudio;
@@ -2861,6 +2973,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.name = const Value.absent(),
     this.description = const Value.absent(),
     this.modelId = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.apiUrl = const Value.absent(),
+    this.apiToken = const Value.absent(),
     this.modelType = const Value.absent(),
     this.supportImage = const Value.absent(),
     this.supportAudio = const Value.absent(),
@@ -2882,6 +2997,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     required String name,
     required String description,
     this.modelId = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.apiUrl = const Value.absent(),
+    this.apiToken = const Value.absent(),
     required String modelType,
     this.supportImage = const Value.absent(),
     this.supportAudio = const Value.absent(),
@@ -2907,6 +3025,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Expression<String>? name,
     Expression<String>? description,
     Expression<String>? modelId,
+    Expression<String>? provider,
+    Expression<String>? apiUrl,
+    Expression<String>? apiToken,
     Expression<String>? modelType,
     Expression<bool>? supportImage,
     Expression<bool>? supportAudio,
@@ -2928,6 +3049,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       if (name != null) 'name': name,
       if (description != null) 'description': description,
       if (modelId != null) 'model_id': modelId,
+      if (provider != null) 'provider': provider,
+      if (apiUrl != null) 'api_url': apiUrl,
+      if (apiToken != null) 'api_token': apiToken,
       if (modelType != null) 'model_type': modelType,
       if (supportImage != null) 'support_image': supportImage,
       if (supportAudio != null) 'support_audio': supportAudio,
@@ -2952,6 +3076,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Value<String>? name,
     Value<String>? description,
     Value<String?>? modelId,
+    Value<String>? provider,
+    Value<String?>? apiUrl,
+    Value<String?>? apiToken,
     Value<String>? modelType,
     Value<bool>? supportImage,
     Value<bool>? supportAudio,
@@ -2973,6 +3100,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       name: name ?? this.name,
       description: description ?? this.description,
       modelId: modelId ?? this.modelId,
+      provider: provider ?? this.provider,
+      apiUrl: apiUrl ?? this.apiUrl,
+      apiToken: apiToken ?? this.apiToken,
       modelType: modelType ?? this.modelType,
       supportImage: supportImage ?? this.supportImage,
       supportAudio: supportAudio ?? this.supportAudio,
@@ -3008,6 +3138,15 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     }
     if (modelId.present) {
       map['model_id'] = Variable<String>(modelId.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (apiUrl.present) {
+      map['api_url'] = Variable<String>(apiUrl.value);
+    }
+    if (apiToken.present) {
+      map['api_token'] = Variable<String>(apiToken.value);
     }
     if (modelType.present) {
       map['model_type'] = Variable<String>(modelType.value);
@@ -3064,6 +3203,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('modelId: $modelId, ')
+          ..write('provider: $provider, ')
+          ..write('apiUrl: $apiUrl, ')
+          ..write('apiToken: $apiToken, ')
           ..write('modelType: $modelType, ')
           ..write('supportImage: $supportImage, ')
           ..write('supportAudio: $supportAudio, ')
@@ -4772,6 +4914,9 @@ typedef $$ModelsTableCreateCompanionBuilder =
       required String name,
       required String description,
       Value<String?> modelId,
+      Value<String> provider,
+      Value<String?> apiUrl,
+      Value<String?> apiToken,
       required String modelType,
       Value<bool> supportImage,
       Value<bool> supportAudio,
@@ -4794,6 +4939,9 @@ typedef $$ModelsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> description,
       Value<String?> modelId,
+      Value<String> provider,
+      Value<String?> apiUrl,
+      Value<String?> apiToken,
       Value<String> modelType,
       Value<bool> supportImage,
       Value<bool> supportAudio,
@@ -4841,6 +4989,21 @@ class $$ModelsTableFilterComposer
 
   ColumnFilters<String> get modelId => $composableBuilder(
     column: $table.modelId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get apiUrl => $composableBuilder(
+    column: $table.apiUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get apiToken => $composableBuilder(
+    column: $table.apiToken,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4949,6 +5112,21 @@ class $$ModelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get apiUrl => $composableBuilder(
+    column: $table.apiUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get apiToken => $composableBuilder(
+    column: $table.apiToken,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get modelType => $composableBuilder(
     column: $table.modelType,
     builder: (column) => ColumnOrderings(column),
@@ -5046,6 +5224,15 @@ class $$ModelsTableAnnotationComposer
   GeneratedColumn<String> get modelId =>
       $composableBuilder(column: $table.modelId, builder: (column) => column);
 
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get apiUrl =>
+      $composableBuilder(column: $table.apiUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get apiToken =>
+      $composableBuilder(column: $table.apiToken, builder: (column) => column);
+
   GeneratedColumn<String> get modelType =>
       $composableBuilder(column: $table.modelType, builder: (column) => column);
 
@@ -5140,6 +5327,9 @@ class $$ModelsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String?> modelId = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String?> apiUrl = const Value.absent(),
+                Value<String?> apiToken = const Value.absent(),
                 Value<String> modelType = const Value.absent(),
                 Value<bool> supportImage = const Value.absent(),
                 Value<bool> supportAudio = const Value.absent(),
@@ -5160,6 +5350,9 @@ class $$ModelsTableTableManager
                 name: name,
                 description: description,
                 modelId: modelId,
+                provider: provider,
+                apiUrl: apiUrl,
+                apiToken: apiToken,
                 modelType: modelType,
                 supportImage: supportImage,
                 supportAudio: supportAudio,
@@ -5182,6 +5375,9 @@ class $$ModelsTableTableManager
                 required String name,
                 required String description,
                 Value<String?> modelId = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String?> apiUrl = const Value.absent(),
+                Value<String?> apiToken = const Value.absent(),
                 required String modelType,
                 Value<bool> supportImage = const Value.absent(),
                 Value<bool> supportAudio = const Value.absent(),
@@ -5202,6 +5398,9 @@ class $$ModelsTableTableManager
                 name: name,
                 description: description,
                 modelId: modelId,
+                provider: provider,
+                apiUrl: apiUrl,
+                apiToken: apiToken,
                 modelType: modelType,
                 supportImage: supportImage,
                 supportAudio: supportAudio,

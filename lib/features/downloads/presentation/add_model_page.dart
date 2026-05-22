@@ -8,6 +8,8 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,7 +27,12 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _sourceController = TextEditingController();
+  final _apiUrlController = TextEditingController();
+  final _apiTokenController = TextEditingController();
+  final _maxTokensController = TextEditingController();
+  final _outputTokensController = TextEditingController();
 
+  String _providerType = ModelProviderType.local;
   String _sourceType = 'network';
   String _modelType = ModelType.gemma4.name;
   String _preferredBackend = 'gpu';
@@ -50,11 +57,17 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
     super.initState();
     _isEditMode = widget.initialModel != null;
     final model = widget.initialModel;
-    if (model == null) return;
+    if (model == null) {
+      _syncTokenControllers();
+      return;
+    }
 
     _nameController.text = model.name;
     _descriptionController.text = model.description;
     _sourceController.text = model.source;
+    _apiUrlController.text = model.apiUrl ?? '';
+    _apiTokenController.text = model.apiToken ?? '';
+    _providerType = model.provider;
     _sourceType = model.sourceType;
     _modelType = model.modelType;
     _preferredBackend = model.preferredBackend;
@@ -68,6 +81,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
     _supportAudio = model.supportAudio;
     _supportsFunctionCalls = model.supportsFunctionCalls;
     _isThinking = model.isThinking;
+    _syncTokenControllers();
   }
 
   @override
@@ -75,13 +89,41 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
     _nameController.dispose();
     _descriptionController.dispose();
     _sourceController.dispose();
+    _apiUrlController.dispose();
+    _apiTokenController.dispose();
+    _maxTokensController.dispose();
+    _outputTokensController.dispose();
     super.dispose();
   }
 
+  int _resolveMaxTokensMax() {
+    if (_providerType == ModelProviderType.remote) return 1000000;
+    return 8192;
+  }
+
+  int _resolveMaxTokensMin() {
+    if (_providerType == ModelProviderType.remote) return 1;
+    return 256;
+  }
+
+  int _resolveTokenBufferMin() {
+    if (_providerType == ModelProviderType.remote) return 1;
+    return 32;
+  }
+
   int _resolveTokenBufferMax(int maxTokens) {
+    if (_providerType == ModelProviderType.remote) {
+      if (maxTokens < 1) return 1;
+      return maxTokens;
+    }
     final candidate = maxTokens - 1;
     if (candidate < 32) return 32;
     return candidate > 4096 ? 4096 : candidate;
+  }
+
+  void _syncTokenControllers() {
+    _maxTokensController.text = _maxTokens.toString();
+    _outputTokensController.text = _tokenBuffer.toString();
   }
 
   Future<void> _pickFile() async {
@@ -125,38 +167,110 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     final source = _sourceController.text.trim();
+    final apiUrl = _apiUrlController.text.trim();
+    final apiToken = _apiTokenController.text.trim();
 
-    if (name.isEmpty || description.isEmpty || source.isEmpty) {
+    if (_providerType == ModelProviderType.remote) {
+      final parsedMaxTokens = int.tryParse(_maxTokensController.text.trim());
+      final parsedOutputTokens = int.tryParse(
+        _outputTokensController.text.trim(),
+      );
+      if (parsedMaxTokens == null || parsedOutputTokens == null) {
+        AppToast.show(
+          'Max tokens and output tokens must be valid numbers',
+          type: AppToastType.error,
+        );
+        return;
+      }
+      _maxTokens = parsedMaxTokens;
+      _tokenBuffer = parsedOutputTokens;
+    }
+
+    if (name.isEmpty || description.isEmpty) {
       AppToast.show('All fields are required', type: AppToastType.error);
       return;
     }
-    if (_tokenBuffer >= _maxTokens) {
+
+    final minTokens = _resolveMaxTokensMin();
+    final maxTokensLimit = _resolveMaxTokensMax();
+    if (_maxTokens < minTokens || _maxTokens > maxTokensLimit) {
       AppToast.show(
-        'Token buffer must be smaller than max tokens',
+        'Max tokens must be between $minTokens and $maxTokensLimit',
         type: AppToastType.error,
       );
       return;
     }
 
-    if (_sourceType == 'network' &&
-        !(source.startsWith('http://') || source.startsWith('https://'))) {
+    final minOutputTokens = _resolveTokenBufferMin();
+    final maxOutputTokens = _resolveTokenBufferMax(_maxTokens);
+    if (_tokenBuffer < minOutputTokens || _tokenBuffer > maxOutputTokens) {
       AppToast.show(
-        'Network source must be a valid URL',
-        type: AppToastType.error,
-      );
-      return;
-    }
-    if (_sourceType == 'file' && source.startsWith('content://')) {
-      AppToast.show(
-        'content:// URIs are not absolute paths. Please paste the real model file path.',
+        _providerType == ModelProviderType.remote
+            ? 'Output tokens must be between $minOutputTokens and $maxOutputTokens'
+            : 'Output tokens must be between $minOutputTokens and $maxOutputTokens',
         type: AppToastType.error,
       );
       return;
     }
 
-    final normalizedSource = _sourceType == 'file'
+    if (_providerType == ModelProviderType.local &&
+        _tokenBuffer >= _maxTokens) {
+      AppToast.show(
+        'Output tokens must be smaller than max tokens for local models',
+        type: AppToastType.error,
+      );
+      return;
+    }
+
+    if (_providerType == ModelProviderType.local) {
+      if (source.isEmpty) {
+        AppToast.show(
+          'Source is required for local models',
+          type: AppToastType.error,
+        );
+        return;
+      }
+      if (_sourceType == 'network' &&
+          !(source.startsWith('http://') || source.startsWith('https://'))) {
+        AppToast.show(
+          'Network source must be a valid URL',
+          type: AppToastType.error,
+        );
+        return;
+      }
+      if (_sourceType == 'file' && source.startsWith('content://')) {
+        AppToast.show(
+          'content:// URIs are not absolute paths. Please paste the real model file path.',
+          type: AppToastType.error,
+        );
+        return;
+      }
+    } else {
+      if (apiUrl.isEmpty || apiToken.isEmpty) {
+        AppToast.show(
+          'API URL and token are required for remote models',
+          type: AppToastType.error,
+        );
+        return;
+      }
+      if (!(apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))) {
+        AppToast.show(
+          'API URL must start with http:// or https://',
+          type: AppToastType.error,
+        );
+        return;
+      }
+    }
+
+    final normalizedSource =
+        _providerType == ModelProviderType.local && _sourceType == 'file'
         ? _normalizeFileUriToPath(source)
-        : source;
+        : (_providerType == ModelProviderType.local
+              ? source
+              : (source.isEmpty ? 'remote://chat' : source));
+    final sourceType = _providerType == ModelProviderType.local
+        ? _sourceType
+        : 'remote';
 
     setState(() => _saving = true);
     try {
@@ -166,6 +280,9 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
           id: widget.initialModel!.id,
           name: name,
           description: description,
+          provider: _providerType,
+          apiUrl: _providerType == ModelProviderType.remote ? apiUrl : null,
+          apiToken: _providerType == ModelProviderType.remote ? apiToken : null,
           modelType: _modelType,
           supportImage: _supportImage,
           supportAudio: _supportAudio,
@@ -178,13 +295,16 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
           tokenBuffer: _tokenBuffer,
           randomSeed: _randomSeed,
           preferredBackend: _preferredBackend,
-          sourceType: _sourceType,
+          sourceType: sourceType,
           source: normalizedSource,
         );
       } else {
         await actions.addModel(
           name: name,
           description: description,
+          provider: _providerType,
+          apiUrl: _providerType == ModelProviderType.remote ? apiUrl : null,
+          apiToken: _providerType == ModelProviderType.remote ? apiToken : null,
           modelType: _modelType,
           supportImage: _supportImage,
           supportAudio: _supportAudio,
@@ -197,7 +317,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
           tokenBuffer: _tokenBuffer,
           randomSeed: _randomSeed,
           preferredBackend: _preferredBackend,
-          sourceType: _sourceType,
+          sourceType: sourceType,
           source: normalizedSource,
         );
       }
@@ -214,8 +334,14 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
   @override
   Widget build(BuildContext context) {
     final tokenBufferMax = _resolveTokenBufferMax(_maxTokens);
+    final tokenBufferMin = _resolveTokenBufferMin();
     if (_tokenBuffer > tokenBufferMax) {
       _tokenBuffer = tokenBufferMax;
+      _syncTokenControllers();
+    }
+    if (_tokenBuffer < tokenBufferMin) {
+      _tokenBuffer = tokenBufferMin;
+      _syncTokenControllers();
     }
 
     Widget reveal(int index, Widget child) {
@@ -306,19 +432,52 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
               3,
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment<String>(value: 'network', label: Text('URL')),
-                  ButtonSegment<String>(value: 'file', label: Text('File')),
+                  ButtonSegment<String>(
+                    value: ModelProviderType.local,
+                    label: Text('Local'),
+                  ),
+                  ButtonSegment<String>(
+                    value: ModelProviderType.remote,
+                    label: Text('Remote API'),
+                  ),
                 ],
-                selected: {_sourceType},
+                selected: {_providerType},
                 onSelectionChanged: (value) {
-                  setState(() => _sourceType = value.first);
-                  _sourceController.clear();
+                  setState(() {
+                    _providerType = value.first;
+                    final minTokens = _resolveMaxTokensMin();
+                    final maxTokens = _resolveMaxTokensMax();
+                    if (_maxTokens < minTokens) _maxTokens = minTokens;
+                    if (_maxTokens > maxTokens) _maxTokens = maxTokens;
+                    final maxOutput = _resolveTokenBufferMax(_maxTokens);
+                    final minOutput = _resolveTokenBufferMin();
+                    if (_tokenBuffer < minOutput) _tokenBuffer = minOutput;
+                    if (_tokenBuffer > maxOutput) _tokenBuffer = maxOutput;
+                    _syncTokenControllers();
+                  });
                 },
               ),
             ),
             const SizedBox(height: 8),
+            if (_providerType == ModelProviderType.local)
+              reveal(
+                4,
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(value: 'network', label: Text('URL')),
+                    ButtonSegment<String>(value: 'file', label: Text('File')),
+                  ],
+                  selected: {_sourceType},
+                  onSelectionChanged: (value) {
+                    setState(() => _sourceType = value.first);
+                    _sourceController.clear();
+                  },
+                ),
+              ),
+            if (_providerType == ModelProviderType.local)
+              const SizedBox(height: 8),
             reveal(
-              4,
+              5,
               Row(
                 children: [
                   Expanded(
@@ -344,7 +503,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
               ),
             ),
             reveal(
-              5,
+              6,
               Row(
                 children: [
                   Expanded(
@@ -370,7 +529,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
             ),
             const SizedBox(height: 8),
             reveal(
-              6,
+              7,
               ModelSettingsSliderTile(
                 label: 'Temperature',
                 valueText: _temperature.toStringAsFixed(2),
@@ -384,7 +543,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
               ),
             ),
             reveal(
-              7,
+              8,
               ModelSettingsSliderTile(
                 label: 'Top-P',
                 valueText: _topP.toStringAsFixed(2),
@@ -399,7 +558,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
             ),
             const SizedBox(height: 8),
             reveal(
-              8,
+              9,
               ModelSettingsSliderTile(
                 label: 'Top-K',
                 valueText: _topK.toString(),
@@ -412,45 +571,69 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                 ),
               ),
             ),
-            reveal(
-              9,
-              ModelSettingsSliderTile(
-                label: 'Max tokens',
-                valueText: _maxTokens.toString(),
-                slider: Slider(
-                  value: _maxTokens.toDouble(),
-                  min: 256,
-                  max: 8192,
-                  divisions: 248,
-                  onChanged: (value) {
-                    setState(() {
-                      _maxTokens = value.round();
-                      final maxAllowed = _resolveTokenBufferMax(_maxTokens);
-                      if (_tokenBuffer > maxAllowed) {
-                        _tokenBuffer = maxAllowed;
-                      }
-                    });
-                  },
+            if (_providerType == ModelProviderType.local)
+              reveal(
+                10,
+                ModelSettingsSliderTile(
+                  label: 'Max tokens',
+                  valueText: _maxTokens.toString(),
+                  slider: Slider(
+                    value: _maxTokens.toDouble(),
+                    min: 256,
+                    max: 8192,
+                    divisions: 248,
+                    onChanged: (value) {
+                      setState(() {
+                        _maxTokens = value.round();
+                        final maxAllowed = _resolveTokenBufferMax(_maxTokens);
+                        if (_tokenBuffer > maxAllowed) {
+                          _tokenBuffer = maxAllowed;
+                        }
+                        _syncTokenControllers();
+                      });
+                    },
+                  ),
                 ),
               ),
-            ),
-            reveal(
-              10,
-              ModelSettingsSliderTile(
-                label: 'Token buffer',
-                valueText: _tokenBuffer.toString(),
-                slider: Slider(
-                  value: _tokenBuffer.toDouble(),
-                  min: 32,
-                  max: tokenBufferMax.toDouble(),
-                  divisions: tokenBufferMax > 32 ? tokenBufferMax - 32 : 1,
-                  onChanged: (value) =>
-                      setState(() => _tokenBuffer = value.round()),
+            if (_providerType == ModelProviderType.local)
+              reveal(
+                11,
+                ModelSettingsSliderTile(
+                  label: 'Output tokens',
+                  valueText: _tokenBuffer.toString(),
+                  slider: Slider(
+                    value: _tokenBuffer.toDouble(),
+                    min: tokenBufferMin.toDouble(),
+                    max: tokenBufferMax.toDouble(),
+                    divisions: tokenBufferMax > tokenBufferMin
+                        ? tokenBufferMax - tokenBufferMin
+                        : 1,
+                    onChanged: (value) => setState(() {
+                      _tokenBuffer = value.round();
+                      _syncTokenControllers();
+                    }),
+                  ),
                 ),
               ),
-            ),
+            if (_providerType == ModelProviderType.remote)
+              reveal(
+                10,
+                Column(
+                  children: [
+                    ModelSettingsNumberField(
+                      controller: _maxTokensController,
+                      label: 'Max tokens (context, up to 1,000,000)',
+                    ),
+                    const SizedBox(height: 8),
+                    ModelSettingsNumberField(
+                      controller: _outputTokensController,
+                      label: 'Output tokens',
+                    ),
+                  ],
+                ),
+              ),
             reveal(
-              11,
+              12,
               ModelSettingsSliderTile(
                 label: 'Random seed',
                 valueText: _randomSeed.toString(),
@@ -465,40 +648,42 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
               ),
             ),
             const SizedBox(height: 12),
-            reveal(
-              12,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Preferred backend',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    initialValue: _preferredBackend,
-                    decoration: const InputDecoration(
-                      hintText: 'Preferred backend',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'auto', child: Text('Auto')),
-                      DropdownMenuItem(value: 'gpu', child: Text('GPU')),
-                      DropdownMenuItem(value: 'cpu', child: Text('CPU')),
-                      DropdownMenuItem(value: 'npu', child: Text('NPU')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _preferredBackend = value);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_sourceType == 'file')
+            if (_providerType == ModelProviderType.local)
               reveal(
                 13,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Preferred backend',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: _preferredBackend,
+                      decoration: const InputDecoration(
+                        hintText: 'Preferred backend',
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                        DropdownMenuItem(value: 'gpu', child: Text('GPU')),
+                        DropdownMenuItem(value: 'cpu', child: Text('CPU')),
+                        DropdownMenuItem(value: 'npu', child: Text('NPU')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _preferredBackend = value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            if (_providerType == ModelProviderType.local &&
+                _sourceType == 'file')
+              reveal(
+                14,
 
                 FilledButton.icon(
                   onPressed: _picking ? null : _pickFile,
@@ -512,31 +697,67 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                   label: const Text('Choose file'),
                 ),
               ),
-            if (_sourceType == 'file') const SizedBox(height: 8),
-            reveal(
-              14,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _sourceType == 'network' ? 'URL source' : 'File path',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _sourceController,
-                    decoration: InputDecoration(
-                      hintText: _sourceType == 'network'
-                          ? 'https://...'
-                          : '/absolute/path/model.task',
+            if (_providerType == ModelProviderType.local &&
+                _sourceType == 'file')
+              const SizedBox(height: 8),
+            if (_providerType == ModelProviderType.local)
+              reveal(
+                15,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _sourceType == 'network' ? 'URL source' : 'File path',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _sourceController,
+                      decoration: InputDecoration(
+                        hintText: _sourceType == 'network'
+                            ? 'https://...'
+                            : '/absolute/path/model.task',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            if (_providerType == ModelProviderType.remote)
+              reveal(
+                16,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'API URL',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _apiUrlController,
+                      decoration: const InputDecoration(
+                        hintText: 'https://api.example.com/v1',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'API Token',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _apiTokenController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Bearer token',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             reveal(
-              15,
+              17,
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

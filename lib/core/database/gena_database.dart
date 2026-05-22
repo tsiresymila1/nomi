@@ -54,6 +54,9 @@ class Models extends Table with TableMixin {
   late final name = text().withLength(min: 1, max: 64)();
   late final description = text()();
   late final modelId = text().nullable()();
+  late final provider = text().withDefault(const Constant('local'))();
+  late final apiUrl = text().nullable()();
+  late final apiToken = text().nullable()();
   late final modelType = text()();
   late final supportImage = boolean().withDefault(const Constant(false))();
   late final supportAudio = boolean().withDefault(const Constant(false))();
@@ -79,7 +82,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +163,14 @@ class GenaDatabase extends _$GenaDatabase {
           'native_open_app_enabled = 1, '
           'native_send_email_enabled = 1, '
           'native_flashlight_enabled = 1',
+        );
+      }
+      if (from < 12) {
+        await m.addColumn(models, models.provider);
+        await m.addColumn(models, models.apiUrl);
+        await m.addColumn(models, models.apiToken);
+        await customStatement(
+          "UPDATE models SET provider = 'local' WHERE provider IS NULL OR TRIM(provider) = ''",
         );
       }
     },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class DownloadItem extends StatefulWidget {
@@ -32,6 +33,7 @@ class _DownloadItemState extends State<DownloadItem> {
     final model = widget.model;
     final progress = widget.progress;
     final isDownloading = progress != null && progress < 1.0;
+    final isRemote = model.provider == ModelProviderType.remote;
     final isNetworkSource =
         model.sourceType == 'network' ||
         model.source.startsWith('http://') ||
@@ -150,17 +152,25 @@ class _DownloadItemState extends State<DownloadItem> {
                           child: FilledButton.icon(
                             onPressed: isDownloading
                                 ? null
+                                : isRemote
+                                ? null
                                 : widget.isInstalled
                                 ? null
                                 : widget.onDownload,
-                            icon: isNetworkSource
+                            icon: isRemote
+                                ? const Icon(Icons.cloud_done_rounded, size: 18)
+                                : isNetworkSource
                                 ? const Icon(Icons.download_rounded, size: 18)
                                 : const HugeIcon(
                                     icon: HugeIcons.strokeRoundedComputerAdd,
                                     size: 18,
                                   ),
                             label: Text(
-                              widget.isInstalled ? 'Installed' : 'Download',
+                              isRemote
+                                  ? 'Remote'
+                                  : (widget.isInstalled
+                                        ? 'Installed'
+                                        : 'Download'),
                             ),
                           ),
                         ),

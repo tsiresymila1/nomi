@@ -79,14 +79,12 @@ class NativeToolBridgeService {
 
     final subject = (args['subject'] ?? '').toString();
     final body = (args['body'] ?? '').toString();
-    final uri = Uri(
-      scheme: 'mailto',
-      path: to,
-      queryParameters: <String, String>{
-        if (subject.isNotEmpty) 'subject': subject,
-        if (body.isNotEmpty) 'body': body,
-      },
-    );
+    final queryParts = <String>[
+      if (subject.isNotEmpty) 'subject=${Uri.encodeComponent(subject)}',
+      if (body.isNotEmpty) 'body=${Uri.encodeComponent(body)}',
+    ];
+    final query = queryParts.isEmpty ? '' : '?${queryParts.join('&')}';
+    final uri = Uri.parse('mailto:$to$query');
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     return <String, dynamic>{

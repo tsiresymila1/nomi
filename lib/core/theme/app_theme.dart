@@ -106,7 +106,7 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.green.shade900,
+        seedColor: Colors.green.shade200,
         brightness: Brightness.light,
       ),
     );
@@ -145,7 +145,7 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.green.shade700,
+        seedColor: Colors.green.shade800,
         brightness: Brightness.dark,
         surface: _darkSurface,
         surfaceTint: Colors.transparent,

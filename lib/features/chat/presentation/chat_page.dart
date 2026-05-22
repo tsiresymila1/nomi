@@ -120,6 +120,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     final selectedChat = ref.watch(selectedChatIdProvider);
+    final activeModel = ref.watch(activeModelInfoProvider);
     final activeGemmaChat = ref.watch(activeGemmaChatProvider);
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
@@ -131,8 +132,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final isDark = themeMode == ThemeMode.dark;
     final gradColor = isDark ? Colors.black : Colors.white70;
 
+    final usesLocalRuntime = activeModel?.provider == 'local';
     final isModelLoading =
-        isSwitchingModel || activeInstall != null || activeRuntime.isLoading;
+        isSwitchingModel ||
+        activeInstall != null ||
+        (usesLocalRuntime &&
+            (activeRuntime.isLoading || activeGemmaChat.isLoading));
 
     final body = isModelLoading
         ? reveal(
@@ -149,7 +154,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           )
         : selectedChat == null
         ? reveal(const Center(child: Text('Select or create a chat')))
-        : activeGemmaChat.when(
+        : activeModel == null
+        ? reveal(const Center(child: Text('No active model')))
+        : usesLocalRuntime
+        ? activeGemmaChat.when(
             loading: () => reveal(
               Center(
                 child: Column(
@@ -170,25 +178,33 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               }
               return ChatView(
                 chatId: selectedChat,
-                chat: session.chat,
               ).animate().fadeIn(duration: Duration(milliseconds: 1200));
             },
-          );
+          )
+        : ChatView(
+            chatId: selectedChat,
+          ).animate().fadeIn(duration: Duration(milliseconds: 1200));
 
-    final bottomBar = activeGemmaChat.maybeWhen(
-      data: (session) =>
-          isSwitchingModel || selectedChat == null || session == null
-          ? const SizedBox.shrink()
-          : AnimatedPadding(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom,
-              ),
-              child: const SafeArea(child: ChatInput()),
+    final canShowInput =
+        !isSwitchingModel &&
+        selectedChat != null &&
+        activeModel != null &&
+        (!usesLocalRuntime ||
+            activeGemmaChat.maybeWhen(
+              data: (session) => session != null,
+              orElse: () => false,
+            ));
+
+    final bottomBar = !canShowInput
+        ? const SizedBox.shrink()
+        : AnimatedPadding(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),
-      orElse: () => const SizedBox.shrink(),
-    );
+            child: const SafeArea(child: ChatInput()),
+          );
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -234,7 +250,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   },
                   child: KeyedSubtree(
                     key: ValueKey(
-                      '${isSwitchingModel}_${selectedChat ?? "none"}_${activeInstall?.key ?? "idle"}',
+                      '${isSwitchingModel}_${selectedChat ?? "none"}_${activeInstall?.key ?? "idle"}_${activeModel?.id ?? "nomodel"}',
                     ),
                     child: body,
                   ),

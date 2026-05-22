@@ -123,15 +123,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Widget build(BuildContext context) {
     final isGenerating = ref.watch(chatGeneratingProvider);
     final inputState = ref.watch(chatInputControllerProvider);
-    final activeGemmaChat = ref.watch(activeGemmaChatProvider);
-    final canAttachImage = activeGemmaChat.maybeWhen(
-      data: (session) => session?.chat.supportImage ?? false,
-      orElse: () => false,
-    );
-    final canRecordAudio = activeGemmaChat.maybeWhen(
-      data: (session) => session?.chat.supportAudio ?? false,
-      orElse: () => false,
-    );
+    final activeModel = ref.watch(activeModelInfoProvider);
+    final canAttachImage = activeModel?.supportImage ?? false;
+    final canRecordAudio = activeModel?.supportAudio ?? false;
     final hasSelectedImage = inputState.selectedImagePath != null;
     final hasSendableContent = _hasTypedContent || hasSelectedImage;
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;

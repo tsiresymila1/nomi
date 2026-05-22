@@ -11,7 +11,12 @@ Future<void> replayStoredMessages({
 }) async {
   final storedMessages =
       await (database.select(database.messages)
-            ..where((t) => t.chat.equals(chatId))
+            ..where(
+              (t) =>
+                  t.chat.equals(chatId) &
+                  t.role.isIn(const <String>['user', 'assistant']) &
+                  t.kind.isIn(const <String>['text', 'image']),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
           .get();
 

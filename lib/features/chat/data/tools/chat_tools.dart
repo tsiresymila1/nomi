@@ -7,6 +7,7 @@ import 'package:gena/features/chat/data/tools/web_search_service.dart';
 const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
 const String webSearchToolName = 'web_search';
+const String ragSearchToolName = 'workspace_rag_search';
 
 const List<String> _weekdayNames = <String>[
   'Monday',
@@ -18,10 +19,13 @@ const List<String> _weekdayNames = <String>[
   'Sunday',
 ];
 
-List<gemma.Tool> buildChatTools({required bool supportsFunctionCalls}) {
+List<gemma.Tool> buildChatTools({
+  required bool supportsFunctionCalls,
+  required bool enableRagTool,
+}) {
   if (!supportsFunctionCalls) return const <gemma.Tool>[];
 
-  return const <gemma.Tool>[
+  final tools = <gemma.Tool>[
     gemma.Tool(
       name: getCurrentDayToolName,
       description:
@@ -67,11 +71,48 @@ List<gemma.Tool> buildChatTools({required bool supportsFunctionCalls}) {
       },
     ),
   ];
+
+  if (enableRagTool) {
+    tools.add(
+      const gemma.Tool(
+        name: ragSearchToolName,
+        description:
+            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. Use this when the user asks about facts likely present in workspace documents.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'Question or search query against workspace documents.',
+            },
+            'top_k': <String, dynamic>{
+              'type': 'integer',
+              'description': 'Max snippets to return (1-8).',
+            },
+            'threshold': <String, dynamic>{
+              'type': 'number',
+              'description': 'Similarity threshold between 0.0 and 1.0.',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+    );
+  }
+
+  return tools;
 }
 
 Future<Map<String, dynamic>> executeChatTool(
-  gemma.FunctionCallResponse call,
-) async {
+  gemma.FunctionCallResponse call, {
+  Future<Map<String, dynamic>> Function(
+    String query, {
+    int topK,
+    double threshold,
+  })?
+  ragToolHandler,
+}) async {
   logger.i(call.name);
   logger.i(call.args);
   switch (call.name) {
@@ -116,6 +157,21 @@ Future<Map<String, dynamic>> executeChatTool(
         maxResults: maxResults,
         maxContentPages: maxContentPages,
       );
+    case ragSearchToolName:
+      if (ragToolHandler == null) {
+        return <String, dynamic>{
+          'status': 'error',
+          'error': 'rag_disabled',
+          'message': 'Workspace RAG tool is not available in this session.',
+        };
+      }
+      final query = (call.args['query'] ?? '').toString().trim();
+      final topK = _toInt(call.args['top_k'], fallback: 4).clamp(1, 8);
+      final threshold = _toDouble(
+        call.args['threshold'],
+        fallback: 0.15,
+      ).clamp(0.0, 1.0);
+      return await ragToolHandler(query, topK: topK, threshold: threshold);
     default:
       return <String, dynamic>{
         'status': 'error',
@@ -129,4 +185,11 @@ int _toInt(Object? value, {required int fallback}) {
   if (value == null) return fallback;
   if (value is int) return value;
   return int.tryParse(value.toString()) ?? fallback;
+}
+
+double _toDouble(Object? value, {required double fallback}) {
+  if (value == null) return fallback;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value.toString()) ?? fallback;
 }

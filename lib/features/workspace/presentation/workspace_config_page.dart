@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
+import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
+import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:gena/features/workspace/data/providers/workspace_config_actions_provider.dart';
 import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
@@ -23,11 +27,27 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
   bool _hydrated = false;
   String? _hydratedWorkspaceId;
   bool _isSaving = false;
+  bool _isImporting = false;
+  bool _ragEnabled = false;
 
   @override
   void dispose() {
     _instructionController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(workspaceRagIngestionBootstrapProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref
+            .read(workspaceEmbedderInstallStateProvider.notifier)
+            .refreshStatus(),
+      );
+    });
   }
 
   Future<void> _save() async {
@@ -40,6 +60,7 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
             WorkspaceConfigSaveInput(
               workspaceId: widget.workspaceId,
               generalInstruction: _instructionController.text,
+              ragEnabled: _ragEnabled,
             ),
           );
       await AppToast.show('Workspace config saved', type: AppToastType.success);
@@ -49,6 +70,71 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
       await AppToast.show('Save failed: $e', type: AppToastType.error);
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _importDocument() async {
+    if (_isImporting) return;
+    setState(() => _isImporting = true);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.custom,
+        allowedExtensions: const [
+          'pdf',
+          'txt',
+          'md',
+          'markdown',
+          'text',
+          'doc',
+          'docx',
+        ],
+        dialogTitle: 'Choose a document (PDF, DOC/DOCX, text)',
+      );
+      final path = picked?.files.single.path;
+      if (path == null || path.trim().isEmpty || !mounted) return;
+
+      await ref
+          .read(workspaceRagActionsProvider)
+          .importDocument(workspaceId: widget.workspaceId, rawPath: path);
+      await AppToast.show(
+        'Document queued for background ingestion',
+        type: AppToastType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await AppToast.show('Import failed: $e', type: AppToastType.error);
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
+  }
+
+  Future<void> _deleteDocument(WorkspaceDocumentEntity document) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete document'),
+        content: Text('Remove "${document.name}" from workspace RAG?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true) return;
+
+    try {
+      await ref.read(workspaceRagActionsProvider).deleteDocument(document.id);
+      await AppToast.show('Document deleted', type: AppToastType.success);
+    } catch (e) {
+      if (!mounted) return;
+      await AppToast.show('Delete failed: $e', type: AppToastType.error);
     }
   }
 
@@ -78,7 +164,10 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
       _hydrated = true;
       _hydratedWorkspaceId = workspace.id;
       _instructionController.text = workspace.generalInstruction;
+      _ragEnabled = workspace.ragEnabled;
     }
+    final documentsAsync = ref.watch(workspaceDocumentsProvider(workspace.id));
+    final embedderState = ref.watch(workspaceEmbedderInstallStateProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -102,6 +191,129 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
               decoration: const InputDecoration(hintText: 'Workspace prompt'),
             ),
             const SizedBox(height: 16),
+            SwitchListTile(
+              value: _ragEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Enable RAG'),
+              subtitle: Text(
+                _ragEnabled
+                    ? 'RAG uses an embedding model. Status: ${embedderState.message}'
+                    : 'Use workspace documents as retrieval context in chat.',
+              ),
+              onChanged: (value) {
+                setState(() => _ragEnabled = value);
+                if (value) {
+                  unawaited(
+                    ref
+                        .read(workspaceEmbedderInstallStateProvider.notifier)
+                        .refreshStatus(),
+                  );
+                }
+              },
+            ),
+            if (_ragEnabled) ...[
+              const SizedBox(height: 8),
+              _EmbedderStatusCard(state: embedderState),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Workspace documents',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: _isImporting
+                      ? null
+                      : () => unawaited(_importDocument()),
+                  icon: _isImporting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_file_rounded),
+                  label: const Text('Add'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            documentsAsync.when(
+              data: (docs) {
+                if (docs.isEmpty) {
+                  return const Text(
+                    'No documents yet. Add PDF or text files to enable retrieval.',
+                    style: TextStyle(fontSize: 12),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final doc in docs)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          doc.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        subtitle: Text(
+                          '${doc.sourceType.toUpperCase()} · ${_statusLabel(doc)}',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (doc.ingestionStatus ==
+                                    WorkspaceDocumentIngestionStatus.queued ||
+                                doc.ingestionStatus ==
+                                    WorkspaceDocumentIngestionStatus.processing)
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            if (doc.ingestionStatus ==
+                                WorkspaceDocumentIngestionStatus.failed)
+                              IconButton(
+                                tooltip: 'Retry ingestion',
+                                icon: const Icon(Icons.refresh_rounded),
+                                onPressed: () => unawaited(
+                                  ref
+                                      .read(workspaceRagActionsProvider)
+                                      .retryDocumentIngestion(doc.id),
+                                ),
+                              ),
+                            IconButton(
+                              tooltip: 'Delete document',
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              onPressed: () => unawaited(_deleteDocument(doc)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(8),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              error: (err, _) => Text(
+                'Failed to load documents: $err',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -117,6 +329,90 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _statusLabel(WorkspaceDocumentEntity doc) {
+    return switch (doc.ingestionStatus) {
+      WorkspaceDocumentIngestionStatus.queued => 'Queued',
+      WorkspaceDocumentIngestionStatus.processing => 'Processing',
+      WorkspaceDocumentIngestionStatus.ready =>
+        '${doc.chunkCount} chunks ready',
+      WorkspaceDocumentIngestionStatus.failed =>
+        'Failed: ${doc.ingestionError ?? 'Unknown error'}',
+    };
+  }
+}
+
+class _EmbedderStatusCard extends ConsumerWidget {
+  final WorkspaceEmbedderInstallState state;
+
+  const _EmbedderStatusCard({required this.state});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isBusy =
+        state.phase == WorkspaceEmbedderInstallPhase.downloading ||
+        state.phase == WorkspaceEmbedderInstallPhase.checking;
+    final isFailed = state.phase == WorkspaceEmbedderInstallPhase.failed;
+    final canInstall =
+        state.phase == WorkspaceEmbedderInstallPhase.idle || isFailed;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            state.message,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          if (isFailed && state.error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              state.error!,
+              style: const TextStyle(fontSize: 11),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (isBusy ||
+              state.modelProgress > 0 ||
+              state.tokenizerProgress > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Model: ${state.modelProgress}%',
+              style: const TextStyle(fontSize: 11),
+            ),
+            LinearProgressIndicator(value: state.modelProgress / 100),
+            const SizedBox(height: 6),
+            Text(
+              'Tokenizer: ${state.tokenizerProgress}%',
+              style: const TextStyle(fontSize: 11),
+            ),
+            LinearProgressIndicator(value: state.tokenizerProgress / 100),
+          ],
+          if (canInstall) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton(
+                onPressed: () => unawaited(
+                  ref
+                      .read(workspaceEmbedderInstallStateProvider.notifier)
+                      .ensureInstalled(),
+                ),
+                child: const Text('Install embedder'),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

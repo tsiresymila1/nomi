@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
@@ -196,7 +197,7 @@ class WorkspaceChatSection extends ConsumerWidget {
                       ),
                   ],
                 ),
-              ),
+              ).animate().fade(duration:200.ms),
           ],
         ),
       ),

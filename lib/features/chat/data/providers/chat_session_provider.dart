@@ -146,6 +146,7 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
     final effectiveThinking = modelRuntime.defaultIsThinking;
     final tools = buildChatTools(
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
+      enableRagTool: activeWorkspace?.ragEnabled ?? false,
     );
     final chat = await modelRuntime.model.createChat(
       temperature: modelRuntime.temperature,

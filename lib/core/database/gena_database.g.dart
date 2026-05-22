@@ -59,12 +59,28 @@ class $WorkspacesTable extends Workspaces
         requiredDuringInsert: false,
         defaultValue: Constant(systemPrompt),
       );
+  static const VerificationMeta _ragEnabledMeta = const VerificationMeta(
+    'ragEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> ragEnabled = GeneratedColumn<bool>(
+    'rag_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("rag_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     createdAt,
     name,
     generalInstruction,
+    ragEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -104,6 +120,12 @@ class $WorkspacesTable extends Workspaces
         ),
       );
     }
+    if (data.containsKey('rag_enabled')) {
+      context.handle(
+        _ragEnabledMeta,
+        ragEnabled.isAcceptableOrUnknown(data['rag_enabled']!, _ragEnabledMeta),
+      );
+    }
     return context;
   }
 
@@ -129,6 +151,10 @@ class $WorkspacesTable extends Workspaces
         DriftSqlType.string,
         data['${effectivePrefix}general_instruction'],
       )!,
+      ragEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}rag_enabled'],
+      )!,
     );
   }
 
@@ -143,11 +169,13 @@ class Workspace extends DataClass implements Insertable<Workspace> {
   final DateTime createdAt;
   final String name;
   final String generalInstruction;
+  final bool ragEnabled;
   const Workspace({
     required this.id,
     required this.createdAt,
     required this.name,
     required this.generalInstruction,
+    required this.ragEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -156,6 +184,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['name'] = Variable<String>(name);
     map['general_instruction'] = Variable<String>(generalInstruction);
+    map['rag_enabled'] = Variable<bool>(ragEnabled);
     return map;
   }
 
@@ -165,6 +194,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       createdAt: Value(createdAt),
       name: Value(name),
       generalInstruction: Value(generalInstruction),
+      ragEnabled: Value(ragEnabled),
     );
   }
 
@@ -180,6 +210,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       generalInstruction: serializer.fromJson<String>(
         json['generalInstruction'],
       ),
+      ragEnabled: serializer.fromJson<bool>(json['ragEnabled']),
     );
   }
   @override
@@ -190,6 +221,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'name': serializer.toJson<String>(name),
       'generalInstruction': serializer.toJson<String>(generalInstruction),
+      'ragEnabled': serializer.toJson<bool>(ragEnabled),
     };
   }
 
@@ -198,11 +230,13 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     DateTime? createdAt,
     String? name,
     String? generalInstruction,
+    bool? ragEnabled,
   }) => Workspace(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     name: name ?? this.name,
     generalInstruction: generalInstruction ?? this.generalInstruction,
+    ragEnabled: ragEnabled ?? this.ragEnabled,
   );
   Workspace copyWithCompanion(WorkspacesCompanion data) {
     return Workspace(
@@ -212,6 +246,9 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       generalInstruction: data.generalInstruction.present
           ? data.generalInstruction.value
           : this.generalInstruction,
+      ragEnabled: data.ragEnabled.present
+          ? data.ragEnabled.value
+          : this.ragEnabled,
     );
   }
 
@@ -221,13 +258,15 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
-          ..write('generalInstruction: $generalInstruction')
+          ..write('generalInstruction: $generalInstruction, ')
+          ..write('ragEnabled: $ragEnabled')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, createdAt, name, generalInstruction);
+  int get hashCode =>
+      Object.hash(id, createdAt, name, generalInstruction, ragEnabled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -235,7 +274,8 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           other.id == this.id &&
           other.createdAt == this.createdAt &&
           other.name == this.name &&
-          other.generalInstruction == this.generalInstruction);
+          other.generalInstruction == this.generalInstruction &&
+          other.ragEnabled == this.ragEnabled);
 }
 
 class WorkspacesCompanion extends UpdateCompanion<Workspace> {
@@ -243,29 +283,34 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
   final Value<DateTime> createdAt;
   final Value<String> name;
   final Value<String> generalInstruction;
+  final Value<bool> ragEnabled;
   const WorkspacesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.name = const Value.absent(),
     this.generalInstruction = const Value.absent(),
+    this.ragEnabled = const Value.absent(),
   });
   WorkspacesCompanion.insert({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     required String name,
     this.generalInstruction = const Value.absent(),
+    this.ragEnabled = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Workspace> custom({
     Expression<int>? id,
     Expression<DateTime>? createdAt,
     Expression<String>? name,
     Expression<String>? generalInstruction,
+    Expression<bool>? ragEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
       if (name != null) 'name': name,
       if (generalInstruction != null) 'general_instruction': generalInstruction,
+      if (ragEnabled != null) 'rag_enabled': ragEnabled,
     });
   }
 
@@ -274,12 +319,14 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Value<DateTime>? createdAt,
     Value<String>? name,
     Value<String>? generalInstruction,
+    Value<bool>? ragEnabled,
   }) {
     return WorkspacesCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
       name: name ?? this.name,
       generalInstruction: generalInstruction ?? this.generalInstruction,
+      ragEnabled: ragEnabled ?? this.ragEnabled,
     );
   }
 
@@ -298,6 +345,9 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     if (generalInstruction.present) {
       map['general_instruction'] = Variable<String>(generalInstruction.value);
     }
+    if (ragEnabled.present) {
+      map['rag_enabled'] = Variable<bool>(ragEnabled.value);
+    }
     return map;
   }
 
@@ -307,7 +357,625 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
-          ..write('generalInstruction: $generalInstruction')
+          ..write('generalInstruction: $generalInstruction, ')
+          ..write('ragEnabled: $ragEnabled')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WorkspaceDocumentsTable extends WorkspaceDocuments
+    with TableInfo<$WorkspaceDocumentsTable, WorkspaceDocument> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorkspaceDocumentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _workspaceMeta = const VerificationMeta(
+    'workspace',
+  );
+  @override
+  late final GeneratedColumn<int> workspace = GeneratedColumn<int>(
+    'workspace',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspaces (id)',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 160,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
+    'sourceType',
+  );
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+    'source_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourcePathMeta = const VerificationMeta(
+    'sourcePath',
+  );
+  @override
+  late final GeneratedColumn<String> sourcePath = GeneratedColumn<String>(
+    'source_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ingestionStatusMeta = const VerificationMeta(
+    'ingestionStatus',
+  );
+  @override
+  late final GeneratedColumn<String> ingestionStatus = GeneratedColumn<String>(
+    'ingestion_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ready'),
+  );
+  static const VerificationMeta _ingestionErrorMeta = const VerificationMeta(
+    'ingestionError',
+  );
+  @override
+  late final GeneratedColumn<String> ingestionError = GeneratedColumn<String>(
+    'ingestion_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _chunkCountMeta = const VerificationMeta(
+    'chunkCount',
+  );
+  @override
+  late final GeneratedColumn<int> chunkCount = GeneratedColumn<int>(
+    'chunk_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    workspace,
+    name,
+    sourceType,
+    sourcePath,
+    content,
+    ingestionStatus,
+    ingestionError,
+    chunkCount,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'workspace_documents';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WorkspaceDocument> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('workspace')) {
+      context.handle(
+        _workspaceMeta,
+        workspace.isAcceptableOrUnknown(data['workspace']!, _workspaceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_workspaceMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+        _sourceTypeMeta,
+        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceTypeMeta);
+    }
+    if (data.containsKey('source_path')) {
+      context.handle(
+        _sourcePathMeta,
+        sourcePath.isAcceptableOrUnknown(data['source_path']!, _sourcePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourcePathMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('ingestion_status')) {
+      context.handle(
+        _ingestionStatusMeta,
+        ingestionStatus.isAcceptableOrUnknown(
+          data['ingestion_status']!,
+          _ingestionStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ingestion_error')) {
+      context.handle(
+        _ingestionErrorMeta,
+        ingestionError.isAcceptableOrUnknown(
+          data['ingestion_error']!,
+          _ingestionErrorMeta,
+        ),
+      );
+    }
+    if (data.containsKey('chunk_count')) {
+      context.handle(
+        _chunkCountMeta,
+        chunkCount.isAcceptableOrUnknown(data['chunk_count']!, _chunkCountMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WorkspaceDocument map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WorkspaceDocument(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      workspace: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}workspace'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_type'],
+      )!,
+      sourcePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_path'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      ingestionStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ingestion_status'],
+      )!,
+      ingestionError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ingestion_error'],
+      ),
+      chunkCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_count'],
+      )!,
+    );
+  }
+
+  @override
+  $WorkspaceDocumentsTable createAlias(String alias) {
+    return $WorkspaceDocumentsTable(attachedDatabase, alias);
+  }
+}
+
+class WorkspaceDocument extends DataClass
+    implements Insertable<WorkspaceDocument> {
+  final int id;
+  final DateTime createdAt;
+  final int workspace;
+  final String name;
+  final String sourceType;
+  final String sourcePath;
+  final String content;
+  final String ingestionStatus;
+  final String? ingestionError;
+  final int chunkCount;
+  const WorkspaceDocument({
+    required this.id,
+    required this.createdAt,
+    required this.workspace,
+    required this.name,
+    required this.sourceType,
+    required this.sourcePath,
+    required this.content,
+    required this.ingestionStatus,
+    this.ingestionError,
+    required this.chunkCount,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['workspace'] = Variable<int>(workspace);
+    map['name'] = Variable<String>(name);
+    map['source_type'] = Variable<String>(sourceType);
+    map['source_path'] = Variable<String>(sourcePath);
+    map['content'] = Variable<String>(content);
+    map['ingestion_status'] = Variable<String>(ingestionStatus);
+    if (!nullToAbsent || ingestionError != null) {
+      map['ingestion_error'] = Variable<String>(ingestionError);
+    }
+    map['chunk_count'] = Variable<int>(chunkCount);
+    return map;
+  }
+
+  WorkspaceDocumentsCompanion toCompanion(bool nullToAbsent) {
+    return WorkspaceDocumentsCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      workspace: Value(workspace),
+      name: Value(name),
+      sourceType: Value(sourceType),
+      sourcePath: Value(sourcePath),
+      content: Value(content),
+      ingestionStatus: Value(ingestionStatus),
+      ingestionError: ingestionError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ingestionError),
+      chunkCount: Value(chunkCount),
+    );
+  }
+
+  factory WorkspaceDocument.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WorkspaceDocument(
+      id: serializer.fromJson<int>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      workspace: serializer.fromJson<int>(json['workspace']),
+      name: serializer.fromJson<String>(json['name']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
+      sourcePath: serializer.fromJson<String>(json['sourcePath']),
+      content: serializer.fromJson<String>(json['content']),
+      ingestionStatus: serializer.fromJson<String>(json['ingestionStatus']),
+      ingestionError: serializer.fromJson<String?>(json['ingestionError']),
+      chunkCount: serializer.fromJson<int>(json['chunkCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'workspace': serializer.toJson<int>(workspace),
+      'name': serializer.toJson<String>(name),
+      'sourceType': serializer.toJson<String>(sourceType),
+      'sourcePath': serializer.toJson<String>(sourcePath),
+      'content': serializer.toJson<String>(content),
+      'ingestionStatus': serializer.toJson<String>(ingestionStatus),
+      'ingestionError': serializer.toJson<String?>(ingestionError),
+      'chunkCount': serializer.toJson<int>(chunkCount),
+    };
+  }
+
+  WorkspaceDocument copyWith({
+    int? id,
+    DateTime? createdAt,
+    int? workspace,
+    String? name,
+    String? sourceType,
+    String? sourcePath,
+    String? content,
+    String? ingestionStatus,
+    Value<String?> ingestionError = const Value.absent(),
+    int? chunkCount,
+  }) => WorkspaceDocument(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    workspace: workspace ?? this.workspace,
+    name: name ?? this.name,
+    sourceType: sourceType ?? this.sourceType,
+    sourcePath: sourcePath ?? this.sourcePath,
+    content: content ?? this.content,
+    ingestionStatus: ingestionStatus ?? this.ingestionStatus,
+    ingestionError: ingestionError.present
+        ? ingestionError.value
+        : this.ingestionError,
+    chunkCount: chunkCount ?? this.chunkCount,
+  );
+  WorkspaceDocument copyWithCompanion(WorkspaceDocumentsCompanion data) {
+    return WorkspaceDocument(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      workspace: data.workspace.present ? data.workspace.value : this.workspace,
+      name: data.name.present ? data.name.value : this.name,
+      sourceType: data.sourceType.present
+          ? data.sourceType.value
+          : this.sourceType,
+      sourcePath: data.sourcePath.present
+          ? data.sourcePath.value
+          : this.sourcePath,
+      content: data.content.present ? data.content.value : this.content,
+      ingestionStatus: data.ingestionStatus.present
+          ? data.ingestionStatus.value
+          : this.ingestionStatus,
+      ingestionError: data.ingestionError.present
+          ? data.ingestionError.value
+          : this.ingestionError,
+      chunkCount: data.chunkCount.present
+          ? data.chunkCount.value
+          : this.chunkCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkspaceDocument(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
+          ..write('name: $name, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('sourcePath: $sourcePath, ')
+          ..write('content: $content, ')
+          ..write('ingestionStatus: $ingestionStatus, ')
+          ..write('ingestionError: $ingestionError, ')
+          ..write('chunkCount: $chunkCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    createdAt,
+    workspace,
+    name,
+    sourceType,
+    sourcePath,
+    content,
+    ingestionStatus,
+    ingestionError,
+    chunkCount,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkspaceDocument &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.workspace == this.workspace &&
+          other.name == this.name &&
+          other.sourceType == this.sourceType &&
+          other.sourcePath == this.sourcePath &&
+          other.content == this.content &&
+          other.ingestionStatus == this.ingestionStatus &&
+          other.ingestionError == this.ingestionError &&
+          other.chunkCount == this.chunkCount);
+}
+
+class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
+  final Value<int> id;
+  final Value<DateTime> createdAt;
+  final Value<int> workspace;
+  final Value<String> name;
+  final Value<String> sourceType;
+  final Value<String> sourcePath;
+  final Value<String> content;
+  final Value<String> ingestionStatus;
+  final Value<String?> ingestionError;
+  final Value<int> chunkCount;
+  const WorkspaceDocumentsCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.workspace = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.sourcePath = const Value.absent(),
+    this.content = const Value.absent(),
+    this.ingestionStatus = const Value.absent(),
+    this.ingestionError = const Value.absent(),
+    this.chunkCount = const Value.absent(),
+  });
+  WorkspaceDocumentsCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    required int workspace,
+    required String name,
+    required String sourceType,
+    required String sourcePath,
+    required String content,
+    this.ingestionStatus = const Value.absent(),
+    this.ingestionError = const Value.absent(),
+    this.chunkCount = const Value.absent(),
+  }) : workspace = Value(workspace),
+       name = Value(name),
+       sourceType = Value(sourceType),
+       sourcePath = Value(sourcePath),
+       content = Value(content);
+  static Insertable<WorkspaceDocument> custom({
+    Expression<int>? id,
+    Expression<DateTime>? createdAt,
+    Expression<int>? workspace,
+    Expression<String>? name,
+    Expression<String>? sourceType,
+    Expression<String>? sourcePath,
+    Expression<String>? content,
+    Expression<String>? ingestionStatus,
+    Expression<String>? ingestionError,
+    Expression<int>? chunkCount,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (workspace != null) 'workspace': workspace,
+      if (name != null) 'name': name,
+      if (sourceType != null) 'source_type': sourceType,
+      if (sourcePath != null) 'source_path': sourcePath,
+      if (content != null) 'content': content,
+      if (ingestionStatus != null) 'ingestion_status': ingestionStatus,
+      if (ingestionError != null) 'ingestion_error': ingestionError,
+      if (chunkCount != null) 'chunk_count': chunkCount,
+    });
+  }
+
+  WorkspaceDocumentsCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? createdAt,
+    Value<int>? workspace,
+    Value<String>? name,
+    Value<String>? sourceType,
+    Value<String>? sourcePath,
+    Value<String>? content,
+    Value<String>? ingestionStatus,
+    Value<String?>? ingestionError,
+    Value<int>? chunkCount,
+  }) {
+    return WorkspaceDocumentsCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      workspace: workspace ?? this.workspace,
+      name: name ?? this.name,
+      sourceType: sourceType ?? this.sourceType,
+      sourcePath: sourcePath ?? this.sourcePath,
+      content: content ?? this.content,
+      ingestionStatus: ingestionStatus ?? this.ingestionStatus,
+      ingestionError: ingestionError ?? this.ingestionError,
+      chunkCount: chunkCount ?? this.chunkCount,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (workspace.present) {
+      map['workspace'] = Variable<int>(workspace.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    if (sourcePath.present) {
+      map['source_path'] = Variable<String>(sourcePath.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (ingestionStatus.present) {
+      map['ingestion_status'] = Variable<String>(ingestionStatus.value);
+    }
+    if (ingestionError.present) {
+      map['ingestion_error'] = Variable<String>(ingestionError.value);
+    }
+    if (chunkCount.present) {
+      map['chunk_count'] = Variable<int>(chunkCount.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkspaceDocumentsCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
+          ..write('name: $name, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('sourcePath: $sourcePath, ')
+          ..write('content: $content, ')
+          ..write('ingestionStatus: $ingestionStatus, ')
+          ..write('ingestionError: $ingestionError, ')
+          ..write('chunkCount: $chunkCount')
           ..write(')'))
         .toString();
   }
@@ -2120,6 +2788,8 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   _$GenaDatabase(QueryExecutor e) : super(e);
   $GenaDatabaseManager get managers => $GenaDatabaseManager(this);
   late final $WorkspacesTable workspaces = $WorkspacesTable(this);
+  late final $WorkspaceDocumentsTable workspaceDocuments =
+      $WorkspaceDocumentsTable(this);
   late final $ChatsTable chats = $ChatsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $ModelsTable models = $ModelsTable(this);
@@ -2129,6 +2799,7 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     workspaces,
+    workspaceDocuments,
     chats,
     messages,
     models,
@@ -2141,6 +2812,7 @@ typedef $$WorkspacesTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       required String name,
       Value<String> generalInstruction,
+      Value<bool> ragEnabled,
     });
 typedef $$WorkspacesTableUpdateCompanionBuilder =
     WorkspacesCompanion Function({
@@ -2148,11 +2820,36 @@ typedef $$WorkspacesTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<String> name,
       Value<String> generalInstruction,
+      Value<bool> ragEnabled,
     });
 
 final class $$WorkspacesTableReferences
     extends BaseReferences<_$GenaDatabase, $WorkspacesTable, Workspace> {
   $$WorkspacesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$WorkspaceDocumentsTable, List<WorkspaceDocument>>
+  _workspaceDocumentsRefsTable(_$GenaDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.workspaceDocuments,
+        aliasName: $_aliasNameGenerator(
+          db.workspaces.id,
+          db.workspaceDocuments.workspace,
+        ),
+      );
+
+  $$WorkspaceDocumentsTableProcessedTableManager get workspaceDocumentsRefs {
+    final manager = $$WorkspaceDocumentsTableTableManager(
+      $_db,
+      $_db.workspaceDocuments,
+    ).filter((f) => f.workspace.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _workspaceDocumentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 
   static MultiTypedResultKey<$ChatsTable, List<Chat>> _chatsRefsTable(
     _$GenaDatabase db,
@@ -2202,6 +2899,36 @@ class $$WorkspacesTableFilterComposer
     column: $table.generalInstruction,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get ragEnabled => $composableBuilder(
+    column: $table.ragEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> workspaceDocumentsRefs(
+    Expression<bool> Function($$WorkspaceDocumentsTableFilterComposer f) f,
+  ) {
+    final $$WorkspaceDocumentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.workspaceDocuments,
+      getReferencedColumn: (t) => t.workspace,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspaceDocumentsTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaceDocuments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> chatsRefs(
     Expression<bool> Function($$ChatsTableFilterComposer f) f,
@@ -2257,6 +2984,11 @@ class $$WorkspacesTableOrderingComposer
     column: $table.generalInstruction,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get ragEnabled => $composableBuilder(
+    column: $table.ragEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WorkspacesTableAnnotationComposer
@@ -2281,6 +3013,37 @@ class $$WorkspacesTableAnnotationComposer
     column: $table.generalInstruction,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get ragEnabled => $composableBuilder(
+    column: $table.ragEnabled,
+    builder: (column) => column,
+  );
+
+  Expression<T> workspaceDocumentsRefs<T extends Object>(
+    Expression<T> Function($$WorkspaceDocumentsTableAnnotationComposer a) f,
+  ) {
+    final $$WorkspaceDocumentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.workspaceDocuments,
+          getReferencedColumn: (t) => t.workspace,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$WorkspaceDocumentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.workspaceDocuments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 
   Expression<T> chatsRefs<T extends Object>(
     Expression<T> Function($$ChatsTableAnnotationComposer a) f,
@@ -2321,7 +3084,7 @@ class $$WorkspacesTableTableManager
           $$WorkspacesTableUpdateCompanionBuilder,
           (Workspace, $$WorkspacesTableReferences),
           Workspace,
-          PrefetchHooks Function({bool chatsRefs})
+          PrefetchHooks Function({bool workspaceDocumentsRefs, bool chatsRefs})
         > {
   $$WorkspacesTableTableManager(_$GenaDatabase db, $WorkspacesTable table)
     : super(
@@ -2340,11 +3103,13 @@ class $$WorkspacesTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> generalInstruction = const Value.absent(),
+                Value<bool> ragEnabled = const Value.absent(),
               }) => WorkspacesCompanion(
                 id: id,
                 createdAt: createdAt,
                 name: name,
                 generalInstruction: generalInstruction,
+                ragEnabled: ragEnabled,
               ),
           createCompanionCallback:
               ({
@@ -2352,11 +3117,13 @@ class $$WorkspacesTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 required String name,
                 Value<String> generalInstruction = const Value.absent(),
+                Value<bool> ragEnabled = const Value.absent(),
               }) => WorkspacesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
                 name: name,
                 generalInstruction: generalInstruction,
+                ragEnabled: ragEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -2366,32 +3133,63 @@ class $$WorkspacesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({chatsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (chatsRefs) db.chats],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (chatsRefs)
-                    await $_getPrefetchedData<
-                      Workspace,
-                      $WorkspacesTable,
-                      Chat
-                    >(
-                      currentTable: table,
-                      referencedTable: $$WorkspacesTableReferences
-                          ._chatsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$WorkspacesTableReferences(db, table, p0).chatsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.workspace == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({workspaceDocumentsRefs = false, chatsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (workspaceDocumentsRefs) db.workspaceDocuments,
+                    if (chatsRefs) db.chats,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (workspaceDocumentsRefs)
+                        await $_getPrefetchedData<
+                          Workspace,
+                          $WorkspacesTable,
+                          WorkspaceDocument
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspacesTableReferences
+                              ._workspaceDocumentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspacesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).workspaceDocumentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workspace == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (chatsRefs)
+                        await $_getPrefetchedData<
+                          Workspace,
+                          $WorkspacesTable,
+                          Chat
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspacesTableReferences
+                              ._chatsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspacesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).chatsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workspace == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2408,7 +3206,441 @@ typedef $$WorkspacesTableProcessedTableManager =
       $$WorkspacesTableUpdateCompanionBuilder,
       (Workspace, $$WorkspacesTableReferences),
       Workspace,
-      PrefetchHooks Function({bool chatsRefs})
+      PrefetchHooks Function({bool workspaceDocumentsRefs, bool chatsRefs})
+    >;
+typedef $$WorkspaceDocumentsTableCreateCompanionBuilder =
+    WorkspaceDocumentsCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      required int workspace,
+      required String name,
+      required String sourceType,
+      required String sourcePath,
+      required String content,
+      Value<String> ingestionStatus,
+      Value<String?> ingestionError,
+      Value<int> chunkCount,
+    });
+typedef $$WorkspaceDocumentsTableUpdateCompanionBuilder =
+    WorkspaceDocumentsCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      Value<int> workspace,
+      Value<String> name,
+      Value<String> sourceType,
+      Value<String> sourcePath,
+      Value<String> content,
+      Value<String> ingestionStatus,
+      Value<String?> ingestionError,
+      Value<int> chunkCount,
+    });
+
+final class $$WorkspaceDocumentsTableReferences
+    extends
+        BaseReferences<
+          _$GenaDatabase,
+          $WorkspaceDocumentsTable,
+          WorkspaceDocument
+        > {
+  $$WorkspaceDocumentsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorkspacesTable _workspaceTable(_$GenaDatabase db) =>
+      db.workspaces.createAlias(
+        $_aliasNameGenerator(db.workspaceDocuments.workspace, db.workspaces.id),
+      );
+
+  $$WorkspacesTableProcessedTableManager get workspace {
+    final $_column = $_itemColumn<int>('workspace')!;
+
+    final manager = $$WorkspacesTableTableManager(
+      $_db,
+      $_db.workspaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$WorkspaceDocumentsTableFilterComposer
+    extends Composer<_$GenaDatabase, $WorkspaceDocumentsTable> {
+  $$WorkspaceDocumentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourcePath => $composableBuilder(
+    column: $table.sourcePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ingestionStatus => $composableBuilder(
+    column: $table.ingestionStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ingestionError => $composableBuilder(
+    column: $table.ingestionError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorkspacesTableFilterComposer get workspace {
+    final $$WorkspacesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceDocumentsTableOrderingComposer
+    extends Composer<_$GenaDatabase, $WorkspaceDocumentsTable> {
+  $$WorkspaceDocumentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourcePath => $composableBuilder(
+    column: $table.sourcePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ingestionStatus => $composableBuilder(
+    column: $table.ingestionStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ingestionError => $composableBuilder(
+    column: $table.ingestionError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorkspacesTableOrderingComposer get workspace {
+    final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceDocumentsTableAnnotationComposer
+    extends Composer<_$GenaDatabase, $WorkspaceDocumentsTable> {
+  $$WorkspaceDocumentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourcePath => $composableBuilder(
+    column: $table.sourcePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get ingestionStatus => $composableBuilder(
+    column: $table.ingestionStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ingestionError => $composableBuilder(
+    column: $table.ingestionError,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => column,
+  );
+
+  $$WorkspacesTableAnnotationComposer get workspace {
+    final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceDocumentsTableTableManager
+    extends
+        RootTableManager<
+          _$GenaDatabase,
+          $WorkspaceDocumentsTable,
+          WorkspaceDocument,
+          $$WorkspaceDocumentsTableFilterComposer,
+          $$WorkspaceDocumentsTableOrderingComposer,
+          $$WorkspaceDocumentsTableAnnotationComposer,
+          $$WorkspaceDocumentsTableCreateCompanionBuilder,
+          $$WorkspaceDocumentsTableUpdateCompanionBuilder,
+          (WorkspaceDocument, $$WorkspaceDocumentsTableReferences),
+          WorkspaceDocument,
+          PrefetchHooks Function({bool workspace})
+        > {
+  $$WorkspaceDocumentsTableTableManager(
+    _$GenaDatabase db,
+    $WorkspaceDocumentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorkspaceDocumentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorkspaceDocumentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorkspaceDocumentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> workspace = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> sourceType = const Value.absent(),
+                Value<String> sourcePath = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> ingestionStatus = const Value.absent(),
+                Value<String?> ingestionError = const Value.absent(),
+                Value<int> chunkCount = const Value.absent(),
+              }) => WorkspaceDocumentsCompanion(
+                id: id,
+                createdAt: createdAt,
+                workspace: workspace,
+                name: name,
+                sourceType: sourceType,
+                sourcePath: sourcePath,
+                content: content,
+                ingestionStatus: ingestionStatus,
+                ingestionError: ingestionError,
+                chunkCount: chunkCount,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                required int workspace,
+                required String name,
+                required String sourceType,
+                required String sourcePath,
+                required String content,
+                Value<String> ingestionStatus = const Value.absent(),
+                Value<String?> ingestionError = const Value.absent(),
+                Value<int> chunkCount = const Value.absent(),
+              }) => WorkspaceDocumentsCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                workspace: workspace,
+                name: name,
+                sourceType: sourceType,
+                sourcePath: sourcePath,
+                content: content,
+                ingestionStatus: ingestionStatus,
+                ingestionError: ingestionError,
+                chunkCount: chunkCount,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WorkspaceDocumentsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({workspace = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (workspace) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.workspace,
+                                referencedTable:
+                                    $$WorkspaceDocumentsTableReferences
+                                        ._workspaceTable(db),
+                                referencedColumn:
+                                    $$WorkspaceDocumentsTableReferences
+                                        ._workspaceTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WorkspaceDocumentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GenaDatabase,
+      $WorkspaceDocumentsTable,
+      WorkspaceDocument,
+      $$WorkspaceDocumentsTableFilterComposer,
+      $$WorkspaceDocumentsTableOrderingComposer,
+      $$WorkspaceDocumentsTableAnnotationComposer,
+      $$WorkspaceDocumentsTableCreateCompanionBuilder,
+      $$WorkspaceDocumentsTableUpdateCompanionBuilder,
+      (WorkspaceDocument, $$WorkspaceDocumentsTableReferences),
+      WorkspaceDocument,
+      PrefetchHooks Function({bool workspace})
     >;
 typedef $$ChatsTableCreateCompanionBuilder =
     ChatsCompanion Function({
@@ -3609,6 +4841,8 @@ class $GenaDatabaseManager {
   $GenaDatabaseManager(this._db);
   $$WorkspacesTableTableManager get workspaces =>
       $$WorkspacesTableTableManager(_db, _db.workspaces);
+  $$WorkspaceDocumentsTableTableManager get workspaceDocuments =>
+      $$WorkspaceDocumentsTableTableManager(_db, _db.workspaceDocuments);
   $$ChatsTableTableManager get chats =>
       $$ChatsTableTableManager(_db, _db.chats);
   $$MessagesTableTableManager get messages =>

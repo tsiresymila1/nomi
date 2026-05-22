@@ -15,6 +15,18 @@ class Chats extends Table with TableMixin {
 class Workspaces extends Table with TableMixin {
   late final name = text().withLength(min: 1, max: 64)();
   late final generalInstruction = text().withDefault(Constant(systemPrompt))();
+  late final ragEnabled = boolean().withDefault(const Constant(false))();
+}
+
+class WorkspaceDocuments extends Table with TableMixin {
+  late final workspace = integer().references(Workspaces, #id)();
+  late final name = text().withLength(min: 1, max: 160)();
+  late final sourceType = text()();
+  late final sourcePath = text()();
+  late final content = text()();
+  late final ingestionStatus = text().withDefault(const Constant('ready'))();
+  late final ingestionError = text().nullable()();
+  late final chunkCount = integer().withDefault(const Constant(0))();
 }
 
 class Messages extends Table with TableMixin {
@@ -47,12 +59,14 @@ class Models extends Table with TableMixin {
   late final source = text()();
 }
 
-@DriftDatabase(tables: [Workspaces, Chats, Messages, Models])
+@DriftDatabase(
+  tables: [Workspaces, WorkspaceDocuments, Chats, Messages, Models],
+)
 class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +110,24 @@ class GenaDatabase extends _$GenaDatabase {
         await m.addColumn(models, models.tokenBuffer);
         await m.addColumn(models, models.randomSeed);
         await m.addColumn(models, models.preferredBackend);
+      }
+      if (from < 8) {
+        await m.addColumn(workspaces, workspaces.ragEnabled);
+        await m.createTable(workspaceDocuments);
+      }
+      if (from < 9) {
+        await m.addColumn(
+          workspaceDocuments,
+          workspaceDocuments.ingestionStatus,
+        );
+        await m.addColumn(
+          workspaceDocuments,
+          workspaceDocuments.ingestionError,
+        );
+        await m.addColumn(workspaceDocuments, workspaceDocuments.chunkCount);
+        await customStatement(
+          "UPDATE workspace_documents SET ingestion_status = 'ready' WHERE ingestion_status IS NULL OR TRIM(ingestion_status) = ''",
+        );
       }
     },
   );

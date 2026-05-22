@@ -4,6 +4,7 @@ import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/prompt.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
+import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
 import 'package:gena/features/workspace/data/providers/selected_workspace_provider.dart';
 import 'package:gena/features/workspace/data/providers/workspace_drawer_state_provider.dart';
 
@@ -83,6 +84,19 @@ class WorkspaceActions {
     );
   }
 
+  Future<void> updateRagEnabled({
+    required String workspaceId,
+    required bool enabled,
+  }) async {
+    final parsedId = int.tryParse(workspaceId);
+    if (parsedId == null) return;
+
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(database.workspaces)
+          ..where((t) => t.id.equals(parsedId)))
+        .write(db.WorkspacesCompanion(ragEnabled: Value(enabled)));
+  }
+
   Future<void> deleteWorkspace(String workspaceId) async {
     final parsedId = int.tryParse(workspaceId);
     if (parsedId == null) return;
@@ -113,9 +127,14 @@ class WorkspaceActions {
         database.chats,
       )..where((t) => t.workspace.equals(parsedId))).go();
       await (database.delete(
+        database.workspaceDocuments,
+      )..where((t) => t.workspace.equals(parsedId))).go();
+      await (database.delete(
         database.workspaces,
       )..where((t) => t.id.equals(parsedId))).go();
     });
+
+    await ref.read(workspaceRagActionsProvider).rebuildAllDocumentsIndex();
 
     ref.read(workspaceDrawerStateProvider.notifier).remove(workspaceId);
 

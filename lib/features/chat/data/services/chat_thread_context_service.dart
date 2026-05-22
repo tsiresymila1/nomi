@@ -32,6 +32,7 @@ Future<ContextWindowPlan> planContextWindow({
   required List<db.Message> storedMessages,
   required int settingsMaxTokens,
   required int requestedOutputReserve,
+  String? overrideLastUserText,
 }) async {
   final reservedOutputTokens = resolveOutputReserve(
     maxTokens: settingsMaxTokens,
@@ -40,8 +41,13 @@ Future<ContextWindowPlan> planContextWindow({
   final promptBudget = math.max(1, settingsMaxTokens - reservedOutputTokens);
 
   final entries = <_ReplayEntry>[];
-  for (final row in storedMessages) {
-    final message = await toReplayMessage(row);
+  for (var i = 0; i < storedMessages.length; i++) {
+    final row = storedMessages[i];
+    final isLastEntry = i == storedMessages.length - 1;
+    final message = await toReplayMessage(
+      row,
+      overrideUserText: isLastEntry ? overrideLastUserText : null,
+    );
     if (message == null) continue;
     final tokens = await estimateTokens(chat: chat, message: message);
     entries.add(_ReplayEntry(message: message, tokens: tokens));
@@ -90,15 +96,22 @@ Future<gemma.Message> buildUserMessage({
   return gemma.Message.withImage(text: text, imageBytes: bytes, isUser: true);
 }
 
-Future<gemma.Message?> toReplayMessage(db.Message row) async {
+Future<gemma.Message?> toReplayMessage(
+  db.Message row, {
+  String? overrideUserText,
+}) async {
   if (!_isContextMessage(row)) {
     return null;
   }
+  final effectiveText = row.role == 'user' && overrideUserText != null
+      ? overrideUserText
+      : row.content;
+
   if (row.kind == 'image' && row.mediaPath != null) {
     final imageFile = File(row.mediaPath!);
     if (await imageFile.exists()) {
       final bytes = await imageFile.readAsBytes();
-      final trimmed = row.content.trim();
+      final trimmed = effectiveText.trim();
       if (trimmed.isEmpty) {
         return gemma.Message.imageOnly(
           imageBytes: bytes,
@@ -106,14 +119,14 @@ Future<gemma.Message?> toReplayMessage(db.Message row) async {
         );
       }
       return gemma.Message.withImage(
-        text: row.content,
+        text: effectiveText,
         imageBytes: bytes,
         isUser: row.role == 'user',
       );
     }
   }
 
-  return gemma.Message.text(text: row.content, isUser: row.role == 'user');
+  return gemma.Message.text(text: effectiveText, isUser: row.role == 'user');
 }
 
 bool _isContextMessage(db.Message row) {

@@ -18,6 +18,7 @@ final workspaceListProvider = StreamProvider<List<WorkspaceEntity>>((ref) {
             id: row.id.toString(),
             name: row.name,
             generalInstruction: row.generalInstruction,
+            ragEnabled: row.ragEnabled,
             createdAt: row.createdAt,
           ),
         )
@@ -68,6 +69,7 @@ final workspaceChatGroupsProvider = StreamProvider<List<WorkspaceChatGroup>>((
         id: workspaceRow.id.toString(),
         name: workspaceRow.name,
         generalInstruction: workspaceRow.generalInstruction,
+        ragEnabled: workspaceRow.ragEnabled,
         createdAt: workspaceRow.createdAt,
       );
 

@@ -213,6 +213,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     isUser: message.role == 'user',
                     kind: message.kind,
                     mediaPath: message.mediaPath,
+                    isStreaming: false,
                   )
                   .animate(key: ValueKey('chat-message-anim-${message.id}'))
                   .fadeIn(duration: 220.ms, delay: delayMs.ms)
@@ -266,6 +267,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 key: const ValueKey('chat-waiting-tool'),
                 message: 'Waiting for function tool: $waitingToolName',
                 isUser: false,
+                kind: 'tool_waiting',
+                isStreaming: true,
               );
             }
 
@@ -276,6 +279,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 message: thinkingDraft,
                 isUser: false,
                 kind: 'thinking',
+                isStreaming: true,
               );
             }
 
@@ -283,6 +287,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
               key: const ValueKey('chat-draft-response'),
               message: draft ?? '',
               isUser: false,
+              isStreaming: isGenerating,
             );
           },
         );

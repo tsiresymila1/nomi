@@ -10,14 +10,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullscreen_image_viewer/fullscreen_image_viewer.dart';
 import 'package:gena/core/extension.dart';
 import 'package:gena/core/utils.dart';
+import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
   final String message;
   final bool isUser;
   final String kind;
   final String? mediaPath;
+  final bool isStreaming;
 
   const ChatBubble({
     super.key,
@@ -25,6 +28,7 @@ class ChatBubble extends ConsumerStatefulWidget {
     required this.isUser,
     this.kind = 'text',
     this.mediaPath,
+    this.isStreaming = false,
   });
 
   @override
@@ -32,8 +36,109 @@ class ChatBubble extends ConsumerStatefulWidget {
 }
 
 class _ChatBubbleState extends ConsumerState<ChatBubble> {
-  bool _isThinkingExpanded = false;
-  bool _isToolTraceExpanded = false;
+  Future<void> _showMessageBottomSheet({
+    required String title,
+    required String message,
+    required bool isDark,
+    required IconData icon,
+    required String kind,
+    required bool isStreaming,
+    double fontSize = 11,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.of(sheetContext).size.height * 0.60;
+        return SizedBox(
+          height: maxHeight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        sheetContext,
+                      ).colorScheme.outlineVariant.withAlpha(180),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(icon, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: Theme.of(sheetContext).textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      String liveMessage = message;
+                      if (isStreaming && kind == 'thinking') {
+                        liveMessage =
+                            ref.watch(chatDraftThinkingProvider) ?? message;
+                      } else if (isStreaming && kind == 'tool_waiting') {
+                        final waitingTool = ref.watch(chatToolWaitingProvider);
+                        final toolName = waitingTool?.trim() ?? '';
+                        liveMessage = toolName.isEmpty
+                            ? message
+                            : 'Waiting for function tool: $toolName';
+                      }
+
+                      final content = Scrollbar(
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          child: MdMessage(
+                            key: ValueKey(
+                              'sheet-$title-$isDark-${liveMessage.hashCode}',
+                            ),
+                            message: liveMessage,
+                            isUser: false,
+                            isDark: isDark,
+                            fontSize: fontSize,
+                          ),
+                        ),
+                      );
+
+                      if (!isStreaming) return content;
+
+                      return Shimmer.fromColors(
+                        baseColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(170),
+                        highlightColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(80),
+                        child: content,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +150,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final isThinking = kind == 'thinking' && !isUser;
     final isToolTraceKind =
         kind == 'tool_trace' || kind == 'tool_call' || kind == 'tool_result';
-    final isToolTrace = isToolTraceKind && !isUser;
+    final isToolWaiting = kind == 'tool_waiting' && !isUser;
+    final isToolTrace = (isToolTraceKind || isToolWaiting) && !isUser;
     return Column(
       mainAxisAlignment: isUser
           ? MainAxisAlignment.end
@@ -81,72 +187,41 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             ),
             child: isThinking
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isThinkingExpanded = !_isThinkingExpanded;
-                          });
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 2,
-                            vertical: 2,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.psychology_outlined, size: 16),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Reasoning',
-                                style: Theme.of(context).textTheme.labelMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              Icon(
-                                _isThinkingExpanded
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                size: 20,
-                              ),
-                            ],
-                          ),
-                        ),
+                ? InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      _showMessageBottomSheet(
+                        title: 'Reasoning',
+                        message: message,
+                        isDark: isDark,
+                        icon: Icons.psychology_outlined,
+                        kind: kind,
+                        isStreaming: widget.isStreaming,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 8,
                       ),
-                      ClipRect(
-                        child: AnimatedSize(
-                          duration: const Duration(milliseconds: 150),
-                          curve: Curves.easeOut,
-                          child: _isThinkingExpanded
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 100,
-                                    ),
-                                    child: Scrollbar(
-                                      thumbVisibility: true,
-                                      child: SingleChildScrollView(
-                                        child: MdMessage(
-                                          fontSize: 11,
-                                          key: const ValueKey(
-                                            'thinking-expanded-content',
-                                          ),
-                                          message: message,
-                                          isUser: false,
-                                          isDark: isDark,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.psychology_outlined, size: 16),
+                          const SizedBox(width: 6),
+                          _shimmerWrap(
+                            enabled: widget.isStreaming,
+                            child: Text(
+                              'Reasoning',
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
+                        ],
                       ),
-                    ],
+                    ),
                   )
                 : (kind == 'image' && mediaPath != null)
                 ? Column(
@@ -198,57 +273,46 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                     ],
                   )
                 : isToolTrace
-                ? GestureDetector(
+                ? InkWell(
+                    borderRadius: BorderRadius.circular(10),
                     onTap: () {
-                      setState(() {
-                        _isToolTraceExpanded = !_isToolTraceExpanded;
-                      });
+                      _showMessageBottomSheet(
+                        title: isToolWaiting
+                            ? 'Function call'
+                            : 'Function trace',
+                        message: isToolWaiting
+                            ? 'Waiting for function tool...'
+                            : message,
+                        isDark: isDark,
+                        icon: Icons.settings_ethernet,
+                        kind: kind,
+                        isStreaming: widget.isStreaming,
+                      );
                     },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 6,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.settings_ethernet, size: 14),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Function trace',
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.settings_ethernet, size: 14),
+                          const SizedBox(width: 6),
+                          _shimmerWrap(
+                            enabled: widget.isStreaming,
+                            child: Text(
+                              isToolWaiting
+                                  ? 'Function call'
+                                  : 'Function trace',
                               style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              _isToolTraceExpanded
-                                  ? Icons.keyboard_arrow_up_rounded
-                                  : Icons.keyboard_arrow_down_rounded,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                        ClipRect(
-                          child: AnimatedSize(
-                            duration: const Duration(milliseconds: 150),
-                            curve: Curves.easeOut,
-                            child: _isToolTraceExpanded
-                                ? Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: MdMessage(
-                                      key: ValueKey(
-                                        'md-tool-$isDark-${message.hashCode}',
-                                      ),
-                                      message: message,
-                                      isUser: false,
-                                      isDark: isDark,
-                                      fontSize: 11,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
+                        ],
+                      ),
                     ),
                   )
                 : MdMessage(
@@ -269,6 +333,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             ],
           ),
       ],
+    );
+  }
+
+  Widget _shimmerWrap({required bool enabled, required Widget child}) {
+    if (!enabled) return child;
+    return Shimmer.fromColors(
+      baseColor: Theme.of(context).colorScheme.onSurface.withAlpha(170),
+      highlightColor: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+      child: child,
     );
   }
 }

@@ -10,6 +10,8 @@ import 'package:gena/features/chat/data/services/chat_thread_context_service.dar
 import 'package:gena/features/chat/data/services/chat_thread_streaming_service.dart';
 import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
+import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
+import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
 
 Future<void> storeUserMessage({
   required db.GenaDatabase database,
@@ -40,6 +42,7 @@ Future<void> prepareContext({
   required gemma.InferenceChat chat,
   required int maxTokens,
   required int tokenBuffer,
+  String? overrideLastUserText,
 }) async {
   final storedMessages =
       await (database.select(database.messages)
@@ -52,6 +55,7 @@ Future<void> prepareContext({
     storedMessages: storedMessages,
     settingsMaxTokens: maxTokens,
     requestedOutputReserve: tokenBuffer,
+    overrideLastUserText: overrideLastUserText,
   );
 
   ref
@@ -74,12 +78,9 @@ Future<void> prepareContext({
     return;
   }
 
-  final lastMessage = storedMessages.last;
-  final userMessage = await buildUserMessage(
-    text: lastMessage.content,
-    imagePath: lastMessage.mediaPath,
-  );
-  await chat.addQueryChunk(userMessage);
+  if (contextPlan.replayHistory.isNotEmpty) {
+    await chat.addQueryChunk(contextPlan.replayHistory.last);
+  }
 }
 
 Future<void> generateAssistantResponse({
@@ -119,7 +120,20 @@ Future<void> generateAssistantResponse({
     for (final call in turnResult.toolCalls) {
       ref.read(chatToolWaitingProvider.notifier).setWaitingTool(call.name);
       try {
-        final toolResult = await executeChatTool(call);
+        final workspaceId = ref.read(activeWorkspaceProvider)?.id;
+        final toolResult = await executeChatTool(
+          call,
+          ragToolHandler: workspaceId == null
+              ? null
+              : (query, {topK = 4, threshold = 0.15}) => ref
+                    .read(workspaceRagActionsProvider)
+                    .runRagTool(
+                      workspaceId: workspaceId,
+                      query: query,
+                      topK: topK,
+                      threshold: threshold,
+                    ),
+        );
         await database
             .into(database.messages)
             .insert(

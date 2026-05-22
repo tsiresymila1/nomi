@@ -1,6 +1,8 @@
 export 'active_model_info_provider.dart';
 export 'chat_page_actions_provider.dart';
 export 'chat_model_switching_provider.dart';
+export 'native_tool_actions_provider.dart';
+export 'native_tool_execution_provider.dart';
 export 'chat_queries_provider.dart';
 export 'chat_history_actions_provider.dart';
 export 'chat_input_controller.dart';

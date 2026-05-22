@@ -74,6 +74,78 @@ class $WorkspacesTable extends Workspaces
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _nativeToolsEnabledMeta =
+      const VerificationMeta('nativeToolsEnabled');
+  @override
+  late final GeneratedColumn<bool> nativeToolsEnabled = GeneratedColumn<bool>(
+    'native_tools_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("native_tools_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _nativeOpenUrlEnabledMeta =
+      const VerificationMeta('nativeOpenUrlEnabled');
+  @override
+  late final GeneratedColumn<bool> nativeOpenUrlEnabled = GeneratedColumn<bool>(
+    'native_open_url_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("native_open_url_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _nativeOpenAppEnabledMeta =
+      const VerificationMeta('nativeOpenAppEnabled');
+  @override
+  late final GeneratedColumn<bool> nativeOpenAppEnabled = GeneratedColumn<bool>(
+    'native_open_app_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("native_open_app_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _nativeSendEmailEnabledMeta =
+      const VerificationMeta('nativeSendEmailEnabled');
+  @override
+  late final GeneratedColumn<bool> nativeSendEmailEnabled =
+      GeneratedColumn<bool>(
+        'native_send_email_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("native_send_email_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _nativeFlashlightEnabledMeta =
+      const VerificationMeta('nativeFlashlightEnabled');
+  @override
+  late final GeneratedColumn<bool> nativeFlashlightEnabled =
+      GeneratedColumn<bool>(
+        'native_flashlight_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("native_flashlight_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -81,6 +153,11 @@ class $WorkspacesTable extends Workspaces
     name,
     generalInstruction,
     ragEnabled,
+    nativeToolsEnabled,
+    nativeOpenUrlEnabled,
+    nativeOpenAppEnabled,
+    nativeSendEmailEnabled,
+    nativeFlashlightEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -126,6 +203,51 @@ class $WorkspacesTable extends Workspaces
         ragEnabled.isAcceptableOrUnknown(data['rag_enabled']!, _ragEnabledMeta),
       );
     }
+    if (data.containsKey('native_tools_enabled')) {
+      context.handle(
+        _nativeToolsEnabledMeta,
+        nativeToolsEnabled.isAcceptableOrUnknown(
+          data['native_tools_enabled']!,
+          _nativeToolsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('native_open_url_enabled')) {
+      context.handle(
+        _nativeOpenUrlEnabledMeta,
+        nativeOpenUrlEnabled.isAcceptableOrUnknown(
+          data['native_open_url_enabled']!,
+          _nativeOpenUrlEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('native_open_app_enabled')) {
+      context.handle(
+        _nativeOpenAppEnabledMeta,
+        nativeOpenAppEnabled.isAcceptableOrUnknown(
+          data['native_open_app_enabled']!,
+          _nativeOpenAppEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('native_send_email_enabled')) {
+      context.handle(
+        _nativeSendEmailEnabledMeta,
+        nativeSendEmailEnabled.isAcceptableOrUnknown(
+          data['native_send_email_enabled']!,
+          _nativeSendEmailEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('native_flashlight_enabled')) {
+      context.handle(
+        _nativeFlashlightEnabledMeta,
+        nativeFlashlightEnabled.isAcceptableOrUnknown(
+          data['native_flashlight_enabled']!,
+          _nativeFlashlightEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -155,6 +277,26 @@ class $WorkspacesTable extends Workspaces
         DriftSqlType.bool,
         data['${effectivePrefix}rag_enabled'],
       )!,
+      nativeToolsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}native_tools_enabled'],
+      )!,
+      nativeOpenUrlEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}native_open_url_enabled'],
+      )!,
+      nativeOpenAppEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}native_open_app_enabled'],
+      )!,
+      nativeSendEmailEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}native_send_email_enabled'],
+      )!,
+      nativeFlashlightEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}native_flashlight_enabled'],
+      )!,
     );
   }
 
@@ -170,12 +312,22 @@ class Workspace extends DataClass implements Insertable<Workspace> {
   final String name;
   final String generalInstruction;
   final bool ragEnabled;
+  final bool nativeToolsEnabled;
+  final bool nativeOpenUrlEnabled;
+  final bool nativeOpenAppEnabled;
+  final bool nativeSendEmailEnabled;
+  final bool nativeFlashlightEnabled;
   const Workspace({
     required this.id,
     required this.createdAt,
     required this.name,
     required this.generalInstruction,
     required this.ragEnabled,
+    required this.nativeToolsEnabled,
+    required this.nativeOpenUrlEnabled,
+    required this.nativeOpenAppEnabled,
+    required this.nativeSendEmailEnabled,
+    required this.nativeFlashlightEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -185,6 +337,11 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     map['name'] = Variable<String>(name);
     map['general_instruction'] = Variable<String>(generalInstruction);
     map['rag_enabled'] = Variable<bool>(ragEnabled);
+    map['native_tools_enabled'] = Variable<bool>(nativeToolsEnabled);
+    map['native_open_url_enabled'] = Variable<bool>(nativeOpenUrlEnabled);
+    map['native_open_app_enabled'] = Variable<bool>(nativeOpenAppEnabled);
+    map['native_send_email_enabled'] = Variable<bool>(nativeSendEmailEnabled);
+    map['native_flashlight_enabled'] = Variable<bool>(nativeFlashlightEnabled);
     return map;
   }
 
@@ -195,6 +352,11 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       name: Value(name),
       generalInstruction: Value(generalInstruction),
       ragEnabled: Value(ragEnabled),
+      nativeToolsEnabled: Value(nativeToolsEnabled),
+      nativeOpenUrlEnabled: Value(nativeOpenUrlEnabled),
+      nativeOpenAppEnabled: Value(nativeOpenAppEnabled),
+      nativeSendEmailEnabled: Value(nativeSendEmailEnabled),
+      nativeFlashlightEnabled: Value(nativeFlashlightEnabled),
     );
   }
 
@@ -211,6 +373,19 @@ class Workspace extends DataClass implements Insertable<Workspace> {
         json['generalInstruction'],
       ),
       ragEnabled: serializer.fromJson<bool>(json['ragEnabled']),
+      nativeToolsEnabled: serializer.fromJson<bool>(json['nativeToolsEnabled']),
+      nativeOpenUrlEnabled: serializer.fromJson<bool>(
+        json['nativeOpenUrlEnabled'],
+      ),
+      nativeOpenAppEnabled: serializer.fromJson<bool>(
+        json['nativeOpenAppEnabled'],
+      ),
+      nativeSendEmailEnabled: serializer.fromJson<bool>(
+        json['nativeSendEmailEnabled'],
+      ),
+      nativeFlashlightEnabled: serializer.fromJson<bool>(
+        json['nativeFlashlightEnabled'],
+      ),
     );
   }
   @override
@@ -222,6 +397,13 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       'name': serializer.toJson<String>(name),
       'generalInstruction': serializer.toJson<String>(generalInstruction),
       'ragEnabled': serializer.toJson<bool>(ragEnabled),
+      'nativeToolsEnabled': serializer.toJson<bool>(nativeToolsEnabled),
+      'nativeOpenUrlEnabled': serializer.toJson<bool>(nativeOpenUrlEnabled),
+      'nativeOpenAppEnabled': serializer.toJson<bool>(nativeOpenAppEnabled),
+      'nativeSendEmailEnabled': serializer.toJson<bool>(nativeSendEmailEnabled),
+      'nativeFlashlightEnabled': serializer.toJson<bool>(
+        nativeFlashlightEnabled,
+      ),
     };
   }
 
@@ -231,12 +413,24 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     String? name,
     String? generalInstruction,
     bool? ragEnabled,
+    bool? nativeToolsEnabled,
+    bool? nativeOpenUrlEnabled,
+    bool? nativeOpenAppEnabled,
+    bool? nativeSendEmailEnabled,
+    bool? nativeFlashlightEnabled,
   }) => Workspace(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     name: name ?? this.name,
     generalInstruction: generalInstruction ?? this.generalInstruction,
     ragEnabled: ragEnabled ?? this.ragEnabled,
+    nativeToolsEnabled: nativeToolsEnabled ?? this.nativeToolsEnabled,
+    nativeOpenUrlEnabled: nativeOpenUrlEnabled ?? this.nativeOpenUrlEnabled,
+    nativeOpenAppEnabled: nativeOpenAppEnabled ?? this.nativeOpenAppEnabled,
+    nativeSendEmailEnabled:
+        nativeSendEmailEnabled ?? this.nativeSendEmailEnabled,
+    nativeFlashlightEnabled:
+        nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
   );
   Workspace copyWithCompanion(WorkspacesCompanion data) {
     return Workspace(
@@ -249,6 +443,21 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       ragEnabled: data.ragEnabled.present
           ? data.ragEnabled.value
           : this.ragEnabled,
+      nativeToolsEnabled: data.nativeToolsEnabled.present
+          ? data.nativeToolsEnabled.value
+          : this.nativeToolsEnabled,
+      nativeOpenUrlEnabled: data.nativeOpenUrlEnabled.present
+          ? data.nativeOpenUrlEnabled.value
+          : this.nativeOpenUrlEnabled,
+      nativeOpenAppEnabled: data.nativeOpenAppEnabled.present
+          ? data.nativeOpenAppEnabled.value
+          : this.nativeOpenAppEnabled,
+      nativeSendEmailEnabled: data.nativeSendEmailEnabled.present
+          ? data.nativeSendEmailEnabled.value
+          : this.nativeSendEmailEnabled,
+      nativeFlashlightEnabled: data.nativeFlashlightEnabled.present
+          ? data.nativeFlashlightEnabled.value
+          : this.nativeFlashlightEnabled,
     );
   }
 
@@ -259,14 +468,29 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('generalInstruction: $generalInstruction, ')
-          ..write('ragEnabled: $ragEnabled')
+          ..write('ragEnabled: $ragEnabled, ')
+          ..write('nativeToolsEnabled: $nativeToolsEnabled, ')
+          ..write('nativeOpenUrlEnabled: $nativeOpenUrlEnabled, ')
+          ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
+          ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
+          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, createdAt, name, generalInstruction, ragEnabled);
+  int get hashCode => Object.hash(
+    id,
+    createdAt,
+    name,
+    generalInstruction,
+    ragEnabled,
+    nativeToolsEnabled,
+    nativeOpenUrlEnabled,
+    nativeOpenAppEnabled,
+    nativeSendEmailEnabled,
+    nativeFlashlightEnabled,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -275,7 +499,12 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           other.createdAt == this.createdAt &&
           other.name == this.name &&
           other.generalInstruction == this.generalInstruction &&
-          other.ragEnabled == this.ragEnabled);
+          other.ragEnabled == this.ragEnabled &&
+          other.nativeToolsEnabled == this.nativeToolsEnabled &&
+          other.nativeOpenUrlEnabled == this.nativeOpenUrlEnabled &&
+          other.nativeOpenAppEnabled == this.nativeOpenAppEnabled &&
+          other.nativeSendEmailEnabled == this.nativeSendEmailEnabled &&
+          other.nativeFlashlightEnabled == this.nativeFlashlightEnabled);
 }
 
 class WorkspacesCompanion extends UpdateCompanion<Workspace> {
@@ -284,12 +513,22 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
   final Value<String> name;
   final Value<String> generalInstruction;
   final Value<bool> ragEnabled;
+  final Value<bool> nativeToolsEnabled;
+  final Value<bool> nativeOpenUrlEnabled;
+  final Value<bool> nativeOpenAppEnabled;
+  final Value<bool> nativeSendEmailEnabled;
+  final Value<bool> nativeFlashlightEnabled;
   const WorkspacesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.name = const Value.absent(),
     this.generalInstruction = const Value.absent(),
     this.ragEnabled = const Value.absent(),
+    this.nativeToolsEnabled = const Value.absent(),
+    this.nativeOpenUrlEnabled = const Value.absent(),
+    this.nativeOpenAppEnabled = const Value.absent(),
+    this.nativeSendEmailEnabled = const Value.absent(),
+    this.nativeFlashlightEnabled = const Value.absent(),
   });
   WorkspacesCompanion.insert({
     this.id = const Value.absent(),
@@ -297,6 +536,11 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     required String name,
     this.generalInstruction = const Value.absent(),
     this.ragEnabled = const Value.absent(),
+    this.nativeToolsEnabled = const Value.absent(),
+    this.nativeOpenUrlEnabled = const Value.absent(),
+    this.nativeOpenAppEnabled = const Value.absent(),
+    this.nativeSendEmailEnabled = const Value.absent(),
+    this.nativeFlashlightEnabled = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Workspace> custom({
     Expression<int>? id,
@@ -304,6 +548,11 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Expression<String>? name,
     Expression<String>? generalInstruction,
     Expression<bool>? ragEnabled,
+    Expression<bool>? nativeToolsEnabled,
+    Expression<bool>? nativeOpenUrlEnabled,
+    Expression<bool>? nativeOpenAppEnabled,
+    Expression<bool>? nativeSendEmailEnabled,
+    Expression<bool>? nativeFlashlightEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -311,6 +560,16 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
       if (name != null) 'name': name,
       if (generalInstruction != null) 'general_instruction': generalInstruction,
       if (ragEnabled != null) 'rag_enabled': ragEnabled,
+      if (nativeToolsEnabled != null)
+        'native_tools_enabled': nativeToolsEnabled,
+      if (nativeOpenUrlEnabled != null)
+        'native_open_url_enabled': nativeOpenUrlEnabled,
+      if (nativeOpenAppEnabled != null)
+        'native_open_app_enabled': nativeOpenAppEnabled,
+      if (nativeSendEmailEnabled != null)
+        'native_send_email_enabled': nativeSendEmailEnabled,
+      if (nativeFlashlightEnabled != null)
+        'native_flashlight_enabled': nativeFlashlightEnabled,
     });
   }
 
@@ -320,6 +579,11 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Value<String>? name,
     Value<String>? generalInstruction,
     Value<bool>? ragEnabled,
+    Value<bool>? nativeToolsEnabled,
+    Value<bool>? nativeOpenUrlEnabled,
+    Value<bool>? nativeOpenAppEnabled,
+    Value<bool>? nativeSendEmailEnabled,
+    Value<bool>? nativeFlashlightEnabled,
   }) {
     return WorkspacesCompanion(
       id: id ?? this.id,
@@ -327,6 +591,13 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
       name: name ?? this.name,
       generalInstruction: generalInstruction ?? this.generalInstruction,
       ragEnabled: ragEnabled ?? this.ragEnabled,
+      nativeToolsEnabled: nativeToolsEnabled ?? this.nativeToolsEnabled,
+      nativeOpenUrlEnabled: nativeOpenUrlEnabled ?? this.nativeOpenUrlEnabled,
+      nativeOpenAppEnabled: nativeOpenAppEnabled ?? this.nativeOpenAppEnabled,
+      nativeSendEmailEnabled:
+          nativeSendEmailEnabled ?? this.nativeSendEmailEnabled,
+      nativeFlashlightEnabled:
+          nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
     );
   }
 
@@ -348,6 +619,29 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     if (ragEnabled.present) {
       map['rag_enabled'] = Variable<bool>(ragEnabled.value);
     }
+    if (nativeToolsEnabled.present) {
+      map['native_tools_enabled'] = Variable<bool>(nativeToolsEnabled.value);
+    }
+    if (nativeOpenUrlEnabled.present) {
+      map['native_open_url_enabled'] = Variable<bool>(
+        nativeOpenUrlEnabled.value,
+      );
+    }
+    if (nativeOpenAppEnabled.present) {
+      map['native_open_app_enabled'] = Variable<bool>(
+        nativeOpenAppEnabled.value,
+      );
+    }
+    if (nativeSendEmailEnabled.present) {
+      map['native_send_email_enabled'] = Variable<bool>(
+        nativeSendEmailEnabled.value,
+      );
+    }
+    if (nativeFlashlightEnabled.present) {
+      map['native_flashlight_enabled'] = Variable<bool>(
+        nativeFlashlightEnabled.value,
+      );
+    }
     return map;
   }
 
@@ -358,7 +652,12 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('generalInstruction: $generalInstruction, ')
-          ..write('ragEnabled: $ragEnabled')
+          ..write('ragEnabled: $ragEnabled, ')
+          ..write('nativeToolsEnabled: $nativeToolsEnabled, ')
+          ..write('nativeOpenUrlEnabled: $nativeOpenUrlEnabled, ')
+          ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
+          ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
+          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled')
           ..write(')'))
         .toString();
   }
@@ -2813,6 +3112,11 @@ typedef $$WorkspacesTableCreateCompanionBuilder =
       required String name,
       Value<String> generalInstruction,
       Value<bool> ragEnabled,
+      Value<bool> nativeToolsEnabled,
+      Value<bool> nativeOpenUrlEnabled,
+      Value<bool> nativeOpenAppEnabled,
+      Value<bool> nativeSendEmailEnabled,
+      Value<bool> nativeFlashlightEnabled,
     });
 typedef $$WorkspacesTableUpdateCompanionBuilder =
     WorkspacesCompanion Function({
@@ -2821,6 +3125,11 @@ typedef $$WorkspacesTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> generalInstruction,
       Value<bool> ragEnabled,
+      Value<bool> nativeToolsEnabled,
+      Value<bool> nativeOpenUrlEnabled,
+      Value<bool> nativeOpenAppEnabled,
+      Value<bool> nativeSendEmailEnabled,
+      Value<bool> nativeFlashlightEnabled,
     });
 
 final class $$WorkspacesTableReferences
@@ -2902,6 +3211,31 @@ class $$WorkspacesTableFilterComposer
 
   ColumnFilters<bool> get ragEnabled => $composableBuilder(
     column: $table.ragEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nativeToolsEnabled => $composableBuilder(
+    column: $table.nativeToolsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nativeOpenUrlEnabled => $composableBuilder(
+    column: $table.nativeOpenUrlEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nativeOpenAppEnabled => $composableBuilder(
+    column: $table.nativeOpenAppEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nativeSendEmailEnabled => $composableBuilder(
+    column: $table.nativeSendEmailEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nativeFlashlightEnabled => $composableBuilder(
+    column: $table.nativeFlashlightEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2989,6 +3323,31 @@ class $$WorkspacesTableOrderingComposer
     column: $table.ragEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get nativeToolsEnabled => $composableBuilder(
+    column: $table.nativeToolsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nativeOpenUrlEnabled => $composableBuilder(
+    column: $table.nativeOpenUrlEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nativeOpenAppEnabled => $composableBuilder(
+    column: $table.nativeOpenAppEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nativeSendEmailEnabled => $composableBuilder(
+    column: $table.nativeSendEmailEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nativeFlashlightEnabled => $composableBuilder(
+    column: $table.nativeFlashlightEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WorkspacesTableAnnotationComposer
@@ -3016,6 +3375,31 @@ class $$WorkspacesTableAnnotationComposer
 
   GeneratedColumn<bool> get ragEnabled => $composableBuilder(
     column: $table.ragEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nativeToolsEnabled => $composableBuilder(
+    column: $table.nativeToolsEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nativeOpenUrlEnabled => $composableBuilder(
+    column: $table.nativeOpenUrlEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nativeOpenAppEnabled => $composableBuilder(
+    column: $table.nativeOpenAppEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nativeSendEmailEnabled => $composableBuilder(
+    column: $table.nativeSendEmailEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nativeFlashlightEnabled => $composableBuilder(
+    column: $table.nativeFlashlightEnabled,
     builder: (column) => column,
   );
 
@@ -3104,12 +3488,22 @@ class $$WorkspacesTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> generalInstruction = const Value.absent(),
                 Value<bool> ragEnabled = const Value.absent(),
+                Value<bool> nativeToolsEnabled = const Value.absent(),
+                Value<bool> nativeOpenUrlEnabled = const Value.absent(),
+                Value<bool> nativeOpenAppEnabled = const Value.absent(),
+                Value<bool> nativeSendEmailEnabled = const Value.absent(),
+                Value<bool> nativeFlashlightEnabled = const Value.absent(),
               }) => WorkspacesCompanion(
                 id: id,
                 createdAt: createdAt,
                 name: name,
                 generalInstruction: generalInstruction,
                 ragEnabled: ragEnabled,
+                nativeToolsEnabled: nativeToolsEnabled,
+                nativeOpenUrlEnabled: nativeOpenUrlEnabled,
+                nativeOpenAppEnabled: nativeOpenAppEnabled,
+                nativeSendEmailEnabled: nativeSendEmailEnabled,
+                nativeFlashlightEnabled: nativeFlashlightEnabled,
               ),
           createCompanionCallback:
               ({
@@ -3118,12 +3512,22 @@ class $$WorkspacesTableTableManager
                 required String name,
                 Value<String> generalInstruction = const Value.absent(),
                 Value<bool> ragEnabled = const Value.absent(),
+                Value<bool> nativeToolsEnabled = const Value.absent(),
+                Value<bool> nativeOpenUrlEnabled = const Value.absent(),
+                Value<bool> nativeOpenAppEnabled = const Value.absent(),
+                Value<bool> nativeSendEmailEnabled = const Value.absent(),
+                Value<bool> nativeFlashlightEnabled = const Value.absent(),
               }) => WorkspacesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
                 name: name,
                 generalInstruction: generalInstruction,
                 ragEnabled: ragEnabled,
+                nativeToolsEnabled: nativeToolsEnabled,
+                nativeOpenUrlEnabled: nativeOpenUrlEnabled,
+                nativeOpenAppEnabled: nativeOpenAppEnabled,
+                nativeSendEmailEnabled: nativeSendEmailEnabled,
+                nativeFlashlightEnabled: nativeFlashlightEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map(

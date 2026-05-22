@@ -43,7 +43,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     required IconData icon,
     required String kind,
     required bool isStreaming,
-    double fontSize = 11,
+    double fontSize = 13,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -121,6 +121,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       if (!isStreaming) return content;
 
                       return Shimmer.fromColors(
+                        period: 4000.ms,
                         baseColor: Theme.of(
                           context,
                         ).colorScheme.onSurface.withAlpha(170),

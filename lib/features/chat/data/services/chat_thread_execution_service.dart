@@ -10,6 +10,8 @@ import 'package:gena/features/chat/data/services/chat_thread_context_service.dar
 import 'package:gena/features/chat/data/services/chat_thread_streaming_service.dart';
 import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
+import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
+import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
 import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
 
@@ -120,7 +122,12 @@ Future<void> generateAssistantResponse({
     for (final call in turnResult.toolCalls) {
       ref.read(chatToolWaitingProvider.notifier).setWaitingTool(call.name);
       try {
-        final workspaceId = ref.read(activeWorkspaceProvider)?.id;
+        final activeWorkspace = ref.read(activeWorkspaceProvider);
+        final workspaceId = activeWorkspace?.id;
+        final nativeToolAllowed = _isNativeToolAllowed(
+          workspace: activeWorkspace,
+          toolName: call.name,
+        );
         final toolResult = await executeChatTool(
           call,
           ragToolHandler: workspaceId == null
@@ -133,6 +140,11 @@ Future<void> generateAssistantResponse({
                       topK: topK,
                       threshold: threshold,
                     ),
+          nativeToolHandler: !nativeToolAllowed
+              ? null
+              : (toolName, args) => ref
+                    .read(nativeToolActionsProvider)
+                    .requestAndExecute(toolName: toolName, args: args),
         );
         await database
             .into(database.messages)
@@ -196,4 +208,19 @@ String _formatToolTraceMessage(
 String _toPrettyJson(Map<String, dynamic> payload) {
   const encoder = JsonEncoder.withIndent('  ');
   return encoder.convert(payload);
+}
+
+bool _isNativeToolAllowed({
+  required WorkspaceEntity? workspace,
+  required String toolName,
+}) {
+  if (workspace == null) return false;
+  if (!workspace.nativeToolsEnabled) return false;
+  return switch (toolName) {
+    nativeOpenUrlToolName => workspace.nativeOpenUrlEnabled,
+    nativeOpenAppToolName => workspace.nativeOpenAppEnabled,
+    nativeSendEmailToolName => workspace.nativeSendEmailEnabled,
+    nativeFlashlightToolName => workspace.nativeFlashlightEnabled,
+    _ => true,
+  };
 }

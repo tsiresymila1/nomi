@@ -19,6 +19,11 @@ final workspaceListProvider = StreamProvider<List<WorkspaceEntity>>((ref) {
             name: row.name,
             generalInstruction: row.generalInstruction,
             ragEnabled: row.ragEnabled,
+            nativeToolsEnabled: row.nativeToolsEnabled,
+            nativeOpenUrlEnabled: row.nativeOpenUrlEnabled,
+            nativeOpenAppEnabled: row.nativeOpenAppEnabled,
+            nativeSendEmailEnabled: row.nativeSendEmailEnabled,
+            nativeFlashlightEnabled: row.nativeFlashlightEnabled,
             createdAt: row.createdAt,
           ),
         )
@@ -70,6 +75,11 @@ final workspaceChatGroupsProvider = StreamProvider<List<WorkspaceChatGroup>>((
         name: workspaceRow.name,
         generalInstruction: workspaceRow.generalInstruction,
         ragEnabled: workspaceRow.ragEnabled,
+        nativeToolsEnabled: workspaceRow.nativeToolsEnabled,
+        nativeOpenUrlEnabled: workspaceRow.nativeOpenUrlEnabled,
+        nativeOpenAppEnabled: workspaceRow.nativeOpenAppEnabled,
+        nativeSendEmailEnabled: workspaceRow.nativeSendEmailEnabled,
+        nativeFlashlightEnabled: workspaceRow.nativeFlashlightEnabled,
         createdAt: workspaceRow.createdAt,
       );
 

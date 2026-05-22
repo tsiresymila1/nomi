@@ -8,6 +8,10 @@ const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
 const String webSearchToolName = 'web_search';
 const String ragSearchToolName = 'workspace_rag_search';
+const String nativeOpenUrlToolName = 'native_open_url';
+const String nativeOpenAppToolName = 'native_open_app';
+const String nativeSendEmailToolName = 'native_send_email';
+const String nativeFlashlightToolName = 'native_flashlight';
 
 const List<String> _weekdayNames = <String>[
   'Monday',
@@ -22,6 +26,10 @@ const List<String> _weekdayNames = <String>[
 List<gemma.Tool> buildChatTools({
   required bool supportsFunctionCalls,
   required bool enableRagTool,
+  required bool enableNativeOpenUrlTool,
+  required bool enableNativeOpenAppTool,
+  required bool enableNativeSendEmailTool,
+  required bool enableNativeFlashlightTool,
 }) {
   if (!supportsFunctionCalls) return const <gemma.Tool>[];
 
@@ -101,6 +109,95 @@ List<gemma.Tool> buildChatTools({
     );
   }
 
+  if (enableNativeOpenUrlTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativeOpenUrlToolName,
+        description:
+            'Open an external URL on the device browser. Requires explicit user approval before execution.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'url': <String, dynamic>{
+              'type': 'string',
+              'description': 'HTTP/HTTPS URL to open.',
+            },
+          },
+          'required': <String>['url'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeOpenAppTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativeOpenAppToolName,
+        description:
+            'Open another app through a deep link URI on the device. Requires explicit user approval before execution.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'uri': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'URI/deep-link to launch (for example tel:, maps:, custom app scheme).',
+            },
+          },
+          'required': <String>['uri'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeSendEmailTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativeSendEmailToolName,
+        description:
+            'Compose an email in the user email app. Requires explicit user approval before execution.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'to': <String, dynamic>{
+              'type': 'string',
+              'description': 'Recipient email address.',
+            },
+            'subject': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email subject.',
+            },
+            'body': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email body.',
+            },
+          },
+          'required': <String>['to'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeFlashlightTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativeFlashlightToolName,
+        description:
+            'Turn the device flashlight on or off. Requires explicit user approval before execution.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'mode': <String, dynamic>{
+              'type': 'string',
+              'description': 'Use "on" or "off".',
+            },
+          },
+          'required': <String>['mode'],
+        },
+      ),
+    );
+  }
+
   return tools;
 }
 
@@ -112,6 +209,11 @@ Future<Map<String, dynamic>> executeChatTool(
     double threshold,
   })?
   ragToolHandler,
+  Future<Map<String, dynamic>> Function(
+    String toolName,
+    Map<String, dynamic> args,
+  )?
+  nativeToolHandler,
 }) async {
   logger.i(call.name);
   logger.i(call.args);
@@ -172,6 +274,19 @@ Future<Map<String, dynamic>> executeChatTool(
         fallback: 0.15,
       ).clamp(0.0, 1.0);
       return await ragToolHandler(query, topK: topK, threshold: threshold);
+    case nativeOpenUrlToolName:
+    case nativeOpenAppToolName:
+    case nativeSendEmailToolName:
+    case nativeFlashlightToolName:
+      if (nativeToolHandler == null) {
+        return <String, dynamic>{
+          'status': 'error',
+          'error': 'native_tools_disabled',
+          'message': 'Native action tools are not available in this workspace.',
+        };
+      }
+      final args = _toArgsMap(call.args);
+      return nativeToolHandler(call.name, args);
     default:
       return <String, dynamic>{
         'status': 'error',
@@ -179,6 +294,10 @@ Future<Map<String, dynamic>> executeChatTool(
         'message': 'Tool "${call.name}" is not supported by this app.',
       };
   }
+}
+
+Map<String, dynamic> _toArgsMap(Map<Object?, Object?> rawArgs) {
+  return rawArgs.map((key, value) => MapEntry(key?.toString() ?? '', value));
 }
 
 int _toInt(Object? value, {required int fallback}) {

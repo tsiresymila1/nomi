@@ -147,6 +147,18 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
     final tools = buildChatTools(
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
       enableRagTool: activeWorkspace?.ragEnabled ?? false,
+      enableNativeOpenUrlTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenUrlEnabled ?? false),
+      enableNativeOpenAppTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativeSendEmailTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeSendEmailEnabled ?? false),
+      enableNativeFlashlightTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeFlashlightEnabled ?? false),
     );
     final chat = await modelRuntime.model.createChat(
       temperature: modelRuntime.temperature,

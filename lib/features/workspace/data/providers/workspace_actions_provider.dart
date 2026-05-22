@@ -97,6 +97,42 @@ class WorkspaceActions {
         .write(db.WorkspacesCompanion(ragEnabled: Value(enabled)));
   }
 
+  Future<void> updateNativeToolsEnabled({
+    required String workspaceId,
+    required bool enabled,
+  }) async {
+    final parsedId = int.tryParse(workspaceId);
+    if (parsedId == null) return;
+
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(database.workspaces)
+          ..where((t) => t.id.equals(parsedId)))
+        .write(db.WorkspacesCompanion(nativeToolsEnabled: Value(enabled)));
+  }
+
+  Future<void> updateNativeToolPermissions({
+    required String workspaceId,
+    required bool openUrlEnabled,
+    required bool openAppEnabled,
+    required bool sendEmailEnabled,
+    required bool flashlightEnabled,
+  }) async {
+    final parsedId = int.tryParse(workspaceId);
+    if (parsedId == null) return;
+
+    final database = ref.read(genaDatabaseProvider);
+    await (database.update(
+      database.workspaces,
+    )..where((t) => t.id.equals(parsedId))).write(
+      db.WorkspacesCompanion(
+        nativeOpenUrlEnabled: Value(openUrlEnabled),
+        nativeOpenAppEnabled: Value(openAppEnabled),
+        nativeSendEmailEnabled: Value(sendEmailEnabled),
+        nativeFlashlightEnabled: Value(flashlightEnabled),
+      ),
+    );
+  }
+
   Future<void> deleteWorkspace(String workspaceId) async {
     final parsedId = int.tryParse(workspaceId);
     if (parsedId == null) return;

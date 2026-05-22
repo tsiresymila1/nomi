@@ -29,6 +29,11 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
   bool _isSaving = false;
   bool _isImporting = false;
   bool _ragEnabled = false;
+  bool _nativeToolsEnabled = true;
+  bool _nativeOpenUrlEnabled = true;
+  bool _nativeOpenAppEnabled = true;
+  bool _nativeSendEmailEnabled = true;
+  bool _nativeFlashlightEnabled = true;
 
   @override
   void dispose() {
@@ -61,6 +66,11 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
               workspaceId: widget.workspaceId,
               generalInstruction: _instructionController.text,
               ragEnabled: _ragEnabled,
+              nativeToolsEnabled: _nativeToolsEnabled,
+              nativeOpenUrlEnabled: _nativeOpenUrlEnabled,
+              nativeOpenAppEnabled: _nativeOpenAppEnabled,
+              nativeSendEmailEnabled: _nativeSendEmailEnabled,
+              nativeFlashlightEnabled: _nativeFlashlightEnabled,
             ),
           );
       await AppToast.show('Workspace config saved', type: AppToastType.success);
@@ -165,6 +175,11 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
       _hydratedWorkspaceId = workspace.id;
       _instructionController.text = workspace.generalInstruction;
       _ragEnabled = workspace.ragEnabled;
+      _nativeToolsEnabled = workspace.nativeToolsEnabled;
+      _nativeOpenUrlEnabled = workspace.nativeOpenUrlEnabled;
+      _nativeOpenAppEnabled = workspace.nativeOpenAppEnabled;
+      _nativeSendEmailEnabled = workspace.nativeSendEmailEnabled;
+      _nativeFlashlightEnabled = workspace.nativeFlashlightEnabled;
     }
     final documentsAsync = ref.watch(workspaceDocumentsProvider(workspace.id));
     final embedderState = ref.watch(workspaceEmbedderInstallStateProvider);
@@ -215,6 +230,52 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
               const SizedBox(height: 8),
               _EmbedderStatusCard(state: embedderState),
             ],
+            const SizedBox(height: 8),
+            SwitchListTile(
+              value: _nativeToolsEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Enable Native Action Tools'),
+              subtitle: const Text(
+                'Allow model tool calls to request native phone actions with user approval popup.',
+              ),
+              onChanged: (value) => setState(() => _nativeToolsEnabled = value),
+            ),
+            SwitchListTile(
+              value: _nativeOpenUrlEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Allow open URL'),
+              subtitle: const Text('Native tool: open external link'),
+              onChanged: !_nativeToolsEnabled
+                  ? null
+                  : (value) => setState(() => _nativeOpenUrlEnabled = value),
+            ),
+            SwitchListTile(
+              value: _nativeOpenAppEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Allow open app'),
+              subtitle: const Text('Native tool: launch app URI/deep link'),
+              onChanged: !_nativeToolsEnabled
+                  ? null
+                  : (value) => setState(() => _nativeOpenAppEnabled = value),
+            ),
+            SwitchListTile(
+              value: _nativeSendEmailEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Allow send email'),
+              subtitle: const Text('Native tool: compose email via mail app'),
+              onChanged: !_nativeToolsEnabled
+                  ? null
+                  : (value) => setState(() => _nativeSendEmailEnabled = value),
+            ),
+            SwitchListTile(
+              value: _nativeFlashlightEnabled,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Allow flashlight'),
+              subtitle: const Text('Native tool: turn flashlight on/off'),
+              onChanged: !_nativeToolsEnabled
+                  ? null
+                  : (value) => setState(() => _nativeFlashlightEnabled = value),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [

@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:gena/features/chat/data/models/native_tool_request.dart';
+import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_app_bar.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_drawer.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input.dart';
@@ -10,11 +12,100 @@ import 'package:gena/features/chat/presentation/widgets/chat_view.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 
-class ChatPage extends ConsumerWidget {
+class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends ConsumerState<ChatPage> {
+  bool _isNativeDialogOpen = false;
+  String? _lastNativeRequestId;
+
+  Future<void> _showNativeActionDialog(
+    BuildContext context,
+    NativeToolRequest request,
+  ) async {
+    if (_isNativeDialogOpen || _lastNativeRequestId == request.id) return;
+    _isNativeDialogOpen = true;
+    _lastNativeRequestId = request.id;
+
+    final approved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Approve Native Action'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'The assistant requests action: ${_toolLabel(request.toolName)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  request.args.isEmpty
+                      ? 'No arguments'
+                      : ref
+                            .read(nativeToolActionsProvider)
+                            .formatArgsForDisplay(request.args),
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Reject'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Approve'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (approved == true) {
+      ref.read(nativeToolExecutionProvider.notifier).approveCurrent();
+    } else {
+      ref.read(nativeToolExecutionProvider.notifier).rejectCurrent();
+    }
+    _isNativeDialogOpen = false;
+    _lastNativeRequestId = null;
+  }
+
+  String _toolLabel(String toolName) {
+    return switch (toolName) {
+      nativeOpenUrlToolName => 'Open URL',
+      nativeOpenAppToolName => 'Open App',
+      nativeSendEmailToolName => 'Send Email',
+      nativeFlashlightToolName => 'Flashlight',
+      _ => toolName,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<NativeToolExecutionState>(nativeToolExecutionProvider, (
+      previous,
+      next,
+    ) {
+      final request = next.currentRequest;
+      if (request == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showNativeActionDialog(context, request);
+      });
+    });
+
     Widget reveal(Widget child, {int delayMs = 0}) {
       return child
           .animate()

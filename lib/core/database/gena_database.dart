@@ -16,6 +16,19 @@ class Workspaces extends Table with TableMixin {
   late final name = text().withLength(min: 1, max: 64)();
   late final generalInstruction = text().withDefault(Constant(systemPrompt))();
   late final ragEnabled = boolean().withDefault(const Constant(false))();
+  late final nativeToolsEnabled = boolean().withDefault(const Constant(true))();
+  late final nativeOpenUrlEnabled = boolean().withDefault(
+    const Constant(true),
+  )();
+  late final nativeOpenAppEnabled = boolean().withDefault(
+    const Constant(true),
+  )();
+  late final nativeSendEmailEnabled = boolean().withDefault(
+    const Constant(true),
+  )();
+  late final nativeFlashlightEnabled = boolean().withDefault(
+    const Constant(true),
+  )();
 }
 
 class WorkspaceDocuments extends Table with TableMixin {
@@ -66,7 +79,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -127,6 +140,26 @@ class GenaDatabase extends _$GenaDatabase {
         await m.addColumn(workspaceDocuments, workspaceDocuments.chunkCount);
         await customStatement(
           "UPDATE workspace_documents SET ingestion_status = 'ready' WHERE ingestion_status IS NULL OR TRIM(ingestion_status) = ''",
+        );
+      }
+      if (from < 10) {
+        await m.addColumn(workspaces, workspaces.nativeToolsEnabled);
+        await customStatement(
+          'UPDATE workspaces SET native_tools_enabled = 1 WHERE native_tools_enabled IS NULL OR native_tools_enabled = 0',
+        );
+      }
+      if (from < 11) {
+        await m.addColumn(workspaces, workspaces.nativeOpenUrlEnabled);
+        await m.addColumn(workspaces, workspaces.nativeOpenAppEnabled);
+        await m.addColumn(workspaces, workspaces.nativeSendEmailEnabled);
+        await m.addColumn(workspaces, workspaces.nativeFlashlightEnabled);
+        await customStatement(
+          'UPDATE workspaces '
+          'SET native_tools_enabled = 1, '
+          'native_open_url_enabled = 1, '
+          'native_open_app_enabled = 1, '
+          'native_send_email_enabled = 1, '
+          'native_flashlight_enabled = 1',
         );
       }
     },

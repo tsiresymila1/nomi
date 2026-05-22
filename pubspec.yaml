@@ -37,6 +37,8 @@ dependencies:
   hugeicons: ^1.1.7
   fullscreen_image_viewer: ^1.2.0
   doc_text_extractor: ^2.1.0
+  url_launcher: ^6.3.2
+  torch_light: ^1.1.0
 
 dev_dependencies:
   flutter_test:

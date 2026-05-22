@@ -19,11 +19,21 @@ class WorkspaceConfigSaveInput {
   final String workspaceId;
   final String generalInstruction;
   final bool ragEnabled;
+  final bool nativeToolsEnabled;
+  final bool nativeOpenUrlEnabled;
+  final bool nativeOpenAppEnabled;
+  final bool nativeSendEmailEnabled;
+  final bool nativeFlashlightEnabled;
 
   const WorkspaceConfigSaveInput({
     required this.workspaceId,
     required this.generalInstruction,
     required this.ragEnabled,
+    required this.nativeToolsEnabled,
+    required this.nativeOpenUrlEnabled,
+    required this.nativeOpenAppEnabled,
+    required this.nativeSendEmailEnabled,
+    required this.nativeFlashlightEnabled,
   });
 }
 
@@ -53,6 +63,21 @@ class WorkspaceConfigActions {
         .updateRagEnabled(
           workspaceId: input.workspaceId,
           enabled: input.ragEnabled,
+        );
+    await ref
+        .read(workspaceActionsProvider)
+        .updateNativeToolsEnabled(
+          workspaceId: input.workspaceId,
+          enabled: input.nativeToolsEnabled,
+        );
+    await ref
+        .read(workspaceActionsProvider)
+        .updateNativeToolPermissions(
+          workspaceId: input.workspaceId,
+          openUrlEnabled: input.nativeOpenUrlEnabled,
+          openAppEnabled: input.nativeOpenAppEnabled,
+          sendEmailEnabled: input.nativeSendEmailEnabled,
+          flashlightEnabled: input.nativeFlashlightEnabled,
         );
 
     ref.invalidate(activeGemmaChatProvider);

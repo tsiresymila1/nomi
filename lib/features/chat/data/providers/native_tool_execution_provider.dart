@@ -24,6 +24,10 @@ class NativeToolExecutionNotifier extends Notifier<NativeToolExecutionState> {
   NativeToolExecutionState build() => const NativeToolExecutionState.idle();
 
   Future<bool> requestApproval(NativeToolRequest request) {
+    if (!request.needApproval) {
+      return Future<bool>.value(true);
+    }
+
     final completer = Completer<bool>();
     _pending[request.id] = completer;
     _queue.add(request);

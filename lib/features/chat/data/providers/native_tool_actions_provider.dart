@@ -21,10 +21,14 @@ class NativeToolActions {
     required String toolName,
     required Map<String, dynamic> args,
   }) async {
+    final service = ref.read(nativeToolBridgeServiceProvider);
+    final needApproval = _requiresApproval(toolName);
+
     final request = NativeToolRequest(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       toolName: toolName,
       args: Map<String, dynamic>.from(args),
+      needApproval: needApproval,
       createdAt: DateTime.now(),
     );
 
@@ -39,11 +43,22 @@ class NativeToolActions {
       };
     }
 
-    final service = ref.read(nativeToolBridgeServiceProvider);
     return service.execute(toolName: toolName, args: args);
   }
 
   String formatArgsForDisplay(Map<String, dynamic> args) {
     return const JsonEncoder.withIndent('  ').convert(args);
+  }
+
+  bool _requiresApproval(String toolName) {
+    final normalized = toolName.trim().toLowerCase();
+    const mutatePrefixes = <String>[
+      'native_create_',
+      'native_delete_',
+      'native_update_',
+      'native_mutate_',
+      'native_send_',
+    ];
+    return mutatePrefixes.any(normalized.startsWith);
   }
 }

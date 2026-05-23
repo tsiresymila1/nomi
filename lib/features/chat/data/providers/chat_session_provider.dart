@@ -136,6 +136,15 @@ final activeGemmaChatProvider = StreamProvider.autoDispose<GemmaChatSession?>((
       enableNativeOpenAppTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
           (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativePhoneCallTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativeContactsTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativeSmsTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
       enableNativeSendEmailTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
           (activeWorkspace?.nativeSendEmailEnabled ?? false),

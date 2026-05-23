@@ -11,6 +11,11 @@ const String webSearchToolName = 'web_search';
 const String ragSearchToolName = 'workspace_rag_search';
 const String nativeOpenUrlToolName = 'native_open_url';
 const String nativeOpenAppToolName = 'native_open_app';
+const String nativePhoneCallToolName = 'native_phone_call';
+const String nativeReadContactsToolName = 'native_read_contacts';
+const String nativeSearchContactsToolName = 'native_search_contacts';
+const String nativeCreateContactToolName = 'native_create_contact';
+const String nativeSendSmsToolName = 'native_send_sms';
 const String nativeSendEmailToolName = 'native_send_email';
 const String nativeFlashlightToolName = 'native_flashlight';
 
@@ -24,11 +29,19 @@ const List<String> _weekdayNames = <String>[
   'Sunday',
 ];
 
+const String _nativeMutatingApprovalPolicy =
+    'Only send/create/delete actions require explicit user approval.';
+const String _nativeMutatingActionApproval =
+    'This action requires explicit user approval.';
+
 List<gemma.Tool> buildChatTools({
   required bool supportsFunctionCalls,
   required bool enableRagTool,
   required bool enableNativeOpenUrlTool,
   required bool enableNativeOpenAppTool,
+  required bool enableNativePhoneCallTool,
+  required bool enableNativeContactsTool,
+  required bool enableNativeSmsTool,
   required bool enableNativeSendEmailTool,
   required bool enableNativeFlashlightTool,
 }) {
@@ -58,7 +71,7 @@ List<gemma.Tool> buildChatTools({
     gemma.Tool(
       name: webSearchToolName,
       description:
-          'Search the web and return top results plus extracted markdown from pages. Use this when the user asks for recent or external information.',
+          'Search the public web and return top results plus extracted markdown from pages. If workspace RAG is available, do NOT use web search first. Use workspace_rag_search first for knowledge/context questions, then use web_search only when the user needs fresh/latest external information or when RAG does not contain the answer.',
       parameters: <String, dynamic>{
         'type': 'object',
         'properties': <String, dynamic>{
@@ -86,7 +99,7 @@ List<gemma.Tool> buildChatTools({
       const gemma.Tool(
         name: ragSearchToolName,
         description:
-            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. Use this when the user asks about facts likely present in workspace documents.',
+            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. This is the preferred first step for factual questions when RAG is enabled. Use this before web_search for non-fresh information.',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -115,7 +128,7 @@ List<gemma.Tool> buildChatTools({
       const gemma.Tool(
         name: nativeOpenUrlToolName,
         description:
-            'Open an external URL on the device browser. Requires explicit user approval before execution.',
+            'Open an external URL on the device browser. $_nativeMutatingApprovalPolicy',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -135,17 +148,141 @@ List<gemma.Tool> buildChatTools({
       const gemma.Tool(
         name: nativeOpenAppToolName,
         description:
-            'Open another app through a deep link URI on the device. Requires explicit user approval before execution.',
+            'Open another app through a deep link URI on the device. $_nativeMutatingApprovalPolicy',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
             'uri': <String, dynamic>{
               'type': 'string',
               'description':
-                  'URI/deep-link to launch (for example tel:, maps:, custom app scheme).',
+                  'URI/deep-link to launch (for example maps:, or custom app scheme).',
             },
           },
           'required': <String>['uri'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativePhoneCallTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativePhoneCallToolName,
+        description:
+            'Place a direct phone call using native device APIs. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'phone_number': <String, dynamic>{
+              'type': 'string',
+              'description': 'Target phone number to call directly.',
+            },
+          },
+          'required': <String>['phone_number'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeContactsTool) {
+    tools.addAll(const <gemma.Tool>[
+      gemma.Tool(
+        name: nativeReadContactsToolName,
+        description:
+            'Read contacts from the device address book. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 50, max 200).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+      gemma.Tool(
+        name: nativeSearchContactsToolName,
+        description:
+            'Search contacts by name or query text in device address book. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description': 'Name or query to search contacts.',
+            },
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 20, max 100).',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+      gemma.Tool(
+        name: nativeCreateContactToolName,
+        description:
+            'Create a new contact in the device address book. $_nativeMutatingActionApproval',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'given_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact first/given name.',
+            },
+            'family_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact last/family name.',
+            },
+            'phone_numbers': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of phone numbers to save.',
+            },
+            'emails': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of email addresses to save.',
+            },
+            'company': <String, dynamic>{
+              'type': 'string',
+              'description': 'Company name (optional).',
+            },
+            'job_title': <String, dynamic>{
+              'type': 'string',
+              'description': 'Job title (optional).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+    ]);
+  }
+
+  if (enableNativeSmsTool) {
+    tools.add(
+      const gemma.Tool(
+        name: nativeSendSmsToolName,
+        description:
+            'Send an SMS/MMS using native messaging APIs. $_nativeMutatingActionApproval',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'message': <String, dynamic>{
+              'type': 'string',
+              'description': 'SMS body content.',
+            },
+            'recipients': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description':
+                  'List of recipient phone numbers (one or multiple).',
+            },
+          },
+          'required': <String>['message', 'recipients'],
         },
       ),
     );
@@ -156,7 +293,7 @@ List<gemma.Tool> buildChatTools({
       const gemma.Tool(
         name: nativeSendEmailToolName,
         description:
-            'Compose an email in the user email app. Requires explicit user approval before execution.',
+            'Compose an email in the user email app. $_nativeMutatingActionApproval',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -184,7 +321,7 @@ List<gemma.Tool> buildChatTools({
       const gemma.Tool(
         name: nativeFlashlightToolName,
         description:
-            'Turn the device flashlight on or off. Requires explicit user approval before execution.',
+            'Turn the device flashlight on or off. $_nativeMutatingApprovalPolicy',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -207,6 +344,9 @@ List<openai.Tool> buildRemoteChatTools({
   required bool enableRagTool,
   required bool enableNativeOpenUrlTool,
   required bool enableNativeOpenAppTool,
+  required bool enableNativePhoneCallTool,
+  required bool enableNativeContactsTool,
+  required bool enableNativeSmsTool,
   required bool enableNativeSendEmailTool,
   required bool enableNativeFlashlightTool,
 }) {
@@ -236,7 +376,7 @@ List<openai.Tool> buildRemoteChatTools({
     openai.Tool.function(
       name: webSearchToolName,
       description:
-          'Search the web and return top results plus extracted markdown from pages. Use this when the user asks for recent or external information.',
+          'Search the public web and return top results plus extracted markdown from pages. If workspace RAG is available, do NOT use web search first. Use workspace_rag_search first for knowledge/context questions, then use web_search only when the user needs fresh/latest external information or when RAG does not contain the answer.',
       parameters: <String, dynamic>{
         'type': 'object',
         'properties': <String, dynamic>{
@@ -264,7 +404,7 @@ List<openai.Tool> buildRemoteChatTools({
       openai.Tool.function(
         name: ragSearchToolName,
         description:
-            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. Use this when the user asks about facts likely present in workspace documents.',
+            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. This is the preferred first step for factual questions when RAG is enabled. Use this before web_search for non-fresh information.',
         parameters: const <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -293,7 +433,7 @@ List<openai.Tool> buildRemoteChatTools({
       openai.Tool.function(
         name: nativeOpenUrlToolName,
         description:
-            'Open an external URL on the device browser. Requires explicit user approval before execution.',
+            'Open an external URL on the device browser. $_nativeMutatingApprovalPolicy',
         parameters: const <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -313,17 +453,141 @@ List<openai.Tool> buildRemoteChatTools({
       openai.Tool.function(
         name: nativeOpenAppToolName,
         description:
-            'Open another app through a deep link URI on the device. Requires explicit user approval before execution.',
+            'Open another app through a deep link URI on the device. $_nativeMutatingApprovalPolicy',
         parameters: const <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
             'uri': <String, dynamic>{
               'type': 'string',
               'description':
-                  'URI/deep-link to launch (for example tel:, maps:, custom app scheme).',
+                  'URI/deep-link to launch (for example maps:, or custom app scheme).',
             },
           },
           'required': <String>['uri'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativePhoneCallTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativePhoneCallToolName,
+        description:
+            'Place a direct phone call using native device APIs. $_nativeMutatingApprovalPolicy',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'phone_number': <String, dynamic>{
+              'type': 'string',
+              'description': 'Target phone number to call directly.',
+            },
+          },
+          'required': <String>['phone_number'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeContactsTool) {
+    tools.addAll(<openai.Tool>[
+      openai.Tool.function(
+        name: nativeReadContactsToolName,
+        description:
+            'Read contacts from the device address book. $_nativeMutatingApprovalPolicy',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 50, max 200).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+      openai.Tool.function(
+        name: nativeSearchContactsToolName,
+        description:
+            'Search contacts by name or query text in device address book. $_nativeMutatingApprovalPolicy',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description': 'Name or query to search contacts.',
+            },
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 20, max 100).',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+      openai.Tool.function(
+        name: nativeCreateContactToolName,
+        description:
+            'Create a new contact in the device address book. $_nativeMutatingActionApproval',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'given_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact first/given name.',
+            },
+            'family_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact last/family name.',
+            },
+            'phone_numbers': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of phone numbers to save.',
+            },
+            'emails': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of email addresses to save.',
+            },
+            'company': <String, dynamic>{
+              'type': 'string',
+              'description': 'Company name (optional).',
+            },
+            'job_title': <String, dynamic>{
+              'type': 'string',
+              'description': 'Job title (optional).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+    ]);
+  }
+
+  if (enableNativeSmsTool) {
+    tools.add(
+      openai.Tool.function(
+        name: nativeSendSmsToolName,
+        description:
+            'Send an SMS/MMS using native messaging APIs. $_nativeMutatingActionApproval',
+        parameters: const <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'message': <String, dynamic>{
+              'type': 'string',
+              'description': 'SMS body content.',
+            },
+            'recipients': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description':
+                  'List of recipient phone numbers (one or multiple).',
+            },
+          },
+          'required': <String>['message', 'recipients'],
         },
       ),
     );
@@ -334,7 +598,7 @@ List<openai.Tool> buildRemoteChatTools({
       openai.Tool.function(
         name: nativeSendEmailToolName,
         description:
-            'Compose an email in the user email app. Requires explicit user approval before execution.',
+            'Compose an email in the user email app. $_nativeMutatingActionApproval',
         parameters: const <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -362,7 +626,7 @@ List<openai.Tool> buildRemoteChatTools({
       openai.Tool.function(
         name: nativeFlashlightToolName,
         description:
-            'Turn the device flashlight on or off. Requires explicit user approval before execution.',
+            'Turn the device flashlight on or off. $_nativeMutatingApprovalPolicy',
         parameters: const <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -477,6 +741,11 @@ Future<Map<String, dynamic>> executeChatToolByName(
       return await ragToolHandler(query, topK: topK, threshold: threshold);
     case nativeOpenUrlToolName:
     case nativeOpenAppToolName:
+    case nativePhoneCallToolName:
+    case nativeReadContactsToolName:
+    case nativeSearchContactsToolName:
+    case nativeCreateContactToolName:
+    case nativeSendSmsToolName:
     case nativeSendEmailToolName:
     case nativeFlashlightToolName:
       if (nativeToolHandler == null) {

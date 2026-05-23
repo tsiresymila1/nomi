@@ -38,6 +38,8 @@ dependencies:
   fullscreen_image_viewer: ^1.2.0
   doc_text_extractor: ^2.1.0
   url_launcher: ^6.3.2
+  contacts_service_plus: ^0.0.3
+  flutter_sms: ^3.0.1
   torch_light: ^1.1.0
   openai_dart: ^5.0.0
 

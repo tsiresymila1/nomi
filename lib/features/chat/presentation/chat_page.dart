@@ -86,6 +86,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return switch (toolName) {
       nativeOpenUrlToolName => 'Open URL',
       nativeOpenAppToolName => 'Open App',
+      nativePhoneCallToolName => 'Direct Phone Call',
+      nativeReadContactsToolName => 'Read Contacts',
+      nativeSearchContactsToolName => 'Search Contacts',
+      nativeCreateContactToolName => 'Create Contact',
+      nativeSendSmsToolName => 'Send SMS',
       nativeSendEmailToolName => 'Send Email',
       nativeFlashlightToolName => 'Flashlight',
       _ => toolName,

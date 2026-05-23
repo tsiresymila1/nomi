@@ -191,6 +191,15 @@ class ChatThreadActions {
       enableNativeOpenAppTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
           (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativePhoneCallTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativeContactsTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
+      enableNativeSmsTool:
+          (activeWorkspace?.nativeToolsEnabled ?? false) &&
+          (activeWorkspace?.nativeOpenAppEnabled ?? false),
       enableNativeSendEmailTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
           (activeWorkspace?.nativeSendEmailEnabled ?? false),
@@ -364,6 +373,11 @@ class ChatThreadActions {
     return switch (toolName) {
       nativeOpenUrlToolName => workspace.nativeOpenUrlEnabled,
       nativeOpenAppToolName => workspace.nativeOpenAppEnabled,
+      nativePhoneCallToolName => workspace.nativeOpenAppEnabled,
+      nativeReadContactsToolName => workspace.nativeOpenAppEnabled,
+      nativeSearchContactsToolName => workspace.nativeOpenAppEnabled,
+      nativeCreateContactToolName => workspace.nativeOpenAppEnabled,
+      nativeSendSmsToolName => workspace.nativeOpenAppEnabled,
       nativeSendEmailToolName => workspace.nativeSendEmailEnabled,
       nativeFlashlightToolName => workspace.nativeFlashlightEnabled,
       _ => true,

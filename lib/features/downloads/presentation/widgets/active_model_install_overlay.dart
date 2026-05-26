@@ -14,7 +14,8 @@ class ActiveModelInstallOverlay extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Positioned.fill(
+    return Positioned(
+      bottom: 0,
       child: Container(
         color: Colors.black.withValues(alpha: 0.35),
         child: Center(

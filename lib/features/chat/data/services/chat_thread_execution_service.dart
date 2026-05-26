@@ -21,8 +21,8 @@ Future<void> storeUserMessage({
   required String text,
   required bool hasImage,
   required String? imagePath,
-}) {
-  return database
+}) async {
+  await database
       .into(database.messages)
       .insert(
         db.MessagesCompanion.insert(
@@ -35,6 +35,23 @@ Future<void> storeUserMessage({
               : const Value.absent(),
         ),
       );
+}
+
+Future<void> updateThreadTitleFromFirstMessage({
+  required db.GenaDatabase database,
+  required int chatId,
+  required String messageText,
+  required bool hasImage,
+  Future<String?> Function(String messageText, {required bool hasImage})?
+  titleGenerator,
+}) {
+  return _updateThreadTitleFromFirstMessage(
+    database: database,
+    chatId: chatId,
+    messageText: messageText,
+    hasImage: hasImage,
+    titleGenerator: titleGenerator,
+  );
 }
 
 Future<void> prepareContext({
@@ -366,6 +383,111 @@ Object? _sanitizeDynamic(
 String _trimString(String input, int maxChars) {
   if (input.length <= maxChars) return input;
   return '${input.substring(0, maxChars)}...[truncated]';
+}
+
+Future<void> _updateThreadTitleFromFirstMessage({
+  required db.GenaDatabase database,
+  required int chatId,
+  required String messageText,
+  required bool hasImage,
+  Future<String?> Function(String messageText, {required bool hasImage})?
+  titleGenerator,
+}) async {
+  final chat = await (database.select(
+    database.chats,
+  )..where((t) => t.id.equals(chatId))).getSingleOrNull();
+  if (chat == null) return;
+
+  const defaultTitles = {'new chat', 'new thread'};
+  final normalizedCurrentTitle = chat.title.trim().toLowerCase();
+  if (!defaultTitles.contains(normalizedCurrentTitle)) return;
+
+  final userMessageCountExpression = database.messages.id.count();
+  final userMessageCountQuery = database.selectOnly(database.messages)
+    ..addColumns([userMessageCountExpression])
+    ..where(
+      database.messages.chat.equals(chatId) &
+          database.messages.role.equals('user'),
+    );
+  final userMessageCountRow = await userMessageCountQuery.getSingle();
+  final userMessageCount =
+      userMessageCountRow.read(userMessageCountExpression) ?? 0;
+  if (userMessageCount != 1) return;
+
+  String? generatedTitle;
+  if (titleGenerator != null) {
+    try {
+      generatedTitle = await titleGenerator(messageText, hasImage: hasImage);
+    } catch (_) {
+      generatedTitle = null;
+    }
+  }
+
+  generatedTitle =
+      _normalizeGeneratedThreadTitle(generatedTitle) ??
+      _buildAutoThreadTitle(messageText: messageText, hasImage: hasImage);
+  if (generatedTitle == null) return;
+
+  await (database.update(database.chats)..where((t) => t.id.equals(chatId)))
+      .write(db.ChatsCompanion(title: Value(generatedTitle)));
+}
+
+String? _buildAutoThreadTitle({
+  required String messageText,
+  required bool hasImage,
+}) {
+  final normalized = messageText.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (normalized.isEmpty) {
+    return hasImage ? 'Image chat' : null;
+  }
+
+  final withoutTrailingPunctuation = normalized.replaceAll(
+    RegExp(r'[\s\.,;:!?-]+$'),
+    '',
+  );
+  final base = withoutTrailingPunctuation.isEmpty
+      ? normalized
+      : withoutTrailingPunctuation;
+  final maxLength = 32;
+  if (base.length <= maxLength) {
+    return base.length >= 6 ? base : 'Chat: $base';
+  }
+
+  final words = base.split(' ');
+  final buffer = StringBuffer();
+  for (final word in words) {
+    final nextLength = buffer.isEmpty
+        ? word.length
+        : buffer.length + 1 + word.length;
+    if (nextLength > maxLength) break;
+    if (buffer.isNotEmpty) {
+      buffer.write(' ');
+    }
+    buffer.write(word);
+    if (buffer.length >= 28) break;
+  }
+
+  final compact = buffer.toString().trim();
+  if (compact.length >= 6) return compact;
+  return '${base.substring(0, maxLength - 1).trim()}…';
+}
+
+String? _normalizeGeneratedThreadTitle(String? raw) {
+  if (raw == null) return null;
+  var normalized = raw.trim();
+  if (normalized.isEmpty) return null;
+
+  normalized = normalized.split('\n').first.trim();
+  normalized = normalized.replaceAll(RegExp('^["\'`]+|["\'`]+\$'), '').trim();
+  normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
+
+  if (normalized.length < 6) return null;
+  if (normalized.length > 32) {
+    normalized = normalized.substring(0, 31).trimRight();
+    normalized = '$normalized…';
+  }
+
+  return normalized;
 }
 
 bool _isNativeToolAllowed({

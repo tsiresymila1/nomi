@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/features/downloads/data/default_static_models.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
@@ -31,7 +32,7 @@ class DownloadModelsList extends ConsumerWidget {
     final downloadNotifier = ref.read(downloadProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(4),
       child: modelsAsync.when(
         data: (models) => installedModels.when(
           data: (installed) => models.isNotEmpty
@@ -50,10 +51,12 @@ class DownloadModelsList extends ConsumerWidget {
                         model.provider == ModelProviderType.remote ||
                         installed.contains(installedId) ||
                         progress == 1.0;
+                    final canRemove = !isDefaultStaticModel(model);
                     return DownloadItem(
                           model: model,
                           progress: progress,
                           isInstalled: isInstalled,
+                          canRemove: canRemove,
                           onDownload: () {
                             ref
                                 .read(downloadProvider.notifier)

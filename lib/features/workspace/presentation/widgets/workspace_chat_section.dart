@@ -30,176 +30,174 @@ class WorkspaceChatSection extends ConsumerWidget {
     );
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => ref
-                      .read(workspaceDrawerStateProvider.notifier)
-                      .toggle(workspaceId),
-                  icon: Icon(
-                    expanded
-                        ? Icons.keyboard_arrow_down
-                        : Icons.keyboard_arrow_right,
-                    size: 18,
-                  ),
+      color: Colors.transparent,
+      elevation: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: () => ref
+                    .read(workspaceDrawerStateProvider.notifier)
+                    .toggle(workspaceId),
+                icon: Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
+                  size: 18,
                 ),
-                Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      unawaited(
-                        ref
-                            .read(chatPageActionsProvider)
-                            .selectWorkspace(workspaceId),
-                      );
+              ),
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    unawaited(
                       ref
-                          .read(workspaceDrawerStateProvider.notifier)
-                          .toggle(workspaceId);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              group.workspace.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: isSelectedWorkspace
-                                    ? Theme.of(context).colorScheme.primary
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                PopupMenuButton<_WorkspaceMenuAction>(
-                  tooltip: 'Workspace actions',
-                  onSelected: (action) {
-                    switch (action) {
-                      case _WorkspaceMenuAction.newThread:
-                        unawaited(
-                          ref
-                              .read(chatPageActionsProvider)
-                              .createNewThreadInWorkspace(workspaceId),
-                        );
-                        break;
-                      case _WorkspaceMenuAction.rename:
-                        unawaited(_showRenameDialog(context, ref));
-                        break;
-                      case _WorkspaceMenuAction.delete:
-                        unawaited(_showDeleteDialog(context, ref));
-                        break;
-                      case _WorkspaceMenuAction.setting:
-                        context.pop();
-                        context.pushNamed(
-                          'workspace-config',
-                          pathParameters: {'workspaceId': workspaceId},
-                        );
-                        break;
-                    }
+                          .read(chatPageActionsProvider)
+                          .selectWorkspace(workspaceId),
+                    );
+                    ref
+                        .read(workspaceDrawerStateProvider.notifier)
+                        .toggle(workspaceId);
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem<_WorkspaceMenuAction>(
-                      value: _WorkspaceMenuAction.newThread,
-                      child: Row(
-                        children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedPencilEdit02),
-                          SizedBox(width: 8),
-                          Text('New thread'),
-                        ],
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
                     ),
-                    PopupMenuItem<_WorkspaceMenuAction>(
-                      value: _WorkspaceMenuAction.rename,
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined),
-                          SizedBox(width: 8),
-                          Text('Rename workspace'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<_WorkspaceMenuAction>(
-                      value: _WorkspaceMenuAction.delete,
-                      child: Row(
-                        children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedDelete02),
-                          SizedBox(width: 8),
-                          Text('Delete workspace'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<_WorkspaceMenuAction>(
-                      value: _WorkspaceMenuAction.setting,
-                      child: Row(
-                        children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedSetting06),
-                          SizedBox(width: 8),
-                          Text('Setting'),
-                        ],
-                      ),
-                    ),
-                  ],
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.more_vert),
-                  ),
-                ),
-              ],
-            ),
-            if (expanded)
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 4),
-                    if (group.chats.isEmpty)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
+                    child: Row(
+                      children: [
+                        Expanded(
                           child: Text(
-                            'No threads yet',
+                            group.workspace.name,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).hintColor,
+                              fontWeight: FontWeight.w700,
+                              color: isSelectedWorkspace
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
                             ),
                           ),
                         ),
-                      )
-                    else
-                      ListView.builder(
-                        itemCount: group.chats.length,
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemBuilder: (context, index) {
-                          return ChatHistoryTile(chat: group.chats[index]);
-                        },
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
-              ).animate().fade(duration:200.ms),
-          ],
-        ),
+              ),
+              PopupMenuButton<_WorkspaceMenuAction>(
+                tooltip: 'Workspace actions',
+                onSelected: (action) {
+                  switch (action) {
+                    case _WorkspaceMenuAction.newThread:
+                      unawaited(
+                        ref
+                            .read(chatPageActionsProvider)
+                            .createNewThreadInWorkspace(workspaceId),
+                      );
+                      break;
+                    case _WorkspaceMenuAction.rename:
+                      unawaited(_showRenameDialog(context, ref));
+                      break;
+                    case _WorkspaceMenuAction.delete:
+                      unawaited(_showDeleteDialog(context, ref));
+                      break;
+                    case _WorkspaceMenuAction.setting:
+                      context.pop();
+                      context.pushNamed(
+                        'workspace-config',
+                        pathParameters: {'workspaceId': workspaceId},
+                      );
+                      break;
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem<_WorkspaceMenuAction>(
+                    value: _WorkspaceMenuAction.newThread,
+                    child: Row(
+                      children: [
+                        HugeIcon(icon: HugeIcons.strokeRoundedPencilEdit02),
+                        SizedBox(width: 8),
+                        Text('New thread'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<_WorkspaceMenuAction>(
+                    value: _WorkspaceMenuAction.rename,
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined),
+                        SizedBox(width: 8),
+                        Text('Rename workspace'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<_WorkspaceMenuAction>(
+                    value: _WorkspaceMenuAction.delete,
+                    child: Row(
+                      children: [
+                        HugeIcon(icon: HugeIcons.strokeRoundedDelete02),
+                        SizedBox(width: 8),
+                        Text('Delete workspace'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<_WorkspaceMenuAction>(
+                    value: _WorkspaceMenuAction.setting,
+                    child: Row(
+                      children: [
+                        HugeIcon(icon: HugeIcons.strokeRoundedSettings03),
+                        SizedBox(width: 8),
+                        Text('Setting'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.more_vert),
+                ),
+              ),
+            ],
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 4),
+                  if (group.chats.isEmpty)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          'No threads yet',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      itemCount: group.chats.length,
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        return ChatHistoryTile(chat: group.chats[index]);
+                      },
+                    ),
+                ],
+              ),
+            ).animate().fade(duration:200.ms),
+        ],
       ),
     );
   }

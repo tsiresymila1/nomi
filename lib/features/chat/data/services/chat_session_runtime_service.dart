@@ -1,6 +1,7 @@
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
 
 Future<gemma.InferenceModel?> loadActiveModelWithRecovery({
@@ -132,15 +133,32 @@ Future<bool> recoverActiveModelFromCatalog({
 }
 
 Future<void> activateCatalogModel(db.Model model) async {
+  final sourcePath = await resolveModelSourceForInstall(
+    modelName: model.name,
+    sourceType: model.sourceType,
+    source: model.source,
+  );
   final installer = gemma.FlutterGemma.installModel(
     modelType: parseModelType(model.modelType),
-    fileType: inferFileTypeFromSource(model.source),
+    fileType: inferFileTypeFromSource(sourcePath),
   );
 
-  final builder = model.sourceType == 'file'
-      ? installer.fromFile(model.source)
-      : installer.fromNetwork(model.source);
+  final builder = installer.fromFile(sourcePath);
   await builder.install();
+}
+
+Future<String> resolveModelSourceForInstall({
+  required String modelName,
+  required String sourceType,
+  required String source,
+}) async {
+  if (sourceType == 'file') {
+    return source;
+  }
+
+  final downloaded = await ModelBackgroundDownloadService.instance
+      .downloadModelToFile(modelName: modelName, sourceUrl: source);
+  return downloaded.path;
 }
 
 String installedModelIdFromSource(String source) {

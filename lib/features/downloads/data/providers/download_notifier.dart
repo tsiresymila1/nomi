@@ -4,9 +4,11 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/downloads/data/default_static_models.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 
 class ActiveModelInstall {
   final String key;
@@ -60,20 +62,58 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
     }
 
     final installKey = _installKey(model);
-    final installedId = _installedModelId(model);
+    var installedId = _installedModelId(model);
+    var effectiveSource = model.source;
+    var effectiveSourceType = model.sourceType;
 
     _installInProgress = true;
     state = {...state, installKey: 0.0};
     ref.read(activeModelInstallProvider.notifier).start(installKey, model.name);
     try {
+      if (model.sourceType == 'network') {
+        final downloaded = await ModelBackgroundDownloadService.instance
+            .downloadModelToFile(
+              modelName: model.name,
+              sourceUrl: model.source,
+              onProgress: (progress, _) {
+                state = {...state, installKey: progress.clamp(0, 1)};
+              },
+            );
+        effectiveSource = downloaded.path;
+        effectiveSourceType = 'file';
+        installedId = _installedModelIdFromSource(effectiveSource);
+        await ref
+            .read(modelRepositoryActionsProvider)
+            .updateModel(
+              id: model.id,
+              name: model.name,
+              description: model.description,
+              provider: model.provider,
+              apiUrl: model.apiUrl,
+              apiToken: model.apiToken,
+              modelType: model.modelType,
+              supportImage: model.supportImage,
+              supportAudio: model.supportAudio,
+              supportsFunctionCalls: model.supportsFunctionCalls,
+              isThinking: model.isThinking,
+              temperature: model.temperature,
+              topK: model.topK,
+              topP: model.topP,
+              maxTokens: model.maxTokens,
+              tokenBuffer: model.tokenBuffer,
+              randomSeed: model.randomSeed,
+              preferredBackend: model.preferredBackend,
+              sourceType: effectiveSourceType,
+              source: effectiveSource,
+            );
+      }
+
       final installer = FlutterGemma.installModel(
         modelType: _parseModelType(model.modelType),
-        fileType: _inferFileType(model.source),
+        fileType: _inferFileType(effectiveSource),
       );
 
-      final builder = model.sourceType == 'file'
-          ? installer.fromFile(model.source)
-          : installer.fromNetwork(model.source);
+      final builder = installer.fromFile(effectiveSource);
 
       final installation = await builder.withProgress((progress) {
         state = {...state, installKey: progress / 100};
@@ -100,6 +140,14 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
   }
 
   Future<void> removeModel(ModelInfo model) async {
+    if (isDefaultStaticModel(model)) {
+      await AppToast.show(
+        'This default model is static and cannot be deleted.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
     if (model.provider == ModelProviderType.remote) {
       await ref.read(modelRepositoryActionsProvider).deleteModel(model.id);
       return;
@@ -129,8 +177,12 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
   String _installKey(ModelInfo model) => 'model_${model.id}';
 
   String _installedModelId(ModelInfo model) {
-    final parts = model.source.split(RegExp(r'[/\\]'));
-    return parts.isEmpty ? model.source : parts.last;
+    return _installedModelIdFromSource(model.source);
+  }
+
+  String _installedModelIdFromSource(String source) {
+    final parts = source.split(RegExp(r'[/\\]'));
+    return parts.isEmpty ? source : parts.last;
   }
 
   ModelFileType _inferFileType(String source) {

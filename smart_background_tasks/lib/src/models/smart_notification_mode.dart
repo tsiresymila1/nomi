@@ -1,0 +1,1 @@
+enum SmartNotificationMode { grouped, perTask }

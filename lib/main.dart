@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:gena/core/router.dart';
 import 'package:gena/core/theme/app_theme.dart';
+import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/home/presentation/app_introduction_gate.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
@@ -26,6 +28,7 @@ class GenaApp extends ConsumerWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.read(defaultModelSeedingProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -46,7 +49,7 @@ class GenaApp extends ConsumerWidget {
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: overlayStyle,
-          child: child ?? const SizedBox.shrink(),
+          child: AppIntroductionGate(child: child ?? const SizedBox.shrink()),
         );
       },
       theme: AppTheme.light().copyWith(

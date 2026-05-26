@@ -17,6 +17,7 @@ class ChatDrawer extends ConsumerWidget {
     final groupsAsync = ref.watch(workspaceChatGroupsProvider);
 
     return Drawer(
+      width: 350,
       child: SafeArea(
         child: Column(
           children: [
@@ -72,7 +73,13 @@ class ChatDrawer extends ConsumerWidget {
                         WorkspaceChatSection(group: groups[index]),
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
                 error: (error, _) => Center(child: Text('Error: $error')),
               ),
             ),
@@ -121,7 +128,7 @@ class ChatDrawer extends ConsumerWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Power by ', style: TextStyle(fontSize: 12)),
+                        Text('Made with ❤️ by ', style: TextStyle(fontSize: 12)),
                         Text(
                           'Tsiresy Milà',
                           style: TextStyle(

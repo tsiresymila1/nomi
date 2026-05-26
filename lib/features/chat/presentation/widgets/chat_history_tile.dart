@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class ChatHistoryTile extends ConsumerWidget {
@@ -29,16 +30,17 @@ class ChatHistoryTile extends ConsumerWidget {
         style: const TextStyle(fontSize: 12),
       ),
       trailing: IconButton(
-        icon: const HugeIcon(icon: HugeIcons.strokeRoundedArchive04),
+        icon: const HugeIcon(icon: HugeIcons.strokeRoundedDelete03),
         tooltip: 'Archive chat',
-        onPressed: () => _onArchivePressed(context, ref),
+        onPressed: () => unawaited(_onArchivePressed(context, ref)),
       ),
       selected: isSelected,
       onTap: () {
-        unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
         if (context.mounted) {
           Navigator.pop(context);
         }
+        unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
+
       },
       dense: true,
     );
@@ -78,9 +80,17 @@ class ChatHistoryTile extends ConsumerWidget {
     if (shouldArchive != true || !context.mounted) return;
 
     try {
-      await ref.read(chatHistoryActionsProvider).archiveChat(chat.id);
-      if (!context.mounted) return;
-      AppToast.show('Chat archived', type: AppToastType.success);
+      ref
+          .read(chatHistoryActionsProvider)
+          .archiveChat(chat.id)
+          .then((_) {
+            if (!context.mounted) return;
+            AppToast.show('Chat archived', type: AppToastType.success);
+          })
+          .catchError((e) {
+            if (!context.mounted) return;
+            AppToast.show('Archive failed: $e', type: AppToastType.error);
+          });
     } catch (e) {
       if (!context.mounted) return;
       AppToast.show('Archive failed: $e', type: AppToastType.error);

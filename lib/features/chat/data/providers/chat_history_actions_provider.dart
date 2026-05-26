@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
 import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
+import 'package:gena/features/workspace/data/providers/selected_workspace_provider.dart';
 
 final chatHistoryActionsProvider = Provider<ChatHistoryActions>(
   (ref) => ChatHistoryActions(ref),
@@ -24,6 +25,9 @@ class ChatHistoryActions {
               ..limit(1))
             .getSingleOrNull();
     if (chat == null) return;
+    final selectedWorkspaceId = ref.read(selectedWorkspaceIdProvider);
+    final isInSelectedWorkspace =
+        selectedWorkspaceId == chat.workspace.toString();
 
     await database.transaction(() async {
       await (database.delete(
@@ -34,7 +38,7 @@ class ChatHistoryActions {
       )..where((t) => t.id.equals(parsedChatId))).go();
     });
 
-    if (isActiveChat) {
+    if (isActiveChat || isInSelectedWorkspace) {
       await ref.read(chatThreadActionsProvider).stopGeneration();
       await ref
           .read(selectedChatIdProvider.notifier)

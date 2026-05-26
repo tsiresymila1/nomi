@@ -226,13 +226,16 @@ bool _isSelectedModelActive(ModelInfo model) {
 }
 
 Future<void> _activateCatalogModel(ModelInfo model) async {
+  final sourcePath = await resolveModelSourceForInstall(
+    modelName: model.name,
+    sourceType: model.sourceType,
+    source: model.source,
+  );
   final installer = gemma.FlutterGemma.installModel(
     modelType: parseModelType(model.modelType),
-    fileType: inferFileTypeFromSource(model.source),
+    fileType: inferFileTypeFromSource(sourcePath),
   );
 
-  final builder = model.sourceType == 'file'
-      ? installer.fromFile(model.source)
-      : installer.fromNetwork(model.source);
+  final builder = installer.fromFile(sourcePath);
   await builder.install();
 }

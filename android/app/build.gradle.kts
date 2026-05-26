@@ -14,6 +14,7 @@ android {
     ndkVersion = "28.2.13676358"
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -83,6 +84,7 @@ android {
 dependencies {
     // Manually forcing the MediaPipe GenAI dependency often solves the "Unresolved Reference"
     implementation("com.google.mediapipe:tasks-genai:0.10.14")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 flutter {

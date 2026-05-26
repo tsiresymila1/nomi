@@ -7,6 +7,7 @@ class DownloadItem extends StatefulWidget {
   final ModelInfo model;
   final double? progress;
   final bool isInstalled;
+  final bool canRemove;
   final VoidCallback onDownload;
   final VoidCallback onRemove;
   final VoidCallback onEdit;
@@ -16,6 +17,7 @@ class DownloadItem extends StatefulWidget {
     required this.model,
     required this.progress,
     required this.isInstalled,
+    required this.canRemove,
     required this.onDownload,
     required this.onRemove,
     required this.onEdit,
@@ -40,7 +42,6 @@ class _DownloadItemState extends State<DownloadItem> {
         model.source.startsWith('https://');
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
@@ -176,8 +177,12 @@ class _DownloadItemState extends State<DownloadItem> {
                         ),
                         const SizedBox(width: 8),
                         IconButton.filledTonal(
-                          tooltip: 'Remove model',
-                          onPressed: () => _confirmRemove(context),
+                          tooltip: widget.canRemove
+                              ? 'Remove model'
+                              : 'Static default model',
+                          onPressed: !widget.canRemove || isDownloading
+                              ? null
+                              : () => _confirmRemove(context),
                           icon: const HugeIcon(
                             icon: HugeIcons.strokeRoundedDelete02,
                             size: 18,
@@ -191,7 +196,7 @@ class _DownloadItemState extends State<DownloadItem> {
               crossFadeState: _expanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 180),
+              duration: const Duration(milliseconds: 280),
             ),
           ],
         ),

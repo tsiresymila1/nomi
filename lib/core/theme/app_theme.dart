@@ -16,7 +16,7 @@ class AppTheme {
     TextStyle? scale(TextStyle? style) {
       final size = style?.fontSize;
       if (size == null) return style;
-      return style!.copyWith(fontSize: size * _fontScale);
+      return style!.copyWith(fontSize: size * _fontScale, fontWeight: FontWeight.w400);
     }
 
     return source.copyWith(

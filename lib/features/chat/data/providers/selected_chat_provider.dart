@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
@@ -10,13 +12,13 @@ final selectedChatIdProvider =
     );
 
 class SelectedChatIdNotifier extends Notifier<String?> {
-  bool _syncInProgress = false;
+  Future<void>? _activeSync;
 
   @override
   String? build() {
     final workspaceId = ref.watch(selectedWorkspaceIdProvider);
-    _syncSelectionForWorkspace(workspaceId);
-    return null;
+    unawaited(_syncSelectionForWorkspace(workspaceId));
+    return stateOrNull;
   }
 
   Future<void> ensureSelectionForWorkspace(String workspaceId) {
@@ -24,12 +26,18 @@ class SelectedChatIdNotifier extends Notifier<String?> {
   }
 
   Future<void> _syncSelectionForWorkspace(String? workspaceId) async {
-    if (_syncInProgress || workspaceId == null) return;
+    if (workspaceId == null) return;
+
+    final inFlightSync = _activeSync;
+    if (inFlightSync != null) {
+      await inFlightSync;
+    }
 
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) return;
 
-    _syncInProgress = true;
+    final syncCompleter = Completer<void>();
+    _activeSync = syncCompleter.future;
     try {
       final database = ref.read(genaDatabaseProvider);
       final currentChatId = state;
@@ -65,7 +73,10 @@ class SelectedChatIdNotifier extends Notifier<String?> {
 
       await createNewThread(workspaceId: workspaceId);
     } finally {
-      _syncInProgress = false;
+      syncCompleter.complete();
+      if (identical(_activeSync, syncCompleter.future)) {
+        _activeSync = null;
+      }
     }
   }
 

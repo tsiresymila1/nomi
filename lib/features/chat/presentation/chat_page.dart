@@ -94,13 +94,7 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              Expanded(
-                child: _buildBody(coloScheme),
-              ),
-            ],
-          ),
+          Column(children: [Expanded(child: _buildBody(coloScheme))]),
         ],
       ),
     );
@@ -116,7 +110,9 @@ class _ChatPageState extends State<ChatPage> {
               builder: (context, activeModelSnapshot) {
                 final activeModel = activeModelSnapshot.data;
                 final canShowInput =
-                    !isSwitchingModel && selectedChat != null && activeModel != null;
+                    !isSwitchingModel &&
+                    selectedChat != null &&
+                    activeModel != null;
 
                 final bottomBar = !canShowInput
                     ? const SizedBox.shrink()
@@ -228,9 +224,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
         child: Visibility(
           visible:
-              isSwitchingModel &&
-              selectedChat != null &&
-              activeModel != null,
+              isSwitchingModel && selectedChat != null && activeModel != null,
           replacement: body,
           child: Center(
             child: Column(
@@ -249,9 +243,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isSwitchingModel
-                      ? 'Loading model...'
-                      : 'No active chat',
+                  isSwitchingModel ? 'Loading model...' : 'No active chat',
                   style: TextStyle(fontSize: 12),
                 ),
               ],

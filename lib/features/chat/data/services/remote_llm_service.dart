@@ -263,8 +263,8 @@ Future<void> generateRemoteAssistantResponse({
           parsedArgs,
           ragToolHandler: activeWorkspace == null
               ? null
-              : (query, {topK = 4, threshold = 0.15}) => deps.workspaceRagActions
-                    .runRagTool(
+              : (query, {topK = 4, threshold = 0.15}) =>
+                    deps.workspaceRagActions.runRagTool(
                       workspaceId: activeWorkspace.id,
                       query: query,
                       topK: topK,
@@ -276,8 +276,10 @@ Future<void> generateRemoteAssistantResponse({
                 toolName: call.function.name,
               )
               ? null
-              : (toolName, args) => deps.nativeToolActions
-                    .requestAndExecute(toolName: toolName, args: args),
+              : (toolName, args) => deps.nativeToolActions.requestAndExecute(
+                  toolName: toolName,
+                  args: args,
+                ),
         );
 
         await database

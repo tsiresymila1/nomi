@@ -43,7 +43,9 @@ class WorkspaceEmbedderStatusCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          if (isBusy || state.modelProgress > 0 || state.tokenizerProgress > 0) ...[
+          if (isBusy ||
+              state.modelProgress > 0 ||
+              state.tokenizerProgress > 0) ...[
             const SizedBox(height: 8),
             Text(
               'Model: ${state.modelProgress}%',

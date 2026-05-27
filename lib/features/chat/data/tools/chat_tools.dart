@@ -6,7 +6,6 @@ import 'package:gena/features/chat/data/tools/web_search_service.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
-
 const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
 const String webSearchToolName = 'web_search';
@@ -803,4 +802,3 @@ bool isNativeToolAllowed({
     _ => true,
   };
 }
-

@@ -73,7 +73,10 @@ Future<String?> _generateRemoteThreadTitle({
   required String messageText,
   required bool hasImage,
 }) async {
-  final userPrompt = _buildTitlePrompt(messageText: messageText, hasImage: hasImage);
+  final userPrompt = _buildTitlePrompt(
+    messageText: messageText,
+    hasImage: hasImage,
+  );
   final result = await runRemoteChatTurnStreamed(
     model: model,
     messages: [

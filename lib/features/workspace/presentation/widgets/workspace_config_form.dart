@@ -38,7 +38,9 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
         if (_instructionController.text != state.instruction) {
           _instructionController.value = TextEditingValue(
             text: state.instruction,
-            selection: TextSelection.collapsed(offset: state.instruction.length),
+            selection: TextSelection.collapsed(
+              offset: state.instruction.length,
+            ),
           );
         }
 
@@ -93,16 +95,18 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Allow open URL'),
                 subtitle: const Text('Native tool: open external link'),
-                onChanged:
-                    state.nativeToolsEnabled ? cubit.setNativeOpenUrlEnabled : null,
+                onChanged: state.nativeToolsEnabled
+                    ? cubit.setNativeOpenUrlEnabled
+                    : null,
               ),
               SwitchListTile(
                 value: state.nativeOpenAppEnabled,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Allow open app'),
                 subtitle: const Text('Native tool: launch app URI/deep link'),
-                onChanged:
-                    state.nativeToolsEnabled ? cubit.setNativeOpenAppEnabled : null,
+                onChanged: state.nativeToolsEnabled
+                    ? cubit.setNativeOpenAppEnabled
+                    : null,
               ),
               SwitchListTile(
                 value: state.nativeSendEmailEnabled,
@@ -143,7 +147,10 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                     onPressed: state.isImporting
                         ? null
                         : () => unawaited(
-                            WorkspaceConfigActions.importDocument(context, cubit),
+                            WorkspaceConfigActions.importDocument(
+                              context,
+                              cubit,
+                            ),
                           ),
                     icon: state.isImporting
                         ? const SizedBox(
@@ -160,10 +167,18 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
               WorkspaceDocumentsList(
                 documents: state.documents,
                 onRetry: (document) => unawaited(
-                  WorkspaceConfigActions.retryDocument(context, cubit, document),
+                  WorkspaceConfigActions.retryDocument(
+                    context,
+                    cubit,
+                    document,
+                  ),
                 ),
                 onDelete: (document) => unawaited(
-                  WorkspaceConfigActions.deleteDocument(context, cubit, document),
+                  WorkspaceConfigActions.deleteDocument(
+                    context,
+                    cubit,
+                    document,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

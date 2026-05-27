@@ -17,25 +17,35 @@ import 'package:gena/features/workspace/data/providers/workspace_queries_provide
 void registerChatDependencies() {
   // Cubits (no deps)
   if (!sl.isRegistered<ChatModelSwitchingCubit>()) {
-    sl.registerLazySingleton<ChatModelSwitchingCubit>(ChatModelSwitchingCubit.new);
+    sl.registerLazySingleton<ChatModelSwitchingCubit>(
+      ChatModelSwitchingCubit.new,
+    );
   }
   if (!sl.isRegistered<NativeToolExecutionCubit>()) {
-    sl.registerLazySingleton<NativeToolExecutionCubit>(NativeToolExecutionCubit.new);
+    sl.registerLazySingleton<NativeToolExecutionCubit>(
+      NativeToolExecutionCubit.new,
+    );
   }
   if (!sl.isRegistered<ChatGeneratingCubit>()) {
     sl.registerLazySingleton<ChatGeneratingCubit>(ChatGeneratingCubit.new);
   }
   if (!sl.isRegistered<ChatDraftResponseCubit>()) {
-    sl.registerLazySingleton<ChatDraftResponseCubit>(ChatDraftResponseCubit.new);
+    sl.registerLazySingleton<ChatDraftResponseCubit>(
+      ChatDraftResponseCubit.new,
+    );
   }
   if (!sl.isRegistered<ChatDraftThinkingCubit>()) {
-    sl.registerLazySingleton<ChatDraftThinkingCubit>(ChatDraftThinkingCubit.new);
+    sl.registerLazySingleton<ChatDraftThinkingCubit>(
+      ChatDraftThinkingCubit.new,
+    );
   }
   if (!sl.isRegistered<ChatToolWaitingCubit>()) {
     sl.registerLazySingleton<ChatToolWaitingCubit>(ChatToolWaitingCubit.new);
   }
   if (!sl.isRegistered<ChatContextWindowCubit>()) {
-    sl.registerLazySingleton<ChatContextWindowCubit>(ChatContextWindowCubit.new);
+    sl.registerLazySingleton<ChatContextWindowCubit>(
+      ChatContextWindowCubit.new,
+    );
   }
   if (!sl.isRegistered<SelectedModelCubit>()) {
     sl.registerLazySingleton<SelectedModelCubit>(SelectedModelCubit.new);
@@ -43,7 +53,9 @@ void registerChatDependencies() {
 
   // Services (no deps or minimal deps)
   if (!sl.isRegistered<NativeToolBridgeService>()) {
-    sl.registerLazySingleton<NativeToolBridgeService>(NativeToolBridgeService.new);
+    sl.registerLazySingleton<NativeToolBridgeService>(
+      NativeToolBridgeService.new,
+    );
   }
 
   // Actions with deps
@@ -67,10 +79,7 @@ void registerChatDependencies() {
 
   if (!sl.isRegistered<WorkspaceQueries>()) {
     sl.registerLazySingleton<WorkspaceQueries>(
-      () => WorkspaceQueries(
-        database: sl(),
-        selectedWorkspaceCubit: sl(),
-      ),
+      () => WorkspaceQueries(database: sl(), selectedWorkspaceCubit: sl()),
     );
   }
 
@@ -87,10 +96,7 @@ void registerChatDependencies() {
 
   if (!sl.isRegistered<ChatQueriesRepository>()) {
     sl.registerLazySingleton<ChatQueriesRepository>(
-      () => ChatQueriesRepository(
-        database: sl(),
-        selectedWorkspaceCubit: sl(),
-      ),
+      () => ChatQueriesRepository(database: sl(), selectedWorkspaceCubit: sl()),
     );
   }
 

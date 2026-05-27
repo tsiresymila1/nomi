@@ -20,7 +20,9 @@ class WorkspaceDocumentsRepository {
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
   final WorkspaceRagIngestionQueue _ingestionQueue;
 
-  Stream<List<WorkspaceDocumentEntity>> watchWorkspaceDocuments(String workspaceId) {
+  Stream<List<WorkspaceDocumentEntity>> watchWorkspaceDocuments(
+    String workspaceId,
+  ) {
     unawaited(_ingestionQueue.resumePending());
 
     final parsedWorkspaceId = int.tryParse(workspaceId);

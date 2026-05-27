@@ -70,30 +70,31 @@ class WorkspaceLocalChatActions {
 
     final workspaceCount = await _countAllWorkspaces();
     if (workspaceCount <= 1) {
-      throw const WorkspaceActionException('You must keep at least one workspace.');
+      throw const WorkspaceActionException(
+        'You must keep at least one workspace.',
+      );
     }
 
-    final chatsInWorkspace =
-        await (_database.select(_database.chats)
-              ..where((t) => t.workspace.equals(parsedId)))
-            .get();
+    final chatsInWorkspace = await (_database.select(
+      _database.chats,
+    )..where((t) => t.workspace.equals(parsedId))).get();
     final chatIds = chatsInWorkspace.map((chat) => chat.id).toList();
 
     await _database.transaction(() async {
       if (chatIds.isNotEmpty) {
-        await (_database.delete(_database.messages)
-              ..where((t) => t.chat.isIn(chatIds)))
-            .go();
+        await (_database.delete(
+          _database.messages,
+        )..where((t) => t.chat.isIn(chatIds))).go();
       }
-      await (_database.delete(_database.chats)
-            ..where((t) => t.workspace.equals(parsedId)))
-          .go();
-      await (_database.delete(_database.workspaceDocuments)
-            ..where((t) => t.workspace.equals(parsedId)))
-          .go();
-      await (_database.delete(_database.workspaces)
-            ..where((t) => t.id.equals(parsedId)))
-          .go();
+      await (_database.delete(
+        _database.chats,
+      )..where((t) => t.workspace.equals(parsedId))).go();
+      await (_database.delete(
+        _database.workspaceDocuments,
+      )..where((t) => t.workspace.equals(parsedId))).go();
+      await (_database.delete(
+        _database.workspaces,
+      )..where((t) => t.id.equals(parsedId))).go();
     });
 
     await _ingestionController.rebuildReadyIndex();

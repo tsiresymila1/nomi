@@ -104,16 +104,16 @@ class ChatRepository {
   }
 
   Stream<List<WorkspaceChatGroup>> watchWorkspaceChatGroups() {
-    final joinQuery = _database.select(_database.workspaces).join([
-      leftOuterJoin(
-        _database.chats,
-        _database.chats.workspace.equalsExp(_database.workspaces.id),
-      ),
-    ])
-      ..orderBy([
-        OrderingTerm.asc(_database.workspaces.createdAt),
-        OrderingTerm.desc(_database.chats.createdAt),
-      ]);
+    final joinQuery =
+        _database.select(_database.workspaces).join([
+          leftOuterJoin(
+            _database.chats,
+            _database.chats.workspace.equalsExp(_database.workspaces.id),
+          ),
+        ])..orderBy([
+          OrderingTerm.asc(_database.workspaces.createdAt),
+          OrderingTerm.desc(_database.chats.createdAt),
+        ]);
 
     return joinQuery.watch().map((rows) {
       final grouped = <int, WorkspaceChatGroup>{};
@@ -162,10 +162,11 @@ class ChatRepository {
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) return null;
 
-    final row = await (_database.select(_database.workspaces)
-          ..where((t) => t.id.equals(parsedWorkspaceId))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_database.select(_database.workspaces)
+              ..where((t) => t.id.equals(parsedWorkspaceId))
+              ..limit(1))
+            .getSingleOrNull();
     if (row == null) return null;
 
     return WorkspaceEntity(
@@ -183,10 +184,11 @@ class ChatRepository {
   }
 
   Future<String?> getFirstWorkspaceId() async {
-    final firstWorkspace = await (_database.select(_database.workspaces)
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final firstWorkspace =
+        await (_database.select(_database.workspaces)
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
     return firstWorkspace?.id.toString();
   }
 
@@ -194,7 +196,9 @@ class ChatRepository {
     final existing = await getFirstWorkspaceId();
     if (existing != null) return existing;
 
-    final id = await _database.into(_database.workspaces).insert(
+    final id = await _database
+        .into(_database.workspaces)
+        .insert(
           db.WorkspacesCompanion.insert(
             name: defaultWorkspaceName,
             generalInstruction: const Value(systemPrompt),
@@ -216,11 +220,12 @@ class ChatRepository {
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) return null;
 
-    final chat = await (_database.select(_database.chats)
-          ..where((t) => t.workspace.equals(parsedWorkspaceId))
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final chat =
+        await (_database.select(_database.chats)
+              ..where((t) => t.workspace.equals(parsedWorkspaceId))
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
     return chat?.id.toString();
   }
 
@@ -232,12 +237,15 @@ class ChatRepository {
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedChatId == null || parsedWorkspaceId == null) return false;
 
-    final chat = await (_database.select(_database.chats)
-          ..where(
-            (t) => t.id.equals(parsedChatId) & t.workspace.equals(parsedWorkspaceId),
-          )
-          ..limit(1))
-        .getSingleOrNull();
+    final chat =
+        await (_database.select(_database.chats)
+              ..where(
+                (t) =>
+                    t.id.equals(parsedChatId) &
+                    t.workspace.equals(parsedWorkspaceId),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     return chat != null;
   }
 
@@ -247,8 +255,13 @@ class ChatRepository {
       throw StateError('Invalid workspace id: $workspaceId');
     }
 
-    final createdId = await _database.into(_database.chats).insert(
-          db.ChatsCompanion.insert(title: 'New chat', workspace: parsedWorkspaceId),
+    final createdId = await _database
+        .into(_database.chats)
+        .insert(
+          db.ChatsCompanion.insert(
+            title: 'New chat',
+            workspace: parsedWorkspaceId,
+          ),
         );
     return createdId.toString();
   }
@@ -258,11 +271,12 @@ class ChatRepository {
     if (parsedChatId == null) return;
 
     await _database.transaction(() async {
-      await (_database.delete(_database.messages)
-            ..where((t) => t.chat.equals(parsedChatId)))
-          .go();
-      await (_database.delete(_database.chats)..where((t) => t.id.equals(parsedChatId)))
-          .go();
+      await (_database.delete(
+        _database.messages,
+      )..where((t) => t.chat.equals(parsedChatId))).go();
+      await (_database.delete(
+        _database.chats,
+      )..where((t) => t.id.equals(parsedChatId))).go();
     });
   }
 
@@ -270,10 +284,11 @@ class ChatRepository {
     final parsedChatId = int.tryParse(chatId);
     if (parsedChatId == null) return null;
 
-    final row = await (_database.select(_database.chats)
-          ..where((t) => t.id.equals(parsedChatId))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_database.select(_database.chats)
+              ..where((t) => t.id.equals(parsedChatId))
+              ..limit(1))
+            .getSingleOrNull();
     return row?.workspace;
   }
 

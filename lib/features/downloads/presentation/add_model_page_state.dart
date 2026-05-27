@@ -344,224 +344,67 @@ class _AddModelPageState extends State<AddModelPage> {
           children: [
             reveal(
               0,
-              FieldWrapper(
-                label: 'Name',
-                field: TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(hintText: 'Name'),
-                ),
+              ModelBasicInfoSection(
+                nameController: _nameController,
+                descriptionController: _descriptionController,
+                modelType: _modelType,
+                onModelTypeChanged: (value) =>
+                    setState(() => _modelType = value),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             reveal(
               1,
-              FieldWrapper(
-                label: "Description",
-                field: TextField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(hintText: 'Description'),
-                ),
+              ModelCapabilitySwitches(
+                supportImage: _supportImage,
+                supportAudio: _supportAudio,
+                supportsFunctionCalls: _supportsFunctionCalls,
+                isThinking: _isThinking,
+                onSupportImageChanged: (value) =>
+                    setState(() => _supportImage = value),
+                onSupportAudioChanged: (value) =>
+                    setState(() => _supportAudio = value),
+                onFunctionCallsChanged: (value) =>
+                    setState(() => _supportsFunctionCalls = value),
+                onIsThinkingChanged: (value) =>
+                    setState(() => _isThinking = value),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             reveal(
               2,
-              FieldWrapper(
-                label: 'Model type',
-                field: DropdownButtonFormField<String>(
-                  initialValue: _modelType,
-                  style: TextStyle(fontSize: 14),
-                  items: ModelType.values
-                      .map(
-                        (type) => DropdownMenuItem<String>(
-                          value: type.name,
-                          child: Text(type.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) setState(() => _modelType = value);
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            reveal(
-              5,
-              Row(
-                children: [
-                  Expanded(
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _supportImage,
-                      title: const Text('Support image'),
-                      onChanged: (value) =>
-                          setState(() => _supportImage = value),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _supportAudio,
-                      title: const Text('Support audio'),
-                      onChanged: (value) =>
-                          setState(() => _supportAudio = value),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            reveal(
-              6,
-              Row(
-                children: [
-                  Expanded(
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _supportsFunctionCalls,
-                      title: const Text('Function calls'),
-                      onChanged: (value) =>
-                          setState(() => _supportsFunctionCalls = value),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _isThinking,
-                      title: const Text('Thinking default'),
-                      onChanged: (value) => setState(() => _isThinking = value),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            reveal(
-              7,
-              ModelSettingsSliderTile(
-                label: 'Temperature',
-                valueText: _temperature.toStringAsFixed(2),
-                slider: Slider(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  value: _temperature,
-                  min: 0,
-                  max: 2,
-                  divisions: 40,
-                  onChanged: (value) => setState(() => _temperature = value),
-                ),
-              ),
-            ),
-            reveal(
-              8,
-              ModelSettingsSliderTile(
-                label: 'Top-P',
-                valueText: _topP.toStringAsFixed(2),
-                slider: Slider(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  value: _topP,
-                  min: 0.1,
-                  max: 1,
-                  divisions: 18,
-                  onChanged: (value) => setState(() => _topP = value),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            reveal(
-              9,
-              ModelSettingsSliderTile(
-                label: 'Top-K',
-                valueText: _topK.toString(),
-                slider: Slider(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  value: _topK.toDouble(),
-                  min: 1,
-                  max: 200,
-                  divisions: 199,
-                  onChanged: (value) => setState(() => _topK = value.round()),
-                ),
-              ),
-            ),
-            if (_providerType == ModelProviderType.local)
-              reveal(
-                10,
-                ModelSettingsSliderTile(
-                  label: 'Max tokens',
-                  valueText: _maxTokens.toString(),
-                  slider: Slider(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    value: _maxTokens.toDouble(),
-                    min: 256,
-                    max: 8192,
-                    divisions: 248,
-                    onChanged: (value) {
-                      setState(() {
-                        _maxTokens = value.round();
-                        final maxAllowed = _resolveTokenBufferMax(_maxTokens);
-                        if (_tokenBuffer > maxAllowed) {
-                          _tokenBuffer = maxAllowed;
-                        }
-                        _syncTokenControllers();
-                      });
-                    },
-                  ),
-                ),
-              ),
-            if (_providerType == ModelProviderType.local)
-              reveal(
-                11,
-                ModelSettingsSliderTile(
-                  label: 'Output tokens',
-                  valueText: _tokenBuffer.toString(),
-                  slider: Slider(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    value: _tokenBuffer.toDouble(),
-                    min: tokenBufferMin.toDouble(),
-                    max: tokenBufferMax.toDouble(),
-                    divisions: tokenBufferMax > tokenBufferMin
-                        ? tokenBufferMax - tokenBufferMin
-                        : 1,
-                    onChanged: (value) => setState(() {
-                      _tokenBuffer = value.round();
-                      _syncTokenControllers();
-                    }),
-                  ),
-                ),
-              ),
-            if (_providerType == ModelProviderType.remote)
-              reveal(
-                10,
-                Column(
-                  children: [
-                    ModelSettingsNumberField(
-                      controller: _maxTokensController,
-                      label: 'Max tokens (context, up to 1,000,000)',
-                    ),
-                    const SizedBox(height: 8),
-                    ModelSettingsNumberField(
-                      controller: _outputTokensController,
-                      label: 'Output tokens',
-                    ),
-                  ],
-                ),
-              ),
-            reveal(
-              12,
-              ModelSettingsSliderTile(
-                label: 'Random seed',
-                valueText: _randomSeed.toString(),
-                slider: Slider(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  value: _randomSeed.toDouble(),
-                  min: 0,
-                  max: 10000,
-                  divisions: 10000,
-                  onChanged: (value) =>
-                      setState(() => _randomSeed = value.round()),
-                ),
+              ModelSettingsSection(
+                temperature: _temperature,
+                topP: _topP,
+                topK: _topK,
+                maxTokens: _maxTokens,
+                tokenBuffer: _tokenBuffer,
+                randomSeed: _randomSeed,
+                providerType: _providerType,
+                tokenBufferMax: tokenBufferMax,
+                tokenBufferMin: tokenBufferMin,
+                maxTokensController: _maxTokensController,
+                outputTokensController: _outputTokensController,
+                onTemperatureChanged: (value) =>
+                    setState(() => _temperature = value),
+                onTopPChanged: (value) => setState(() => _topP = value),
+                onTopKChanged: (value) => setState(() => _topK = value),
+                onMaxTokensChanged: (value) {
+                  setState(() {
+                    _maxTokens = value;
+                    final maxAllowed = _resolveTokenBufferMax(_maxTokens);
+                    if (_tokenBuffer > maxAllowed) {
+                      _tokenBuffer = maxAllowed;
+                    }
+                    _syncTokenControllers();
+                  });
+                },
+                onTokenBufferChanged: (value) => setState(() {
+                  _tokenBuffer = value;
+                  _syncTokenControllers();
+                }),
+                onRandomSeedChanged: (value) =>
+                    setState(() => _randomSeed = value),
               ),
             ),
             const SizedBox(height: 12),
@@ -596,116 +439,40 @@ class _AddModelPageState extends State<AddModelPage> {
               ),
             ),
             const SizedBox(height: 8),
-            if (_providerType == ModelProviderType.local)
-              reveal(
-                4,
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment<String>(value: 'network', label: Text('URL')),
-                    ButtonSegment<String>(value: 'file', label: Text('File')),
-                  ],
-                  selected: {_sourceType},
-                  onSelectionChanged: (value) {
-                    setState(() => _sourceType = value.first);
-                    _sourceController.clear();
-                  },
-                ),
+            reveal(
+              4,
+              ModelSourceSection(
+                sourceType: _sourceType,
+                providerType: _providerType,
+                sourceController: _sourceController,
+                picking: _picking,
+                onSourceTypeChanged: (value) =>
+                    setState(() => _sourceType = value),
+                onPickFile: _pickFile,
               ),
-            if (_providerType == ModelProviderType.local)
-              const SizedBox(height: 8),
-            if (_providerType == ModelProviderType.local)
-              reveal(
-                13,
-                FieldWrapper(
-                  label: 'Preferred backend',
-                  field: DropdownButtonFormField<String>(
-                    initialValue: _preferredBackend,
-                    style: TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      hintText: 'Preferred backend',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'auto', child: Text('Auto')),
-                      DropdownMenuItem(value: 'gpu', child: Text('GPU')),
-                      DropdownMenuItem(value: 'cpu', child: Text('CPU')),
-                      DropdownMenuItem(value: 'npu', child: Text('NPU')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _preferredBackend = value);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
-            if (_providerType == ModelProviderType.local &&
-                _sourceType == 'file')
-              reveal(
-                14,
-
-                FilledButton.icon(
-                  onPressed: _picking ? null : _pickFile,
-                  icon: _picking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.attach_file),
-                  label: const Text('Choose file'),
-                ),
-              ),
-            if (_providerType == ModelProviderType.local &&
-                _sourceType == 'file')
-              const SizedBox(height: 8),
+            ),
             if (_providerType == ModelProviderType.local)
               reveal(
-                15,
-                FieldWrapper(
-                  label: _sourceType == 'network' ? 'URL source' : 'File path',
-                  field: TextField(
-                    controller: _sourceController,
-                    decoration: InputDecoration(
-                      hintText: _sourceType == 'network'
-                          ? 'https://...'
-                          : '/absolute/path/model.task',
-                    ),
-                  ),
+                5,
+                ModelBackendSection(
+                  preferredBackend: _preferredBackend,
+                  onBackendChanged: (value) =>
+                      setState(() => _preferredBackend = value),
                 ),
               ),
             if (_providerType == ModelProviderType.remote)
               reveal(
-                16,
-                Column(
-                  spacing: 10,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FieldWrapper(
-                      label: 'API URL',
-                      field: TextField(
-                        controller: _apiUrlController,
-                        decoration: const InputDecoration(
-                          hintText: 'https://api.example.com/v1',
-                        ),
-                      ),
-                    ),
-                    FieldWrapper(
-                      label: 'API Token',
-                      field: TextField(
-                        controller: _apiTokenController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Bearer token',
-                        ),
-                      ),
-                    ),
-                  ],
+                6,
+                ModelRemoteApiSection(
+                  apiUrlController: _apiUrlController,
+                  apiTokenController: _apiTokenController,
+                  maxTokensController: _maxTokensController,
+                  outputTokensController: _outputTokensController,
                 ),
               ),
             const SizedBox(height: 16),
             reveal(
-              17,
+              7,
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

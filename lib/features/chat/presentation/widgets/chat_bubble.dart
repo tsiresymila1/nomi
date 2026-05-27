@@ -35,7 +35,9 @@ class ChatBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
         decoration: BoxDecoration(
           color: bubbleColor,
           borderRadius: BorderRadius.circular(16).copyWith(
@@ -51,13 +53,12 @@ class ChatBubble extends StatelessWidget {
   Widget _buildContent(BuildContext context) {
     if (kind == 'image' && mediaPath != null) {
       return Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           if (message.trim().isNotEmpty)
-            GptMarkdown(
-              message,
-              style: const TextStyle(fontSize: 13),
-            ),
+            GptMarkdown(message, style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 8),
           InkWell(
             onTap: () {
@@ -95,9 +96,6 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    return GptMarkdown(
-      message,
-      style: TextStyle(fontSize: isUser ? 14 : 13),
-    );
+    return GptMarkdown(message, style: TextStyle(fontSize: isUser ? 14 : 13));
   }
 }

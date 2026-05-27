@@ -12,11 +12,15 @@ import 'package:gena/features/workspace/presentation/services/workspace_rag_inge
 
 void registerWorkspacePresentationDependencies() {
   if (!sl.isRegistered<WorkspaceDocumentParser>()) {
-    sl.registerLazySingleton<WorkspaceDocumentParser>(WorkspaceDocumentParser.new);
+    sl.registerLazySingleton<WorkspaceDocumentParser>(
+      WorkspaceDocumentParser.new,
+    );
   }
 
   if (!sl.isRegistered<WorkspaceRagVectorStore>()) {
-    sl.registerLazySingleton<WorkspaceRagVectorStore>(WorkspaceRagVectorStore.new);
+    sl.registerLazySingleton<WorkspaceRagVectorStore>(
+      WorkspaceRagVectorStore.new,
+    );
   }
 
   if (!sl.isRegistered<WorkspaceEmbedderInstaller>()) {

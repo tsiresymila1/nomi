@@ -21,9 +21,7 @@ class WorkspaceDrawerCubit extends HydratedCubit<Map<String, bool>> {
     final raw = json['expanded'] as Map<dynamic, dynamic>?;
     if (raw == null) return const <String, bool>{};
 
-    return raw.map(
-      (key, value) => MapEntry(key.toString(), value == true),
-    );
+    return raw.map((key, value) => MapEntry(key.toString(), value == true));
   }
 
   @override

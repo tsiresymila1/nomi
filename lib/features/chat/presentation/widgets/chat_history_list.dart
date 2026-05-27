@@ -55,11 +55,10 @@ class ChatHistoryList extends StatelessWidget {
         }
         return ListView.builder(
           itemCount: chats.length,
-          itemBuilder: (context, index) =>
-              ChatHistoryTile(chat: chats[index])
-                  .animate()
-                  .fadeIn(duration: 220.ms, delay: (index * 40).ms)
-                  .slideX(begin: -0.08, end: 0),
+          itemBuilder: (context, index) => ChatHistoryTile(chat: chats[index])
+              .animate()
+              .fadeIn(duration: 220.ms, delay: (index * 40).ms)
+              .slideX(begin: -0.08, end: 0),
         );
       },
     );

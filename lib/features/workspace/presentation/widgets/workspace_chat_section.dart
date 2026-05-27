@@ -42,9 +42,9 @@ class WorkspaceChatSection extends StatelessWidget {
                     isSelectedWorkspace: isSelectedWorkspace,
                   ),
                   if (expanded)
-                    WorkspaceChatSectionThreads(group: group).animate().fade(
-                      duration: 200.ms,
-                    ),
+                    WorkspaceChatSectionThreads(
+                      group: group,
+                    ).animate().fade(duration: 200.ms),
                 ],
               ),
             );

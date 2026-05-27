@@ -55,11 +55,12 @@ class WorkspaceChatSectionHeader extends StatelessWidget {
         ),
         PopupMenuButton<WorkspaceMenuAction>(
           tooltip: 'Workspace actions',
-          onSelected: (action) => WorkspaceChatSectionActions.onMenuActionSelected(
-            context,
-            group,
-            action,
-          ),
+          onSelected: (action) =>
+              WorkspaceChatSectionActions.onMenuActionSelected(
+                context,
+                group,
+                action,
+              ),
           itemBuilder: (context) => const [
             PopupMenuItem<WorkspaceMenuAction>(
               value: WorkspaceMenuAction.newThread,

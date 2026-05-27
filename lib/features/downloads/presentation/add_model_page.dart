@@ -9,10 +9,13 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
-import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
-import 'package:gena/presentation/widgets/field_wrapper.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_backend_section.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_basic_info_section.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_capability_switches.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_remote_api_section.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_settings_section.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_source_section.dart';
 import 'package:path_provider/path_provider.dart';
 
 part 'add_model_page_state.dart';

@@ -27,7 +27,10 @@ class WorkspaceToolListRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 12, color: enabled ? null : disabledColor),
+              style: TextStyle(
+                fontSize: 12,
+                color: enabled ? null : disabledColor,
+              ),
             ),
           ),
         ],

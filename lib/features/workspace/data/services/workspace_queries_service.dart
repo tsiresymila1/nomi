@@ -27,15 +27,16 @@ class WorkspaceQueriesService {
   }
 
   Stream<List<WorkspaceChatGroup>> watchWorkspaceChatGroups() {
-    final joinQuery = _database.select(_database.workspaces).join([
-      leftOuterJoin(
-        _database.chats,
-        _database.chats.workspace.equalsExp(_database.workspaces.id),
-      ),
-    ])..orderBy([
-      OrderingTerm.asc(_database.workspaces.createdAt),
-      OrderingTerm.desc(_database.chats.createdAt),
-    ]);
+    final joinQuery =
+        _database.select(_database.workspaces).join([
+          leftOuterJoin(
+            _database.chats,
+            _database.chats.workspace.equalsExp(_database.workspaces.id),
+          ),
+        ])..orderBy([
+          OrderingTerm.asc(_database.workspaces.createdAt),
+          OrderingTerm.desc(_database.chats.createdAt),
+        ]);
 
     return joinQuery.watch().map((rows) {
       final grouped = <int, WorkspaceChatGroup>{};
@@ -72,12 +73,12 @@ class WorkspaceQueriesService {
   }
 
   Stream<WorkspaceEntity?> watchActiveWorkspace() {
-    return _selectedWorkspaceCubit.stream.asyncMap(
-      (_) => resolveActiveWorkspace(),
-    ).asyncMap((workspace) async {
-      if (workspace != null) return workspace;
-      return resolveActiveWorkspace();
-    });
+    return _selectedWorkspaceCubit.stream
+        .asyncMap((_) => resolveActiveWorkspace())
+        .asyncMap((workspace) async {
+          if (workspace != null) return workspace;
+          return resolveActiveWorkspace();
+        });
   }
 
   Future<WorkspaceEntity?> resolveActiveWorkspace() async {

@@ -84,7 +84,9 @@ class ChatModelSelectionSheet extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final model = models[index];
                         final isReady = isModelReady(model, installedModels);
-                        final installKey = downloadsCubit.installKeyForModel(model);
+                        final installKey = downloadsCubit.installKeyForModel(
+                          model,
+                        );
                         final progress = downloads[installKey];
                         final isDownloading =
                             model.provider == ModelProviderType.local &&
@@ -93,7 +95,8 @@ class ChatModelSelectionSheet extends StatelessWidget {
                             progress < 1;
                         final isSelected = selectedId == model.id;
                         final localNotReady =
-                            model.provider == ModelProviderType.local && !isReady;
+                            model.provider == ModelProviderType.local &&
+                            !isReady;
                         final isSelectable = !localNotReady && !isDownloading;
                         final statusLabel =
                             model.provider == ModelProviderType.remote

@@ -3,7 +3,8 @@ import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
 import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 
-class WorkspaceEmbedderInstallCubit extends Cubit<WorkspaceEmbedderInstallState> {
+class WorkspaceEmbedderInstallCubit
+    extends Cubit<WorkspaceEmbedderInstallState> {
   WorkspaceEmbedderInstallCubit(this._installer)
     : super(const WorkspaceEmbedderInstallState.idle());
 

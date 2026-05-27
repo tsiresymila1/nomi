@@ -108,10 +108,13 @@ class ChatPageActions {
     }
 
     if (model.provider == ModelProviderType.local) {
-      final installedModels = await _modelInstallerService.listInstalledModels();
-      final isReady = installedModels.contains(model.modelId) ||
+      final installedModels = await _modelInstallerService
+          .listInstalledModels();
+      final isReady =
+          installedModels.contains(model.modelId) ||
           installedModels.any(
-            (entry) => entry.toLowerCase() ==
+            (entry) =>
+                entry.toLowerCase() ==
                 model.source.split(RegExp(r'[/\\]')).last.toLowerCase(),
           );
       if (!isReady) {

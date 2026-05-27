@@ -38,20 +38,22 @@ class WorkspaceRagActions {
       rawPath: rawPath,
     );
 
-    final insertedId = await _database.into(_database.workspaceDocuments).insert(
-      db.WorkspaceDocumentsCompanion.insert(
-        workspace: parsedWorkspaceId,
-        name: prepared.name,
-        sourceType: prepared.sourceType,
-        sourcePath: prepared.sourcePath,
-        content: '',
-        ingestionStatus: Value(
-          WorkspaceDocumentIngestionStatus.queued.value,
-        ),
-        ingestionError: const Value(null),
-        chunkCount: const Value(0),
-      ),
-    );
+    final insertedId = await _database
+        .into(_database.workspaceDocuments)
+        .insert(
+          db.WorkspaceDocumentsCompanion.insert(
+            workspace: parsedWorkspaceId,
+            name: prepared.name,
+            sourceType: prepared.sourceType,
+            sourcePath: prepared.sourcePath,
+            content: '',
+            ingestionStatus: Value(
+              WorkspaceDocumentIngestionStatus.queued.value,
+            ),
+            ingestionError: const Value(null),
+            chunkCount: const Value(0),
+          ),
+        );
 
     await _ingestionQueue.enqueue(insertedId);
   }

@@ -12,7 +12,9 @@ class SelectedChatCubit extends Cubit<String?> {
   }) : _database = database,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
        super(null) {
-    _workspaceSubscription = _selectedWorkspaceCubit.stream.listen((workspaceId) {
+    _workspaceSubscription = _selectedWorkspaceCubit.stream.listen((
+      workspaceId,
+    ) {
       unawaited(_syncSelectionForWorkspace(workspaceId));
     });
     unawaited(_syncSelectionForWorkspace(_selectedWorkspaceCubit.state));
@@ -89,9 +91,14 @@ class SelectedChatCubit extends Cubit<String?> {
       throw StateError('Invalid workspace id: $resolvedWorkspaceId');
     }
 
-    final createdId = await _database.into(_database.chats).insert(
-      db.ChatsCompanion.insert(title: 'New chat', workspace: parsedWorkspaceId),
-    );
+    final createdId = await _database
+        .into(_database.chats)
+        .insert(
+          db.ChatsCompanion.insert(
+            title: 'New chat',
+            workspace: parsedWorkspaceId,
+          ),
+        );
 
     final selectedId = createdId.toString();
     emit(selectedId);

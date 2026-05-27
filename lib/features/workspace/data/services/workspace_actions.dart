@@ -40,17 +40,19 @@ class WorkspaceActions {
       throw const WorkspaceGuardException('Workspace name is required');
     }
 
-    final id = await _database.into(_database.workspaces).insert(
-      db.WorkspacesCompanion.insert(
-        name: name,
-        generalInstruction: const Value(systemPrompt),
-        nativeToolsEnabled: const Value(true),
-        nativeOpenUrlEnabled: const Value(true),
-        nativeOpenAppEnabled: const Value(true),
-        nativeSendEmailEnabled: const Value(true),
-        nativeFlashlightEnabled: const Value(true),
-      ),
-    );
+    final id = await _database
+        .into(_database.workspaces)
+        .insert(
+          db.WorkspacesCompanion.insert(
+            name: name,
+            generalInstruction: const Value(systemPrompt),
+            nativeToolsEnabled: const Value(true),
+            nativeOpenUrlEnabled: const Value(true),
+            nativeOpenAppEnabled: const Value(true),
+            nativeSendEmailEnabled: const Value(true),
+            nativeFlashlightEnabled: const Value(true),
+          ),
+        );
 
     final workspaceId = id.toString();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
@@ -69,11 +71,9 @@ class WorkspaceActions {
       throw const WorkspaceGuardException('Workspace name is required');
     }
 
-    await (_database.update(
-      _database.workspaces,
-    )..where((t) => t.id.equals(parsedId))).write(
-      db.WorkspacesCompanion(name: Value(name)),
-    );
+    await (_database.update(_database.workspaces)
+          ..where((t) => t.id.equals(parsedId)))
+        .write(db.WorkspacesCompanion(name: Value(name)));
   }
 
   Future<void> updateGeneralInstruction({
@@ -83,15 +83,15 @@ class WorkspaceActions {
     final parsedId = int.tryParse(workspaceId);
     if (parsedId == null) return;
 
-    await (_database.update(_database.workspaces)
-          ..where((t) => t.id.equals(parsedId)))
-        .write(
-          db.WorkspacesCompanion(
-            generalInstruction: Value(
-              instruction.trim().isEmpty ? systemPrompt : instruction.trim(),
-            ),
-          ),
-        );
+    await (_database.update(
+      _database.workspaces,
+    )..where((t) => t.id.equals(parsedId))).write(
+      db.WorkspacesCompanion(
+        generalInstruction: Value(
+          instruction.trim().isEmpty ? systemPrompt : instruction.trim(),
+        ),
+      ),
+    );
   }
 
   Future<void> updateRagEnabled({
@@ -128,16 +128,16 @@ class WorkspaceActions {
     final parsedId = int.tryParse(workspaceId);
     if (parsedId == null) return;
 
-    await (_database.update(_database.workspaces)
-          ..where((t) => t.id.equals(parsedId)))
-        .write(
-          db.WorkspacesCompanion(
-            nativeOpenUrlEnabled: Value(openUrlEnabled),
-            nativeOpenAppEnabled: Value(openAppEnabled),
-            nativeSendEmailEnabled: Value(sendEmailEnabled),
-            nativeFlashlightEnabled: Value(flashlightEnabled),
-          ),
-        );
+    await (_database.update(
+      _database.workspaces,
+    )..where((t) => t.id.equals(parsedId))).write(
+      db.WorkspacesCompanion(
+        nativeOpenUrlEnabled: Value(openUrlEnabled),
+        nativeOpenAppEnabled: Value(openAppEnabled),
+        nativeSendEmailEnabled: Value(sendEmailEnabled),
+        nativeFlashlightEnabled: Value(flashlightEnabled),
+      ),
+    );
   }
 
   Future<void> deleteWorkspace(String workspaceId) async {
@@ -151,10 +151,9 @@ class WorkspaceActions {
       );
     }
 
-    final chatsInWorkspace =
-        await (_database.select(_database.chats)
-              ..where((t) => t.workspace.equals(parsedId)))
-            .get();
+    final chatsInWorkspace = await (_database.select(
+      _database.chats,
+    )..where((t) => t.workspace.equals(parsedId))).get();
     final chatIds = chatsInWorkspace.map((chat) => chat.id).toList();
 
     final selectedChatId = _selectedChatCubit.state;
@@ -189,7 +188,9 @@ class WorkspaceActions {
       final fallbackWorkspaceId = fallbackWorkspace?.id.toString();
       _selectedWorkspaceCubit.selectWorkspace(fallbackWorkspaceId);
       if (fallbackWorkspaceId != null) {
-        await _selectedChatCubit.ensureSelectionForWorkspace(fallbackWorkspaceId);
+        await _selectedChatCubit.ensureSelectionForWorkspace(
+          fallbackWorkspaceId,
+        );
       }
       return;
     }
@@ -197,7 +198,8 @@ class WorkspaceActions {
     if (selectedChatId != null) {
       final parsedChatId = int.tryParse(selectedChatId);
       if (parsedChatId != null && chatIds.contains(parsedChatId)) {
-        final activeWorkspaceId = await _selectedWorkspaceCubit.ensureWorkspace();
+        final activeWorkspaceId = await _selectedWorkspaceCubit
+            .ensureWorkspace();
         await _selectedChatCubit.ensureSelectionForWorkspace(activeWorkspaceId);
       }
     }

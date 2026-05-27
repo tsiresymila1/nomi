@@ -51,14 +51,14 @@ class WorkspaceRagIngestionController {
   }
 
   Future<void> retryDocumentIngestion(int documentId) async {
-    await (_database.update(_database.workspaceDocuments)
-          ..where((t) => t.id.equals(documentId)))
-        .write(
-          db.WorkspaceDocumentsCompanion(
-            ingestionStatus: Value(WorkspaceDocumentIngestionStatus.queued.value),
-            ingestionError: const Value(null),
-          ),
-        );
+    await (_database.update(
+      _database.workspaceDocuments,
+    )..where((t) => t.id.equals(documentId))).write(
+      db.WorkspaceDocumentsCompanion(
+        ingestionStatus: Value(WorkspaceDocumentIngestionStatus.queued.value),
+        ingestionError: const Value(null),
+      ),
+    );
     await enqueue(documentId);
   }
 
@@ -70,9 +70,9 @@ class WorkspaceRagIngestionController {
             .getSingleOrNull();
     if (row == null) return;
 
-    await (_database.delete(_database.workspaceDocuments)
-          ..where((t) => t.id.equals(documentId)))
-        .go();
+    await (_database.delete(
+      _database.workspaceDocuments,
+    )..where((t) => t.id.equals(documentId))).go();
 
     try {
       final file = File(row.sourcePath);
@@ -147,16 +147,16 @@ class WorkspaceRagIngestionController {
         sourceType: row.sourceType,
       );
 
-      await (_database.update(_database.workspaceDocuments)
-            ..where((t) => t.id.equals(documentId)))
-          .write(
-            db.WorkspaceDocumentsCompanion(
-              content: Value(parsed.content),
-              chunkCount: Value(parsed.chunks.length),
-              ingestionError: const Value(null),
-              ingestionStatus: Value(WorkspaceDocumentIngestionStatus.ready.value),
-            ),
-          );
+      await (_database.update(
+        _database.workspaceDocuments,
+      )..where((t) => t.id.equals(documentId))).write(
+        db.WorkspaceDocumentsCompanion(
+          content: Value(parsed.content),
+          chunkCount: Value(parsed.chunks.length),
+          ingestionError: const Value(null),
+          ingestionStatus: Value(WorkspaceDocumentIngestionStatus.ready.value),
+        ),
+      );
       await rebuildReadyIndex();
     } catch (error, stackTrace) {
       logger.e(
@@ -178,13 +178,13 @@ class WorkspaceRagIngestionController {
     WorkspaceDocumentIngestionStatus status, {
     String? error,
   }) async {
-    await (_database.update(_database.workspaceDocuments)
-          ..where((t) => t.id.equals(documentId)))
-        .write(
-          db.WorkspaceDocumentsCompanion(
-            ingestionStatus: Value(status.value),
-            ingestionError: Value(error),
-          ),
-        );
+    await (_database.update(
+      _database.workspaceDocuments,
+    )..where((t) => t.id.equals(documentId))).write(
+      db.WorkspaceDocumentsCompanion(
+        ingestionStatus: Value(status.value),
+        ingestionError: Value(error),
+      ),
+    );
   }
 }

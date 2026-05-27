@@ -127,8 +127,7 @@ class WorkspaceChatSectionActions {
     final shouldDelete = await showConfirmActionSheet(
       context,
       title: 'Delete Workspace',
-      message:
-          'Delete "${group.workspace.name}" and all its threads/messages?',
+      message: 'Delete "${group.workspace.name}" and all its threads/messages?',
       confirmLabel: 'Delete',
     );
     if (!shouldDelete) return;

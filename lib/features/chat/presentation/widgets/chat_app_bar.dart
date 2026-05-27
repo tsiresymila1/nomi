@@ -21,7 +21,10 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         return BlocBuilder<ChatModelSwitchingCubit, bool>(
           bloc: sl<ChatModelSwitchingCubit>(),
           builder: (context, isSwitchingModel) {
-            final modelLabel = _resolveModelLabel(activeModel, isSwitchingModel);
+            final modelLabel = _resolveModelLabel(
+              activeModel,
+              isSwitchingModel,
+            );
             return AppBar(
               scrolledUnderElevation: 0,
               elevation: 0,

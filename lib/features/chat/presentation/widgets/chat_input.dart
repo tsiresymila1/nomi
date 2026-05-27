@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
@@ -7,6 +5,9 @@ import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/cubits/chat_input_cubit.dart';
 import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/chat/presentation/widgets/chat_input_attachment_button.dart';
+import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview.dart';
+import 'package:gena/features/chat/presentation/widgets/chat_input_send_button.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -137,8 +138,11 @@ class _ChatInputState extends State<ChatInput> {
                 final canRecordAudio = activeModel?.supportAudio ?? false;
                 final hasSelectedImage = inputState.selectedImagePath != null;
                 final hasSendableContent = _hasTypedContent || hasSelectedImage;
-                final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-                if (_wasKeyboardVisible && !keyboardVisible && _focusNode.hasFocus) {
+                final keyboardVisible =
+                    MediaQuery.viewInsetsOf(context).bottom > 0;
+                if (_wasKeyboardVisible &&
+                    !keyboardVisible &&
+                    _focusNode.hasFocus) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
                     _focusNode.unfocus();
@@ -205,22 +209,14 @@ class _ChatInputState extends State<ChatInput> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (!_hasFocus || hasSelectedImage)
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.surfaceContainerHigh,
-                      side: BorderSide(color: colorScheme.outline),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
+                  ChatInputAttachmentButton(
+                    isGenerating: isGenerating,
+                    hasSelectedImage: hasSelectedImage,
+                    onPressed: () => _openAttachmentMenu(
+                      context: context,
+                      canAttachImage: canAttachImage,
+                      hasSelectedImage: hasSelectedImage,
                     ),
-                    onPressed: isGenerating
-                        ? null
-                        : () => _openAttachmentMenu(
-                            context: context,
-                            canAttachImage: canAttachImage,
-                            hasSelectedImage: hasSelectedImage,
-                          ),
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01),
                   ),
                 Flexible(
                   child: Container(
@@ -231,41 +227,11 @@ class _ChatInputState extends State<ChatInput> {
                     child: Column(
                       children: [
                         if (hasSelectedImage)
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ).copyWith(top: 8),
-                            child: Row(
-                              children: [
-                                Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Image.file(
-                                        File(inputState.selectedImagePath!),
-                                        height: 100,
-                                        width: 80,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: 0,
-                                      child: InkWell(
-                                        child: HugeIcon(
-                                          icon: HugeIcons.strokeRoundedAdd01,
-                                          size: 22,
-                                          color:
-                                              colorScheme.surfaceContainerHigh,
-                                        ),
-                                        onTap: () {
-                                          sl<ChatInputCubit>().clearSelectedImage();
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                          ChatInputImagePreview(
+                            imagePath: inputState.selectedImagePath!,
+                            onRemove: () {
+                              sl<ChatInputCubit>().clearSelectedImage();
+                            },
                           ),
                         TextField(
                           controller: _controller,
@@ -337,31 +303,13 @@ class _ChatInputState extends State<ChatInput> {
                                       color: colorScheme.primary,
                                     ),
                                   if (isGenerating || hasSendableContent)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                          100,
-                                        ),
-                                        color: !isGenerating
-                                            ? Colors.green[900]
-                                            : null,
-                                      ),
-                                      child: suffixActionButton(
-                                        icon: isGenerating
-                                            ? HugeIcons.strokeRoundedStop
-                                            : HugeIcons.strokeRoundedArrowUp02,
-                                        color: isGenerating
-                                            ? Colors.red
-                                            : Colors.white,
-                                        onPressed: isGenerating
-                                            ? _stopGeneration
-                                            : (inputState.isSending
-                                                  ? null
-                                                  : _sendMessage),
-                                        tooltip: isGenerating
-                                            ? 'Stop generation'
-                                            : 'Send',
-                                      ),
+                                    ChatInputSendButton(
+                                      isGenerating: isGenerating,
+                                      hasSendableContent: hasSendableContent,
+                                      isSending: inputState.isSending,
+                                      onPressed: isGenerating
+                                          ? _stopGeneration
+                                          : _sendMessage,
                                     ),
                                 ],
                               ),

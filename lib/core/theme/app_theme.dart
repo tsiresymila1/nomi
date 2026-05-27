@@ -66,10 +66,7 @@ class AppTheme {
       minVerticalPadding: 0,
       horizontalTitleGap: 8,
       contentPadding: EdgeInsets.symmetric(horizontal: 12),
-      titleTextStyle: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
+      titleTextStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       subtitleTextStyle: TextStyle(fontSize: 12, color: Colors.grey),
     );
   }
@@ -86,7 +83,7 @@ class AppTheme {
     return FilledButtonThemeData(
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: TextStyle(color: Colors.white)
+        textStyle: TextStyle(color: Colors.white),
       ),
     );
   }
@@ -158,7 +155,7 @@ class AppTheme {
       appBarTheme: _appBarTheme(Brightness.light),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
       listTileTheme: _listTileTheme(),
-      switchTheme: _switchTheme()
+      switchTheme: _switchTheme(),
     );
   }
 
@@ -187,7 +184,6 @@ class AppTheme {
       surfaceContainerHigh: _darkPanelSoft,
       surfaceContainerHighest: const Color(0xFF252C28),
       surfaceTint: Colors.transparent,
-
     );
     final robotoTextTheme = _scaledTextTheme(base.textTheme);
     final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
@@ -206,8 +202,8 @@ class AppTheme {
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.dark),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
-        listTileTheme: _listTileTheme(),
-        switchTheme: _switchTheme(),
+      listTileTheme: _listTileTheme(),
+      switchTheme: _switchTheme(),
     );
   }
 }

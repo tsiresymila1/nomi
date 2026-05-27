@@ -43,8 +43,11 @@ class _ChatViewState extends State<ChatView> {
                       bloc: sl<ChatToolWaitingCubit>(),
                       builder: (context, waitingToolName) {
                         final hasDraft = (draft ?? '').isNotEmpty;
-                        final hasThinkingDraft = (thinkingDraft ?? '').isNotEmpty;
-                        final hasToolWaitingName = (waitingToolName ?? '').trim().isNotEmpty;
+                        final hasThinkingDraft =
+                            (thinkingDraft ?? '').isNotEmpty;
+                        final hasToolWaitingName = (waitingToolName ?? '')
+                            .trim()
+                            .isNotEmpty;
 
                         final totalCount =
                             messages.length +
@@ -53,7 +56,9 @@ class _ChatViewState extends State<ChatView> {
                             (hasDraft ? 1 : 0);
 
                         if (totalCount == 0) {
-                          return const Center(child: Text('Start a conversation'));
+                          return const Center(
+                            child: Text('Start a conversation'),
+                          );
                         }
 
                         return ListView.builder(
@@ -73,10 +78,12 @@ class _ChatViewState extends State<ChatView> {
                               );
                             }
 
-                            if (hasToolWaitingName && index == messages.length) {
+                            if (hasToolWaitingName &&
+                                index == messages.length) {
                               return ChatBubble(
                                 key: const ValueKey('chat-waiting-tool'),
-                                message: 'Waiting for function tool: $waitingToolName',
+                                message:
+                                    'Waiting for function tool: $waitingToolName',
                                 isUser: false,
                                 kind: 'tool_waiting',
                                 isStreaming: true,
@@ -84,7 +91,9 @@ class _ChatViewState extends State<ChatView> {
                             }
 
                             if (hasThinkingDraft &&
-                                index == messages.length + (hasToolWaitingName ? 1 : 0)) {
+                                index ==
+                                    messages.length +
+                                        (hasToolWaitingName ? 1 : 0)) {
                               return ChatBubble(
                                 key: const ValueKey('chat-draft-thinking'),
                                 message: thinkingDraft ?? '',

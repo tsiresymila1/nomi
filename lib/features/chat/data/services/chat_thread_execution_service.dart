@@ -26,7 +26,9 @@ Future<void> storeUserMessage({
           role: 'user',
           content: text,
           kind: Value(hasImage ? 'image' : 'text'),
-          mediaPath: hasImage ? Value<String?>(imagePath) : const Value.absent(),
+          mediaPath: hasImage
+              ? Value<String?>(imagePath)
+              : const Value.absent(),
         ),
       );
 }
@@ -136,7 +138,8 @@ Future<void> generateAssistantResponse({
       if (isCancelled?.call() ?? false) return;
       deps.chatToolWaitingCubit.setWaitingTool(call.name);
       try {
-        final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
+        final activeWorkspace = await deps.workspaceQueries
+            .resolveActiveWorkspace();
         final workspaceId = activeWorkspace?.id;
         final nativeToolAllowed = isNativeToolAllowed(
           workspace: activeWorkspace,
@@ -146,8 +149,8 @@ Future<void> generateAssistantResponse({
           call,
           ragToolHandler: workspaceId == null
               ? null
-              : (query, {topK = 4, threshold = 0.15}) => deps.workspaceRagActions
-                    .runRagTool(
+              : (query, {topK = 4, threshold = 0.15}) =>
+                    deps.workspaceRagActions.runRagTool(
                       workspaceId: workspaceId,
                       query: query,
                       topK: topK,
@@ -155,8 +158,10 @@ Future<void> generateAssistantResponse({
                     ),
           nativeToolHandler: !nativeToolAllowed
               ? null
-              : (toolName, args) => deps.nativeToolActions
-                    .requestAndExecute(toolName: toolName, args: args),
+              : (toolName, args) => deps.nativeToolActions.requestAndExecute(
+                  toolName: toolName,
+                  args: args,
+                ),
         );
         final modelToolResult = _compactToolResultForModel(
           toolName: call.name,
@@ -254,9 +259,7 @@ Map<String, dynamic> _compactWebSearchResult(Map<String, dynamic> result) {
     final compactItems = <Map<String, dynamic>>[];
     for (final entry in rawData.take(5)) {
       if (entry is! Map) continue;
-      final source = entry.map(
-        (key, value) => MapEntry(key.toString(), value),
-      );
+      final source = entry.map((key, value) => MapEntry(key.toString(), value));
       compactItems.add(<String, dynamic>{
         if (source['title'] != null) 'title': source['title'],
         if (source['url'] != null) 'url': source['url'],
@@ -368,10 +371,7 @@ Future<void> _updateThreadTitleFromFirstMessage({
 
   if (titleGenerator != null) {
     try {
-      final aiTitle = await titleGenerator(
-        normalizedText,
-        hasImage: hasImage,
-      );
+      final aiTitle = await titleGenerator(normalizedText, hasImage: hasImage);
       final normalizedAiTitle = _sanitizeTitle(aiTitle);
       if (normalizedAiTitle != null) {
         nextTitle = normalizedAiTitle;
@@ -381,9 +381,8 @@ Future<void> _updateThreadTitleFromFirstMessage({
     }
   }
 
-  await (database.update(database.chats)..where((t) => t.id.equals(chatId))).write(
-    db.ChatsCompanion(title: Value(nextTitle)),
-  );
+  await (database.update(database.chats)..where((t) => t.id.equals(chatId)))
+      .write(db.ChatsCompanion(title: Value(nextTitle)));
 }
 
 String _fallbackTitle(String messageText, {required bool hasImage}) {
@@ -418,8 +417,14 @@ String? _sanitizeTitle(String? raw) {
   if (normalized.startsWith('"') && normalized.endsWith('"')) {
     normalized = normalized.substring(1, normalized.length - 1).trim();
   }
-  normalized = normalized.replaceAll(RegExp(r'^[\p{P}\p{S}]+', unicode: true), '');
-  normalized = normalized.replaceAll(RegExp(r'[\p{P}\p{S}]+$', unicode: true), '');
+  normalized = normalized.replaceAll(
+    RegExp(r'^[\p{P}\p{S}]+', unicode: true),
+    '',
+  );
+  normalized = normalized.replaceAll(
+    RegExp(r'[\p{P}\p{S}]+$', unicode: true),
+    '',
+  );
 
   if (normalized.isEmpty) return null;
 

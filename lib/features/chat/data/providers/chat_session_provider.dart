@@ -69,7 +69,8 @@ class ChatSessionController {
 
   Future<ActiveGemmaModelRuntime?> getRuntime() async {
     final activeModel = await _activeModelInfoResolver.getActiveModelInfo();
-    if (activeModel == null || activeModel.provider != ModelProviderType.local) {
+    if (activeModel == null ||
+        activeModel.provider != ModelProviderType.local) {
       return null;
     }
 
@@ -85,7 +86,9 @@ class ChatSessionController {
 
     await _ensureLocalModelActive(activeModel);
 
-    final preferredBackend = _parsePreferredBackend(activeModel.preferredBackend);
+    final preferredBackend = _parsePreferredBackend(
+      activeModel.preferredBackend,
+    );
     final model = await getActiveModelWithBackendFallbacks(
       maxTokens: activeModel.maxTokens,
       preferredBackend: preferredBackend,
@@ -129,7 +132,9 @@ class ChatSessionController {
 
     final modelRuntime = await getRuntime();
     if (modelRuntime == null) {
-      logger.i('Chat session provider: runtime unavailable for chat=$parsedChatId.');
+      logger.i(
+        'Chat session provider: runtime unavailable for chat=$parsedChatId.',
+      );
       return null;
     }
 

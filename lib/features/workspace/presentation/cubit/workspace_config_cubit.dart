@@ -101,23 +101,23 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
       final parsedId = int.tryParse(workspaceId);
       if (parsedId == null) return;
 
-      await (_database.update(_database.workspaces)
-            ..where((t) => t.id.equals(parsedId)))
-          .write(
-            db.WorkspacesCompanion(
-              generalInstruction: Value(
-                state.instruction.trim().isEmpty
-                    ? systemPrompt
-                    : state.instruction.trim(),
-              ),
-              ragEnabled: Value(state.ragEnabled),
-              nativeToolsEnabled: Value(state.nativeToolsEnabled),
-              nativeOpenUrlEnabled: Value(state.nativeOpenUrlEnabled),
-              nativeOpenAppEnabled: Value(state.nativeOpenAppEnabled),
-              nativeSendEmailEnabled: Value(state.nativeSendEmailEnabled),
-              nativeFlashlightEnabled: Value(state.nativeFlashlightEnabled),
-            ),
-          );
+      await (_database.update(
+        _database.workspaces,
+      )..where((t) => t.id.equals(parsedId))).write(
+        db.WorkspacesCompanion(
+          generalInstruction: Value(
+            state.instruction.trim().isEmpty
+                ? systemPrompt
+                : state.instruction.trim(),
+          ),
+          ragEnabled: Value(state.ragEnabled),
+          nativeToolsEnabled: Value(state.nativeToolsEnabled),
+          nativeOpenUrlEnabled: Value(state.nativeOpenUrlEnabled),
+          nativeOpenAppEnabled: Value(state.nativeOpenAppEnabled),
+          nativeSendEmailEnabled: Value(state.nativeSendEmailEnabled),
+          nativeFlashlightEnabled: Value(state.nativeFlashlightEnabled),
+        ),
+      );
     } finally {
       emit(state.copyWith(isSaving: false));
     }
@@ -141,18 +141,22 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
         rawPath: rawPath,
       );
 
-      final insertedId = await _database.into(_database.workspaceDocuments).insert(
-        db.WorkspaceDocumentsCompanion.insert(
-          workspace: parsedWorkspaceId,
-          name: prepared.name,
-          sourceType: prepared.sourceType,
-          sourcePath: prepared.sourcePath,
-          content: '',
-          ingestionStatus: Value(WorkspaceDocumentIngestionStatus.queued.value),
-          ingestionError: const Value(null),
-          chunkCount: const Value(0),
-        ),
-      );
+      final insertedId = await _database
+          .into(_database.workspaceDocuments)
+          .insert(
+            db.WorkspaceDocumentsCompanion.insert(
+              workspace: parsedWorkspaceId,
+              name: prepared.name,
+              sourceType: prepared.sourceType,
+              sourcePath: prepared.sourcePath,
+              content: '',
+              ingestionStatus: Value(
+                WorkspaceDocumentIngestionStatus.queued.value,
+              ),
+              ingestionError: const Value(null),
+              chunkCount: const Value(0),
+            ),
+          );
 
       await _ingestionController.enqueue(insertedId);
     } finally {
@@ -175,38 +179,39 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
       return;
     }
 
-    _workspaceSubscription = (_database.select(_database.workspaces)
-          ..where((t) => t.id.equals(parsedWorkspaceId))
-          ..limit(1))
-        .watchSingleOrNull()
-        .listen((row) {
-          if (row == null) {
-            emit(
-              state.copyWith(
-                workspaceLoading: false,
-                clearWorkspace: true,
-                clearHydratedWorkspaceId: true,
-              ),
-            );
-            return;
-          }
+    _workspaceSubscription =
+        (_database.select(_database.workspaces)
+              ..where((t) => t.id.equals(parsedWorkspaceId))
+              ..limit(1))
+            .watchSingleOrNull()
+            .listen((row) {
+              if (row == null) {
+                emit(
+                  state.copyWith(
+                    workspaceLoading: false,
+                    clearWorkspace: true,
+                    clearHydratedWorkspaceId: true,
+                  ),
+                );
+                return;
+              }
 
-          final workspace = WorkspaceEntity(
-            id: row.id.toString(),
-            name: row.name,
-            generalInstruction: row.generalInstruction,
-            ragEnabled: row.ragEnabled,
-            nativeToolsEnabled: row.nativeToolsEnabled,
-            nativeOpenUrlEnabled: row.nativeOpenUrlEnabled,
-            nativeOpenAppEnabled: row.nativeOpenAppEnabled,
-            nativeSendEmailEnabled: row.nativeSendEmailEnabled,
-            nativeFlashlightEnabled: row.nativeFlashlightEnabled,
-            createdAt: row.createdAt,
-          );
+              final workspace = WorkspaceEntity(
+                id: row.id.toString(),
+                name: row.name,
+                generalInstruction: row.generalInstruction,
+                ragEnabled: row.ragEnabled,
+                nativeToolsEnabled: row.nativeToolsEnabled,
+                nativeOpenUrlEnabled: row.nativeOpenUrlEnabled,
+                nativeOpenAppEnabled: row.nativeOpenAppEnabled,
+                nativeSendEmailEnabled: row.nativeSendEmailEnabled,
+                nativeFlashlightEnabled: row.nativeFlashlightEnabled,
+                createdAt: row.createdAt,
+              );
 
-          _hydrateFromWorkspace(workspace);
-          _watchDocuments(row.id);
-        });
+              _hydrateFromWorkspace(workspace);
+              _watchDocuments(row.id);
+            });
   }
 
   void _hydrateFromWorkspace(WorkspaceEntity workspace) {
@@ -242,33 +247,34 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   void _watchDocuments(int parsedWorkspaceId) {
     _documentsSubscription?.cancel();
     emit(state.copyWith(documents: null));
-    _documentsSubscription = (_database.select(_database.workspaceDocuments)
-          ..where((t) => t.workspace.equals(parsedWorkspaceId))
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .watch()
-        .map(
-          (rows) => rows
-              .map(
-                (row) => WorkspaceDocumentEntity(
-                  id: row.id,
-                  workspaceId: row.workspace.toString(),
-                  name: row.name,
-                  sourceType: row.sourceType,
-                  sourcePath: row.sourcePath,
-                  content: row.content,
-                  ingestionStatus: WorkspaceDocumentIngestionStatus.fromDb(
-                    row.ingestionStatus,
-                  ),
-                  ingestionError: row.ingestionError,
-                  chunkCount: row.chunkCount,
-                  createdAt: row.createdAt,
-                ),
-              )
-              .toList(growable: false),
-        )
-        .listen((docs) {
-          emit(state.copyWith(documents: docs));
-        });
+    _documentsSubscription =
+        (_database.select(_database.workspaceDocuments)
+              ..where((t) => t.workspace.equals(parsedWorkspaceId))
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+            .watch()
+            .map(
+              (rows) => rows
+                  .map(
+                    (row) => WorkspaceDocumentEntity(
+                      id: row.id,
+                      workspaceId: row.workspace.toString(),
+                      name: row.name,
+                      sourceType: row.sourceType,
+                      sourcePath: row.sourcePath,
+                      content: row.content,
+                      ingestionStatus: WorkspaceDocumentIngestionStatus.fromDb(
+                        row.ingestionStatus,
+                      ),
+                      ingestionError: row.ingestionError,
+                      chunkCount: row.chunkCount,
+                      createdAt: row.createdAt,
+                    ),
+                  )
+                  .toList(growable: false),
+            )
+            .listen((docs) {
+              emit(state.copyWith(documents: docs));
+            });
   }
 
   void _bindEmbedder() {

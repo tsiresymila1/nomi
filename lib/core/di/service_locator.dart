@@ -29,7 +29,9 @@ Future<void> setupServiceLocator() async {
     sl.registerLazySingleton<ThemeCubit>(ThemeCubit.new);
   }
   if (!sl.isRegistered<WorkspaceDocumentParser>()) {
-    sl.registerLazySingleton<WorkspaceDocumentParser>(WorkspaceDocumentParser.new);
+    sl.registerLazySingleton<WorkspaceDocumentParser>(
+      WorkspaceDocumentParser.new,
+    );
   }
   if (!sl.isRegistered<WorkspaceRagVectorStore>()) {
     sl.registerLazySingleton<WorkspaceRagVectorStore>(

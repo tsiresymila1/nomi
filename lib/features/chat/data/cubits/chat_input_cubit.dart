@@ -61,12 +61,17 @@ class ChatInputCubit extends Cubit<ChatInputState> {
       };
       await AppToast.show(message, type: AppToastType.success);
     } catch (error) {
-      await AppToast.show('Image pick failed: $error', type: AppToastType.error);
+      await AppToast.show(
+        'Image pick failed: $error',
+        type: AppToastType.error,
+      );
     }
   }
 
   void clearSelectedImage() {
-    emit(state.copyWith(selectedImagePath: null, updateSelectedImagePath: true));
+    emit(
+      state.copyWith(selectedImagePath: null, updateSelectedImagePath: true),
+    );
   }
 
   Future<void> sendMessage(String rawText) async {
@@ -77,7 +82,9 @@ class ChatInputCubit extends Cubit<ChatInputState> {
 
     emit(state.copyWith(isSending: true));
     try {
-      emit(state.copyWith(selectedImagePath: null, updateSelectedImagePath: true));
+      emit(
+        state.copyWith(selectedImagePath: null, updateSelectedImagePath: true),
+      );
       await _chatThreadActions.sendMessage(text, imagePath: imagePath);
     } finally {
       emit(state.copyWith(isSending: false));

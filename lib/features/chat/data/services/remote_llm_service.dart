@@ -30,7 +30,7 @@ Future<RemoteChatTurnResult> runRemoteChatTurnStreamed({
   final apiUrlRaw = (model.apiUrl ?? '').trim();
   final apiTokenRaw = (model.apiToken ?? '').trim();
 
-  if (apiUrlRaw.isEmpty || apiTokenRaw.isEmpty) {
+  if (apiUrlRaw.isEmpty) {
     throw StateError('Remote model is missing API URL or token.');
   }
 

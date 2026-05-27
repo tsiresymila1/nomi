@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gena/core/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:smart_background_tasks/smart_background_tasks.dart';
 
+@pragma('vm:entry-point')
 SmartBackgroundTask createModelDownloadTask() => _ModelDownloadTask();
 
 class DownloadedModelFile {
@@ -36,6 +39,7 @@ class ModelBackgroundDownloadService {
   bool _initialized = false;
   StreamSubscription<List<SmartTaskSnapshot>>? _tasksSubscription;
   final Map<String, _PendingDownload> _pending = <String, _PendingDownload>{};
+  final Map<String, String> _taskIdByModelKey = <String, String>{};
 
   Future<void> _ensureInitialized() async {
     if (_initialized) {
@@ -59,6 +63,7 @@ class ModelBackgroundDownloadService {
         switch (task.status) {
           case SmartTaskStatus.completed:
             _pending.remove(task.id);
+            _taskIdByModelKey.remove(pending.modelKey);
             pending.complete(
               DownloadedModelFile(
                 path: pending.outputPath,
@@ -71,10 +76,12 @@ class ModelBackgroundDownloadService {
             break;
           case SmartTaskStatus.failed:
             _pending.remove(task.id);
+            _taskIdByModelKey.remove(pending.modelKey);
             pending.fail(StateError(task.error ?? task.message));
             break;
           case SmartTaskStatus.cancelled:
             _pending.remove(task.id);
+            _taskIdByModelKey.remove(pending.modelKey);
             pending.fail(StateError('Download cancelled'));
             break;
           case SmartTaskStatus.queued:
@@ -89,11 +96,17 @@ class ModelBackgroundDownloadService {
   }
 
   Future<DownloadedModelFile> downloadModelToFile({
+    required String modelKey,
     required String modelName,
     required String sourceUrl,
     void Function(double progress, String message)? onProgress,
   }) async {
     await _ensureInitialized();
+
+    final existingTaskId = _taskIdByModelKey[modelKey];
+    if (existingTaskId != null) {
+      await _controller.cancelTask(existingTaskId);
+    }
 
     final destination = await _resolveDestination(modelName, sourceUrl);
     if (await File(destination.path).exists()) {
@@ -124,12 +137,22 @@ class ModelBackgroundDownloadService {
 
     _pending[taskId] = _PendingDownload(
       completer: completer,
+      taskId: taskId,
+      modelKey: modelKey,
       outputPath: destination.path,
       fileName: destination.fileName,
       onProgress: onProgress ?? (progress, message) {},
     );
+    _taskIdByModelKey[modelKey] = taskId;
 
     return completer.future;
+  }
+
+  Future<void> cancelDownload(String modelKey) async {
+    await _ensureInitialized();
+    final taskId = _taskIdByModelKey[modelKey];
+    if (taskId == null) return;
+    await _controller.cancelTask(taskId);
   }
 
   Future<_DownloadDestination> _resolveDestination(
@@ -183,6 +206,7 @@ class ModelBackgroundDownloadService {
     await _tasksSubscription?.cancel();
     _tasksSubscription = null;
     _pending.clear();
+    _taskIdByModelKey.clear();
     _initialized = false;
     await _controller.dispose();
   }
@@ -191,12 +215,16 @@ class ModelBackgroundDownloadService {
 class _PendingDownload {
   const _PendingDownload({
     required this.completer,
+    required this.taskId,
+    required this.modelKey,
     required this.outputPath,
     required this.fileName,
     required this.onProgress,
   });
 
   final Completer<DownloadedModelFile> completer;
+  final String taskId;
+  final String modelKey;
   final String outputPath;
   final String fileName;
   final void Function(double progress, String message) onProgress;
@@ -240,6 +268,8 @@ class _ModelDownloadTask extends SmartBackgroundTask {
 
   @override
   Future<void> onStart(SmartTaskContext context) async {
+    logger.i("SART DOWNLOADING");
+    logger.i(context.payload);
     _modelName = context.payload['modelName'] as String? ?? 'Model';
     _downloadUrl = context.payload['downloadUrl'] as String? ?? '';
     _outputPath = context.payload['outputPath'] as String? ?? '';
@@ -364,6 +394,7 @@ class _ModelDownloadTask extends SmartBackgroundTask {
         options: Options(headers: headers),
         cancelToken: _cancelToken,
         onReceiveProgress: (received, total) {
+          debugPrint("${resumeFrom + received}/$total");
           if (_cancelled) {
             return;
           }

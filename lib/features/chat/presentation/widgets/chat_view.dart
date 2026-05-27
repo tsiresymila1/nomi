@@ -147,37 +147,38 @@ class _ChatViewState extends ConsumerState<ChatView> {
                       runSpacing: 12,
                       children: [
                         for (final entry in quickPrompts.asMap().entries)
-                          Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(50),
-                                  border: Border.all(
+                          InkWell(
+                            borderRadius: BorderRadius.circular(50),
+                            onTap: isGenerating
+                                    ? null
+                                    : () async {
+                                        await ref
+                                            .read(chatThreadActionsProvider)
+                                            .sendMessage(entry.value);
+                                      },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                              decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(50),
+                                    border: Border.all(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surfaceContainerHigh,
+                                    ),
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.surfaceContainerHigh,
                                   ),
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHigh,
-                                ),
-                                child: InkWell(
-                                  onTap: isGenerating
-                                      ? null
-                                      : () async {
-                                          await ref
-                                              .read(chatThreadActionsProvider)
-                                              .sendMessage(entry.value);
-                                        },
-                                  child: Text(
+                              child: Text(
                                     entry.value,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(fontSize: 12),
                                   ),
-                                ),
-                              )
+                            ),
+                          )
                               .animate(
                                 key: ValueKey('quick-prompt-${entry.key}'),
                               )

@@ -14,23 +14,19 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeModel = ref.watch(activeModelInfoProvider);
-    final activeGemmaChat = ref.watch(activeGemmaChatProvider);
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final hasActiveInstall = ref.watch(activeModelInstallProvider) != null;
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
     final usesLocalRuntime = activeModel?.provider == 'local';
+    final hasActiveRuntimeValue = activeRuntime.hasValue;
     final isModelLoading =
         isSwitchingModel ||
-        hasActiveInstall ||
         (usesLocalRuntime &&
-            (activeRuntime.isLoading || activeGemmaChat.isLoading));
+            (hasActiveInstall ||
+                (activeRuntime.isLoading && !hasActiveRuntimeValue)));
     final modelLabel = _resolveModelLabel(activeModel, isModelLoading);
-    final modelColor = usesLocalRuntime
-        ? activeGemmaChat.maybeWhen(
-            data: (session) =>
-                isModelLoading ? null : (session == null ? Colors.red : null),
-            orElse: () => null,
-          )
+    final modelColor = usesLocalRuntime && !isModelLoading
+        ? Theme.of(context).colorScheme.primary
         : null;
 
     return AppBar(
@@ -53,6 +49,7 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       title: InkWell(
         onTap: () => _showModelSelector(context, ref),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -62,13 +59,17 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                modelLabel,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: modelColor,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  modelLabel,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: modelColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01),

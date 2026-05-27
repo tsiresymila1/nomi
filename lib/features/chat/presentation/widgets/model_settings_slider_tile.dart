@@ -19,10 +19,10 @@ class ModelSettingsSliderTile extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
             Text(
               valueText,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ],
         ),

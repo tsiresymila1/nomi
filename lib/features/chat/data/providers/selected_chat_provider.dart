@@ -17,7 +17,7 @@ class SelectedChatIdNotifier extends Notifier<String?> {
   @override
   String? build() {
     final workspaceId = ref.watch(selectedWorkspaceIdProvider);
-    unawaited(_syncSelectionForWorkspace(workspaceId));
+    Future<void>.microtask(() => _syncSelectionForWorkspace(workspaceId));
     return stateOrNull;
   }
 
@@ -40,7 +40,7 @@ class SelectedChatIdNotifier extends Notifier<String?> {
     _activeSync = syncCompleter.future;
     try {
       final database = ref.read(genaDatabaseProvider);
-      final currentChatId = state;
+      final currentChatId = stateOrNull;
       if (currentChatId != null) {
         final parsedCurrentChatId = int.tryParse(currentChatId);
         if (parsedCurrentChatId != null) {

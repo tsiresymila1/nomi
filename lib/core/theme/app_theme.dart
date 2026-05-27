@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 class AppTheme {
   static const double _defaultFontSize = 13;
-  static const double _materialBaseBodySize = 16;
+  static const double _materialBaseBodySize = 18;
   static const double _fontScale = _defaultFontSize / _materialBaseBodySize;
   static const _lightSurface = Color(0xFFF6F7F5);
   static const _lightPanel = Color(0xFFFFFFFF);
@@ -11,12 +11,16 @@ class AppTheme {
   static const _darkSurface = Color(0xFF0E1110);
   static const _darkPanel = Color(0xFF161A18);
   static const _darkPanelSoft = Color(0xFF1D2320);
+  static const _pureGreen = Color(0xFF419E7E);
 
   static TextTheme _scaledTextTheme(TextTheme source) {
     TextStyle? scale(TextStyle? style) {
       final size = style?.fontSize;
       if (size == null) return style;
-      return style!.copyWith(fontSize: size * _fontScale, fontWeight: FontWeight.w400);
+      return style!.copyWith(
+        fontSize: size * _fontScale,
+        fontWeight: FontWeight.w400,
+      );
     }
 
     return source.copyWith(
@@ -29,7 +33,7 @@ class AppTheme {
       titleLarge: scale(source.titleLarge),
       titleMedium: scale(source.titleMedium),
       titleSmall: scale(source.titleSmall),
-      bodyLarge: scale(source.bodyLarge),
+      bodyLarge: scale(source.bodyLarge)?.copyWith(fontSize: 14),
       bodyMedium: scale(source.bodyMedium),
       bodySmall: scale(source.bodySmall),
       labelLarge: scale(source.labelLarge),
@@ -41,19 +45,32 @@ class AppTheme {
   static InputDecorationTheme _inputDecorationTheme() {
     return InputDecorationTheme(
       filled: true,
-      // fillColor: Colors.grey,
-      // border: _noBorder,
-      // enabledBorder: _noBorder,
-      // focusedBorder: _noBorder,
-      // errorBorder: _noBorder,
-      // focusedErrorBorder: _noBorder,
-      // disabledBorder: _noBorder,
       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      hintStyle: TextStyle(fontSize: 14),
+      hintStyle: TextStyle(fontSize: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide.none,
       ),
+    );
+  }
+
+  static SwitchThemeData _switchTheme() {
+    return SwitchThemeData(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  static ListTileThemeData _listTileTheme() {
+    return ListTileThemeData(
+      dense: true,
+      minVerticalPadding: 0,
+      horizontalTitleGap: 8,
+      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+      titleTextStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      subtitleTextStyle: TextStyle(fontSize: 12, color: Colors.grey),
     );
   }
 
@@ -69,6 +86,7 @@ class AppTheme {
     return FilledButtonThemeData(
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: TextStyle(color: Colors.white)
       ),
     );
   }
@@ -106,11 +124,12 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.green.shade200,
+        seedColor: _pureGreen,
         brightness: Brightness.light,
       ),
     );
     final scheme = base.colorScheme.copyWith(
+      primary: _pureGreen,
       surface: _lightSurface,
       surfaceDim: _lightPanelSoft,
       surfaceBright: _lightPanel,
@@ -138,6 +157,8 @@ class AppTheme {
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.light),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
+      listTileTheme: _listTileTheme(),
+      switchTheme: _switchTheme()
     );
   }
 
@@ -145,14 +166,18 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.green.shade800,
+        seedColor: _pureGreen,
         brightness: Brightness.dark,
         surface: _darkSurface,
         surfaceTint: Colors.transparent,
+        primary: _pureGreen,
+        primaryFixed: _pureGreen,
+        primaryFixedDim: _pureGreen,
       ),
       outlinedButtonTheme: _outlinedButtonTheme(),
     );
     final scheme = base.colorScheme.copyWith(
+      primary: _pureGreen,
       surface: _darkSurface,
       surfaceDim: const Color(0xFF0A0D0C),
       surfaceBright: _darkPanel,
@@ -162,6 +187,7 @@ class AppTheme {
       surfaceContainerHigh: _darkPanelSoft,
       surfaceContainerHighest: const Color(0xFF252C28),
       surfaceTint: Colors.transparent,
+
     );
     final robotoTextTheme = _scaledTextTheme(base.textTheme);
     final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
@@ -180,6 +206,8 @@ class AppTheme {
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.dark),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
+        listTileTheme: _listTileTheme(),
+        switchTheme: _switchTheme(),
     );
   }
 }

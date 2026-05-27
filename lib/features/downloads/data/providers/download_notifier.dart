@@ -70,11 +70,37 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
     state = {...state, installKey: 0.0};
     ref.read(activeModelInstallProvider.notifier).start(installKey, model.name);
     try {
-      if (model.sourceType == 'network') {
+      if (effectiveSourceType == 'file') {
+        final file = File(effectiveSource);
+        final exists = await file.exists();
+        if (!exists) {
+          final defaultUrl = defaultStaticModelSourceUrl(model);
+          if (defaultUrl != null) {
+            effectiveSourceType = 'network';
+            effectiveSource = defaultUrl;
+            await _updateModelSource(
+              model,
+              sourceType: effectiveSourceType,
+              source: effectiveSource,
+            );
+            await AppToast.show(
+              'Model file is missing. Re-downloading from default source.',
+              type: AppToastType.info,
+            );
+          } else {
+            throw StateError(
+              'Model file is missing. Please update the model source.',
+            );
+          }
+        }
+      }
+
+      if (effectiveSourceType == 'network') {
         final downloaded = await ModelBackgroundDownloadService.instance
             .downloadModelToFile(
+              modelKey: installKey,
               modelName: model.name,
-              sourceUrl: model.source,
+              sourceUrl: effectiveSource,
               onProgress: (progress, _) {
                 state = {...state, installKey: progress.clamp(0, 1)};
               },
@@ -82,30 +108,11 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
         effectiveSource = downloaded.path;
         effectiveSourceType = 'file';
         installedId = _installedModelIdFromSource(effectiveSource);
-        await ref
-            .read(modelRepositoryActionsProvider)
-            .updateModel(
-              id: model.id,
-              name: model.name,
-              description: model.description,
-              provider: model.provider,
-              apiUrl: model.apiUrl,
-              apiToken: model.apiToken,
-              modelType: model.modelType,
-              supportImage: model.supportImage,
-              supportAudio: model.supportAudio,
-              supportsFunctionCalls: model.supportsFunctionCalls,
-              isThinking: model.isThinking,
-              temperature: model.temperature,
-              topK: model.topK,
-              topP: model.topP,
-              maxTokens: model.maxTokens,
-              tokenBuffer: model.tokenBuffer,
-              randomSeed: model.randomSeed,
-              preferredBackend: model.preferredBackend,
-              sourceType: effectiveSourceType,
-              source: effectiveSource,
-            );
+        await _updateModelSource(
+          model,
+          sourceType: effectiveSourceType,
+          source: effectiveSource,
+        );
       }
 
       final installer = FlutterGemma.installModel(
@@ -126,10 +133,14 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
       ref.invalidate(modelInstallerProvider);
     } catch (e) {
       logger.e(e, error: e);
+      final message = e.toString().toLowerCase();
+      final isCancelled = message.contains('cancelled');
+      if (!isCancelled) {
+        await AppToast.show('Install failed: $e', type: AppToastType.error);
+      }
       final nextState = {...state};
       nextState.remove(installKey);
       state = nextState;
-      rethrow;
     } finally {
       _installInProgress = false;
       ref.read(activeModelInstallProvider.notifier).clear();
@@ -166,8 +177,68 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
       ref.invalidate(modelInstallerProvider);
     } catch (e) {
       logger.e(e, error: e);
-      rethrow;
+      await AppToast.show('Remove failed: $e', type: AppToastType.error);
     }
+  }
+
+  Future<void> cancelDownload(ModelInfo model) async {
+    final installKey = _installKey(model);
+    _installInProgress = false;
+    ref.read(activeModelInstallProvider.notifier).clear();
+    final nextState = {...state};
+    nextState.remove(installKey);
+    state = nextState;
+
+    try {
+      await ModelBackgroundDownloadService.instance.cancelDownload(installKey);
+      await AppToast.show('Download cancelled', type: AppToastType.info);
+    } catch (e) {
+      logger.e(e, error: e);
+      await AppToast.show('Cancel failed: $e', type: AppToastType.error);
+    }
+  }
+
+  Future<void> deleteDownloadedFileForStaticModel(ModelInfo model) async {
+    if (!isDefaultStaticModel(model)) return;
+
+    final defaultUrl = defaultStaticModelSourceUrl(model);
+    if (defaultUrl == null) {
+      await AppToast.show(
+        'Default source URL not found for this model.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+
+    if (model.sourceType != 'file') {
+      await AppToast.show(
+        'No downloaded file to delete for this model.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    final file = File(model.source);
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    await _tryUninstall(model);
+    await _updateModelSource(model, sourceType: 'network', source: defaultUrl);
+
+    final nextState = {...state};
+    nextState.remove(_installKey(model));
+    nextState.remove(_installedModelId(model));
+    if (model.modelId != null) {
+      nextState.remove(model.modelId!);
+    }
+    state = nextState;
+    ref.invalidate(modelInstallerProvider);
+
+    await AppToast.show(
+      'Downloaded file deleted. Model entry kept.',
+      type: AppToastType.success,
+    );
   }
 
   String installKeyForModel(ModelInfo model) => _installKey(model);
@@ -183,6 +254,49 @@ class DownloadNotifier extends Notifier<Map<String, double>> {
   String _installedModelIdFromSource(String source) {
     final parts = source.split(RegExp(r'[/\\]'));
     return parts.isEmpty ? source : parts.last;
+  }
+
+  Future<void> _updateModelSource(
+    ModelInfo model, {
+    required String sourceType,
+    required String source,
+  }) async {
+    await ref
+        .read(modelRepositoryActionsProvider)
+        .updateModel(
+          id: model.id,
+          name: model.name,
+          description: model.description,
+          provider: model.provider,
+          apiUrl: model.apiUrl,
+          apiToken: model.apiToken,
+          modelType: model.modelType,
+          supportImage: model.supportImage,
+          supportAudio: model.supportAudio,
+          supportsFunctionCalls: model.supportsFunctionCalls,
+          isThinking: model.isThinking,
+          temperature: model.temperature,
+          topK: model.topK,
+          topP: model.topP,
+          maxTokens: model.maxTokens,
+          tokenBuffer: model.tokenBuffer,
+          randomSeed: model.randomSeed,
+          preferredBackend: model.preferredBackend,
+          sourceType: sourceType,
+          source: source,
+        );
+  }
+
+  Future<void> _tryUninstall(ModelInfo model) async {
+    try {
+      if (model.modelId != null && model.modelId!.isNotEmpty) {
+        await FlutterGemma.uninstallModel(model.modelId!);
+        return;
+      }
+      await FlutterGemma.uninstallModel(_installedModelId(model));
+    } catch (_) {
+      // Best effort only: source file can still be reset even if uninstall fails.
+    }
   }
 
   ModelFileType _inferFileType(String source) {

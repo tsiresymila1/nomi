@@ -55,6 +55,11 @@ class SelectedWorkspaceIdNotifier extends Notifier<String?> {
           db.WorkspacesCompanion.insert(
             name: defaultWorkspaceName,
             generalInstruction: const Value(systemPrompt),
+            nativeToolsEnabled: const Value(true),
+            nativeOpenUrlEnabled: const Value(true),
+            nativeOpenAppEnabled: const Value(true),
+            nativeSendEmailEnabled: const Value(true),
+            nativeFlashlightEnabled: const Value(true),
           ),
         );
     return id.toString();

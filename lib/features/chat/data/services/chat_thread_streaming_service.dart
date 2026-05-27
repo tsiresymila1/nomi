@@ -7,8 +7,12 @@ import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
 
 class StreamingTurnResult {
   final List<gemma.FunctionCallResponse> toolCalls;
+  final bool wasCancelled;
 
-  const StreamingTurnResult({required this.toolCalls});
+  const StreamingTurnResult({
+    required this.toolCalls,
+    this.wasCancelled = false,
+  });
 }
 
 Future<StreamingTurnResult> runStreamingTurn({
@@ -18,11 +22,18 @@ Future<StreamingTurnResult> runStreamingTurn({
   required StringBuffer thinkingBuffer,
   required bool shouldHandleThinking,
   required gemma.ModelType modelType,
+  bool Function()? isCancelled,
 }) async {
   final turnTextBuffer = StringBuffer();
   final toolCalls = <gemma.FunctionCallResponse>[];
+  var wasCancelled = false;
 
   await for (final response in chat.generateChatResponseAsync()) {
+    if (isCancelled?.call() ?? false) {
+      wasCancelled = true;
+      break;
+    }
+
     if (response is gemma.TextResponse) {
       turnTextBuffer.write(response.token);
       final preview = sanitizeToolMarkupForDisplay(
@@ -63,6 +74,13 @@ Future<StreamingTurnResult> runStreamingTurn({
     toolCalls.addAll(parsedToolCalls);
   }
 
+  if (wasCancelled) {
+    return const StreamingTurnResult(
+      toolCalls: <gemma.FunctionCallResponse>[],
+      wasCancelled: true,
+    );
+  }
+
   final visibleTurnText = sanitizeToolMarkupForDisplay(turnText);
   responseBuffer.write(visibleTurnText);
   ref
@@ -88,10 +106,10 @@ String sanitizeToolMarkupForDisplay(
     }
   }
   sanitized = sanitized.replaceAll('<|"|>', '"');
-  try{
+  try {
     jsonDecode(sanitized);
     return "";
-  }catch(e){
+  } catch (e) {
     return sanitized;
   }
 }

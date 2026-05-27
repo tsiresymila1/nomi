@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
@@ -9,7 +10,7 @@ import 'package:gena/features/chat/presentation/widgets/chat_app_bar.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_drawer.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_view.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
@@ -20,54 +21,79 @@ class ChatPage extends ConsumerStatefulWidget {
 }
 
 class _ChatPageState extends ConsumerState<ChatPage> {
-  bool _isNativeDialogOpen = false;
+  bool _isNativeSheetOpen = false;
   String? _lastNativeRequestId;
 
-  Future<void> _showNativeActionDialog(
+  Future<void> _showNativeActionSheet(
     BuildContext context,
     NativeToolRequest request,
   ) async {
-    if (_isNativeDialogOpen || _lastNativeRequestId == request.id) return;
-    _isNativeDialogOpen = true;
+    if (_isNativeSheetOpen || _lastNativeRequestId == request.id) return;
+    _isNativeSheetOpen = true;
     _lastNativeRequestId = request.id;
 
-    final approved = await showDialog<bool>(
+    final approved = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Approve Native Action'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'The assistant requests action: ${_toolLabel(request.toolName)}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  request.args.isEmpty
-                      ? 'No arguments'
-                      : ref
-                            .read(nativeToolActionsProvider)
-                            .formatArgsForDisplay(request.args),
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                ),
-              ],
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Approve Native Action',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'The assistant requests action: ${_toolLabel(request.toolName)}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    request.args.isEmpty
+                        ? 'No arguments'
+                        : ref
+                              .read(nativeToolActionsProvider)
+                              .formatArgsForDisplay(request.args),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Reject'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Approve'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Reject'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Approve'),
-            ),
-          ],
         );
       },
     );
@@ -78,7 +104,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } else {
       ref.read(nativeToolExecutionProvider.notifier).rejectCurrent();
     }
-    _isNativeDialogOpen = false;
+    _isNativeSheetOpen = false;
     _lastNativeRequestId = null;
   }
 
@@ -107,8 +133,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (request == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _showNativeActionDialog(context, request);
+        _showNativeActionSheet(context, request);
       });
+    });
+
+    ref.listen<ModelInfo?>(activeModelInfoProvider, (previous, next) {
+      if (previous == null || next == null) return;
+      if (previous.id != next.id) return;
+
+      if (!_hasSessionConfigChange(previous, next)) return;
+
+      logger.i(
+        'Active model config changed for id=${next.id} (${next.name}). Reloading runtime/chat session.',
+      );
+      ref.invalidate(activeGemmaModelRuntimeProvider);
+      ref.invalidate(activeGemmaChatProvider);
     });
 
     Widget reveal(Widget child, {int delayMs = 0}) {
@@ -126,11 +165,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     final selectedChat = ref.watch(selectedChatIdProvider);
     final activeModel = ref.watch(activeModelInfoProvider);
-    final activeGemmaChat = ref.watch(activeGemmaChatProvider);
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
     final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
-    final activeInstall = ref.watch(activeModelInstallProvider);
-    final downloadState = ref.watch(downloadProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     final coloScheme = Theme.of(context).colorScheme;
@@ -138,67 +174,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final gradColor = isDark ? Colors.black : Colors.white70;
 
     final usesLocalRuntime = activeModel?.provider == 'local';
+    final hasActiveRuntimeValue = activeRuntime.hasValue;
     final isModelLoading =
         isSwitchingModel ||
-        activeInstall != null ||
         (usesLocalRuntime &&
-            (activeRuntime.isLoading || activeGemmaChat.isLoading));
+            (activeRuntime.isLoading && !hasActiveRuntimeValue));
 
-    final body = isModelLoading
-        ? reveal(
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  SpinKitThreeBounce(size: 25, color: coloScheme.primary),
-                  Text("Wait a minutes. Loading model ..."),
-                ],
-              ),
-            ),
-          )
-        : selectedChat == null
+    final body = selectedChat == null
         ? reveal(const Center(child: Text('Select or create a chat')))
         : activeModel == null
         ? reveal(const Center(child: Text('No active model')))
-        : usesLocalRuntime
-        ? activeGemmaChat.when(
-            loading: () => reveal(
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 6,
-                  children: [
-                    SpinKitThreeBounce(size: 25, color: coloScheme.primary),
-                    Text("Wait a minutes. Loading model ..."),
-                  ],
-                ),
-              ),
-            ),
-            error: (error, stack) =>
-                reveal(Center(child: Text('Error: $error'))),
-            data: (session) {
-              if (session == null) {
-                return reveal(const Center(child: Text('No active model')));
-              }
-              return ChatView(
-                chatId: selectedChat,
-              ).animate().fadeIn(duration: Duration(milliseconds: 1200));
-            },
-          )
         : ChatView(
             chatId: selectedChat,
           ).animate().fadeIn(duration: Duration(milliseconds: 1200));
 
     final canShowInput =
-        !isSwitchingModel &&
-        selectedChat != null &&
-        activeModel != null &&
-        (!usesLocalRuntime ||
-            activeGemmaChat.maybeWhen(
-              data: (session) => session != null,
-              orElse: () => false,
-            ));
+        !isSwitchingModel && selectedChat != null && activeModel != null;
 
     final bottomBar = !canShowInput
         ? const SizedBox.shrink()
@@ -255,7 +246,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   },
                   child: KeyedSubtree(
                     key: ValueKey(
-                      '${isSwitchingModel}_${selectedChat ?? "none"}_${activeInstall?.key ?? "idle"}_${activeModel?.id ?? "nomodel"}',
+                      '${isSwitchingModel}_${selectedChat ?? "none"}_${activeModel?.id ?? "nomodel"}',
                     ),
                     child: body,
                   ),
@@ -263,39 +254,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               ),
             ],
           ),
-          if (activeInstall != null)
-            reveal(
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
+          if (isModelLoading && selectedChat != null && activeModel != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              top: MediaQuery.of(context).padding.top + 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 12,
+                        child: SpinKitThreeBounce(
+                          size: 10,
+                          color: coloScheme.primary,
+                        ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Installing ${activeInstall.label}...',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          if (downloadState[activeInstall.key] == null)
-                            SpinKitThreeBounce(
-                              size: 30,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          else
-                            LinearProgressIndicator(
-                              value: downloadState[activeInstall.key],
-                            ),
-                        ],
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Preparing model session...',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -303,5 +296,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ],
       ),
     );
+  }
+
+  bool _hasSessionConfigChange(ModelInfo previous, ModelInfo next) {
+    return previous.provider != next.provider ||
+        previous.modelType != next.modelType ||
+        previous.supportImage != next.supportImage ||
+        previous.supportAudio != next.supportAudio ||
+        previous.supportsFunctionCalls != next.supportsFunctionCalls ||
+        previous.isThinking != next.isThinking ||
+        previous.temperature != next.temperature ||
+        previous.topK != next.topK ||
+        previous.topP != next.topP ||
+        previous.maxTokens != next.maxTokens ||
+        previous.tokenBuffer != next.tokenBuffer ||
+        previous.randomSeed != next.randomSeed ||
+        previous.preferredBackend != next.preferredBackend ||
+        previous.sourceType != next.sourceType ||
+        previous.source != next.source ||
+        previous.modelId != next.modelId ||
+        previous.apiUrl != next.apiUrl ||
+        previous.apiToken != next.apiToken;
   }
 }

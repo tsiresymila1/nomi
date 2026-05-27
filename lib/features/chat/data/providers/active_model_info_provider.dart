@@ -14,7 +14,7 @@ class SelectedModelIdNotifier extends Notifier<int?> {
   @override
   int? build() {
     _hydrate();
-    return null;
+    return stateOrNull;
   }
 
   Future<void> _hydrate() async {
@@ -39,7 +39,8 @@ class SelectedModelIdNotifier extends Notifier<int?> {
 }
 
 final activeModelInfoProvider = Provider<ModelInfo?>((ref) {
-  final models = ref.watch(modelRepositoryProvider).asData?.value;
+  final modelsAsync = ref.watch(modelRepositoryProvider);
+  final models = modelsAsync.hasValue ? modelsAsync.value : null;
   if (models == null || models.isEmpty) return null;
 
   final selectedId = ref.watch(selectedModelIdProvider);
@@ -49,5 +50,5 @@ final activeModelInfoProvider = Provider<ModelInfo?>((ref) {
     }
   }
 
-  return models.first;
+  return null;
 });

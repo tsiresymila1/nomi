@@ -3,6 +3,8 @@ import 'package:gena/features/chat/presentation/chat_page.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/presentation/add_model_page.dart';
 import 'package:gena/features/downloads/presentation/download_page.dart';
+import 'package:gena/features/home/presentation/home_page.dart';
+import 'package:gena/features/remote_servers/presentation/remote_servers_page.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/setting/presentation/setting_page.dart';
@@ -15,10 +17,10 @@ final router = GoRouter(
       path: '/',
       name: "home",
       pageBuilder: (context, state) =>
-          _buildTransitionPage(state: state, child: const ChatPage()),
+          _buildTransitionPage(state: state, child: const HomePage()),
     ),
     GoRoute(
-      path: '/chat/:id',
+      path: '/chat',
       name: "chat",
       pageBuilder: (context, state) =>
           _buildTransitionPage(state: state, child: const ChatPage()),
@@ -46,6 +48,12 @@ final router = GoRouter(
       name: "setting",
       pageBuilder: (context, state) =>
           _buildTransitionPage(state: state, child: const SettingsPage()),
+    ),
+    GoRoute(
+      path: '/remote-servers',
+      name: 'remote-servers',
+      pageBuilder: (context, state) =>
+          _buildTransitionPage(state: state, child: const RemoteServersPage()),
     ),
     GoRoute(
       path: '/settings/workspace/:workspaceId/config',

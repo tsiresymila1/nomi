@@ -156,9 +156,26 @@ Future<String> resolveModelSourceForInstall({
     return source;
   }
 
+  final modelKey = _buildModelDownloadKey(modelName: modelName, source: source);
   final downloaded = await ModelBackgroundDownloadService.instance
-      .downloadModelToFile(modelName: modelName, sourceUrl: source);
+      .downloadModelToFile(
+        modelKey: modelKey,
+        modelName: modelName,
+        sourceUrl: source,
+      );
   return downloaded.path;
+}
+
+String _buildModelDownloadKey({
+  required String modelName,
+  required String source,
+}) {
+  final normalizedName = modelName.trim().toLowerCase().replaceAll(
+    RegExp(r'[^a-z0-9._-]'),
+    '_',
+  );
+  final normalizedSource = source.trim().toLowerCase();
+  return 'runtime_${normalizedName}_${normalizedSource.hashCode}';
 }
 
 String installedModelIdFromSource(String source) {

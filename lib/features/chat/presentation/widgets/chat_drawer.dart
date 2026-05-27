@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:gena/presentation/widgets/field_wrapper.dart';
 import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
 import 'package:gena/features/workspace/presentation/widgets/workspace_chat_section.dart';
 import 'package:go_router/go_router.dart';
@@ -26,17 +27,20 @@ class ChatDrawer extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Row(
-                      children: [
-                        Image.asset('assets/images/logo.png', width: 50),
-                        const Text(
-                          'Nomi',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
+                    child: InkWell(
+                      onTap: () => context.goNamed("home"),
+                      child: Row(
+                        children: [
+                          Image.asset('assets/images/logo.png', width: 40),
+                          const Text(
+                            'Nomi',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -101,7 +105,10 @@ class ChatDrawer extends ConsumerWidget {
                         onPressed: () async {
                           await ref
                               .read(chatThreadActionsProvider)
-                              .stopGeneration();
+                              .stopGeneration(
+                                triggerLocalModelCancel: false,
+                                waitForLocalModelCancel: false,
+                              );
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('download');
@@ -115,7 +122,10 @@ class ChatDrawer extends ConsumerWidget {
                         onPressed: () async {
                           await ref
                               .read(chatThreadActionsProvider)
-                              .stopGeneration();
+                              .stopGeneration(
+                                triggerLocalModelCancel: false,
+                                waitForLocalModelCancel: false,
+                              );
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('setting');
@@ -128,7 +138,10 @@ class ChatDrawer extends ConsumerWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Made with ❤️ by ', style: TextStyle(fontSize: 12)),
+                        Text(
+                          'Made with ❤️ by ',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         Text(
                           'Tsiresy Milà',
                           style: TextStyle(
@@ -153,34 +166,70 @@ class ChatDrawer extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final controller = TextEditingController();
-    final shouldCreate = await showDialog<bool>(
+    final shouldCreate = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New workspace'),
-        content: TextField(
-          controller: controller,
-          maxLength: 64,
-          decoration: const InputDecoration(hintText: 'Workspace name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Create'),
-          ),
-        ],
+      isScrollControlled: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
       ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'New workspace',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              FieldWrapper(
+                label: 'Name',
+                field: TextField(
+                  controller: controller,
+                  maxLength: 64,
+                  decoration: const InputDecoration(hintText: 'My workspace'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Create'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
 
-    if (shouldCreate != true) return;
+    if (shouldCreate != true) {
+      controller.dispose();
+      return;
+    }
 
     try {
       await ref.read(workspaceActionsProvider).createWorkspace(controller.text);
     } on WorkspaceGuardException catch (e) {
       await AppToast.show(e.message, type: AppToastType.error);
     }
+    controller.dispose();
   }
 }

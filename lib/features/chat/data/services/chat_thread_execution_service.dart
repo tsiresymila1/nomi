@@ -109,12 +109,15 @@ Future<void> generateAssistantResponse({
   required bool shouldHandleThinking,
   required db.GenaDatabase database,
   required int chatId,
+  bool Function()? isCancelled,
 }) async {
   final responseBuffer = StringBuffer();
   final thinkingBuffer = StringBuffer();
   var toolTurns = 0;
 
   while (true) {
+    if (isCancelled?.call() ?? false) return;
+
     final turnResult = await runStreamingTurn(
       ref: ref,
       chat: session.chat,
@@ -122,7 +125,9 @@ Future<void> generateAssistantResponse({
       thinkingBuffer: thinkingBuffer,
       shouldHandleThinking: shouldHandleThinking,
       modelType: modelType,
+      isCancelled: isCancelled,
     );
+    if (turnResult.wasCancelled) return;
 
     if (turnResult.toolCalls.isEmpty) break;
     if (toolTurns++ >= 4) {
@@ -137,6 +142,7 @@ Future<void> generateAssistantResponse({
     }
 
     for (final call in turnResult.toolCalls) {
+      if (isCancelled?.call() ?? false) return;
       ref.read(chatToolWaitingProvider.notifier).setWaitingTool(call.name);
       try {
         final activeWorkspace = ref.read(activeWorkspaceProvider);
@@ -188,6 +194,8 @@ Future<void> generateAssistantResponse({
       }
     }
   }
+
+  if (isCancelled?.call() ?? false) return;
 
   final thinkingText = thinkingBuffer.toString().trim();
   if (thinkingText.isNotEmpty) {

@@ -35,6 +35,7 @@ class ChatThreadActions {
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
   Completer<void>? _remoteAbortCompleter;
+  GemmaChatSession? _activeLocalGenerationSession;
 
   ChatThreadActions(this.ref);
 
@@ -109,6 +110,7 @@ class ChatThreadActions {
           );
           return;
         }
+        _activeLocalGenerationSession = session;
         await _generateLocalResponse(
           currentGeneration: currentGeneration,
           chatId: parsedChatId,
@@ -134,6 +136,7 @@ class ChatThreadActions {
       );
       await AppToast.show('Message failed: $e', type: AppToastType.error);
     } finally {
+      _activeLocalGenerationSession = null;
       _remoteAbortCompleter = null;
       if (_cancelGenerationSerial == currentGeneration) {
         _cancelGenerationSerial = null;
@@ -184,6 +187,7 @@ class ChatThreadActions {
       shouldHandleThinking: shouldHandleThinking,
       database: database,
       chatId: chatId,
+      isCancelled: () => _cancelGenerationSerial == currentGeneration,
     );
   }
 
@@ -438,7 +442,6 @@ class ChatThreadActions {
       topP: runtime.topP,
       systemInstruction: _threadTitleSystemInstruction,
     );
-    
 
     try {
       await session.addQueryChunk(
@@ -517,7 +520,10 @@ class ChatThreadActions {
     };
   }
 
-  Future<void> stopGeneration() async {
+  Future<void> stopGeneration({
+    bool triggerLocalModelCancel = true,
+    bool waitForLocalModelCancel = true,
+  }) async {
     if (!ref.read(chatGeneratingProvider)) return;
 
     _cancelGenerationSerial = _generationSerial;
@@ -526,10 +532,25 @@ class ChatThreadActions {
     }
 
     final selectedModel = ref.read(activeModelInfoProvider);
-    if (selectedModel?.provider == ModelProviderType.local) {
-      final session = await ref.read(activeGemmaChatProvider.future);
-      if (session != null) {
-        await session.chat.stopGeneration();
+    final localSession = _activeLocalGenerationSession;
+    if (triggerLocalModelCancel &&
+        selectedModel?.provider == ModelProviderType.local &&
+        localSession != null) {
+      final stopFuture = localSession.chat.stopGeneration().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {},
+      );
+      if (waitForLocalModelCancel) {
+        await stopFuture;
+      } else {
+        unawaited(
+          stopFuture.catchError(
+            (error, stackTrace) => logger.w(
+              'Local stopGeneration finished with warning: $error',
+              stackTrace: stackTrace,
+            ),
+          ),
+        );
       }
     }
 

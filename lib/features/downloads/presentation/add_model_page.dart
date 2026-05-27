@@ -12,6 +12,7 @@ import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_number_field.dart';
 import 'package:gena/features/chat/presentation/widgets/model_settings_slider_tile.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/presentation/widgets/field_wrapper.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AddModelPage extends ConsumerStatefulWidget {
@@ -363,119 +364,53 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 2,
           children: [
             reveal(
               0,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Name',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(hintText: 'Name'),
-                  ),
-                ],
+              FieldWrapper(
+                label: 'Name',
+                field: TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(hintText: 'Name'),
+                ),
               ),
             ),
             const SizedBox(height: 10),
             reveal(
               1,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Description',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _descriptionController,
-                    decoration: const InputDecoration(hintText: 'Description'),
-                  ),
-                ],
+              FieldWrapper(
+                label: "Description",
+                field: TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(hintText: 'Description'),
+                ),
               ),
             ),
             const SizedBox(height: 10),
             reveal(
               2,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Model type',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    initialValue: _modelType,
-                    items: ModelType.values
-                        .map(
-                          (type) => DropdownMenuItem<String>(
-                            value: type.name,
-                            child: Text(type.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) setState(() => _modelType = value);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            reveal(
-              3,
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment<String>(
-                    value: ModelProviderType.local,
-                    label: Text('Local'),
-                  ),
-                  ButtonSegment<String>(
-                    value: ModelProviderType.remote,
-                    label: Text('Remote API'),
-                  ),
-                ],
-                selected: {_providerType},
-                onSelectionChanged: (value) {
-                  setState(() {
-                    _providerType = value.first;
-                    final minTokens = _resolveMaxTokensMin();
-                    final maxTokens = _resolveMaxTokensMax();
-                    if (_maxTokens < minTokens) _maxTokens = minTokens;
-                    if (_maxTokens > maxTokens) _maxTokens = maxTokens;
-                    final maxOutput = _resolveTokenBufferMax(_maxTokens);
-                    final minOutput = _resolveTokenBufferMin();
-                    if (_tokenBuffer < minOutput) _tokenBuffer = minOutput;
-                    if (_tokenBuffer > maxOutput) _tokenBuffer = maxOutput;
-                    _syncTokenControllers();
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (_providerType == ModelProviderType.local)
-              reveal(
-                4,
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment<String>(value: 'network', label: Text('URL')),
-                    ButtonSegment<String>(value: 'file', label: Text('File')),
-                  ],
-                  selected: {_sourceType},
-                  onSelectionChanged: (value) {
-                    setState(() => _sourceType = value.first);
-                    _sourceController.clear();
+              FieldWrapper(
+                label: 'Model type',
+                field: DropdownButtonFormField<String>(
+                  initialValue: _modelType,
+                  style: TextStyle(fontSize: 14),
+                  items: ModelType.values
+                      .map(
+                        (type) => DropdownMenuItem<String>(
+                          value: type.name,
+                          child: Text(type.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _modelType = value);
                   },
                 ),
               ),
-            if (_providerType == ModelProviderType.local)
-              const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 8),
+
             reveal(
               5,
               Row(
@@ -534,6 +469,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                 label: 'Temperature',
                 valueText: _temperature.toStringAsFixed(2),
                 slider: Slider(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   value: _temperature,
                   min: 0,
                   max: 2,
@@ -548,6 +484,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                 label: 'Top-P',
                 valueText: _topP.toStringAsFixed(2),
                 slider: Slider(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   value: _topP,
                   min: 0.1,
                   max: 1,
@@ -563,6 +500,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                 label: 'Top-K',
                 valueText: _topK.toString(),
                 slider: Slider(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   value: _topK.toDouble(),
                   min: 1,
                   max: 200,
@@ -578,6 +516,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                   label: 'Max tokens',
                   valueText: _maxTokens.toString(),
                   slider: Slider(
+                    padding: EdgeInsets.symmetric(vertical: 12),
                     value: _maxTokens.toDouble(),
                     min: 256,
                     max: 8192,
@@ -602,6 +541,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                   label: 'Output tokens',
                   valueText: _tokenBuffer.toString(),
                   slider: Slider(
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     value: _tokenBuffer.toDouble(),
                     min: tokenBufferMin.toDouble(),
                     max: tokenBufferMax.toDouble(),
@@ -638,6 +578,7 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
                 label: 'Random seed',
                 valueText: _randomSeed.toString(),
                 slider: Slider(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   value: _randomSeed.toDouble(),
                   min: 0,
                   max: 10000,
@@ -648,35 +589,78 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
               ),
             ),
             const SizedBox(height: 12),
+            reveal(
+              3,
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment<String>(
+                    value: ModelProviderType.local,
+                    label: Text('Local'),
+                  ),
+                  ButtonSegment<String>(
+                    value: ModelProviderType.remote,
+                    label: Text('Remote API'),
+                  ),
+                ],
+                selected: {_providerType},
+                onSelectionChanged: (value) {
+                  setState(() {
+                    _providerType = value.first;
+                    final minTokens = _resolveMaxTokensMin();
+                    final maxTokens = _resolveMaxTokensMax();
+                    if (_maxTokens < minTokens) _maxTokens = minTokens;
+                    if (_maxTokens > maxTokens) _maxTokens = maxTokens;
+                    final maxOutput = _resolveTokenBufferMax(_maxTokens);
+                    final minOutput = _resolveTokenBufferMin();
+                    if (_tokenBuffer < minOutput) _tokenBuffer = minOutput;
+                    if (_tokenBuffer > maxOutput) _tokenBuffer = maxOutput;
+                    _syncTokenControllers();
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_providerType == ModelProviderType.local)
+              reveal(
+                4,
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(value: 'network', label: Text('URL')),
+                    ButtonSegment<String>(value: 'file', label: Text('File')),
+                  ],
+                  selected: {_sourceType},
+                  onSelectionChanged: (value) {
+                    setState(() => _sourceType = value.first);
+                    _sourceController.clear();
+                  },
+                ),
+              ),
+            if (_providerType == ModelProviderType.local)
+              const SizedBox(height: 8),
             if (_providerType == ModelProviderType.local)
               reveal(
                 13,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Preferred backend',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                FieldWrapper(
+                  label: 'Preferred backend',
+                  field: DropdownButtonFormField<String>(
+                    initialValue: _preferredBackend,
+                    style: TextStyle(fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: 'Preferred backend',
+
                     ),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<String>(
-                      initialValue: _preferredBackend,
-                      decoration: const InputDecoration(
-                        hintText: 'Preferred backend',
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'auto', child: Text('Auto')),
-                        DropdownMenuItem(value: 'gpu', child: Text('GPU')),
-                        DropdownMenuItem(value: 'cpu', child: Text('CPU')),
-                        DropdownMenuItem(value: 'npu', child: Text('NPU')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _preferredBackend = value);
-                        }
-                      },
-                    ),
-                  ],
+                    items: const [
+                      DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                      DropdownMenuItem(value: 'gpu', child: Text('GPU')),
+                      DropdownMenuItem(value: 'cpu', child: Text('CPU')),
+                      DropdownMenuItem(value: 'npu', child: Text('NPU')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _preferredBackend = value);
+                      }
+                    },
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
@@ -703,53 +687,42 @@ class _AddModelPageState extends ConsumerState<AddModelPage> {
             if (_providerType == ModelProviderType.local)
               reveal(
                 15,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _sourceType == 'network' ? 'URL source' : 'File path',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                FieldWrapper(
+                  label: _sourceType == 'network' ? 'URL source' : 'File path',
+                  field: TextField(
+                    controller: _sourceController,
+                    decoration: InputDecoration(
+                      hintText: _sourceType == 'network'
+                          ? 'https://...'
+                          : '/absolute/path/model.task',
                     ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _sourceController,
-                      decoration: InputDecoration(
-                        hintText: _sourceType == 'network'
-                            ? 'https://...'
-                            : '/absolute/path/model.task',
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             if (_providerType == ModelProviderType.remote)
               reveal(
                 16,
                 Column(
+                  spacing: 10,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'API URL',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _apiUrlController,
-                      decoration: const InputDecoration(
-                        hintText: 'https://api.example.com/v1',
+                    FieldWrapper(
+                      label: 'API URL',
+                      field: TextField(
+                        controller: _apiUrlController,
+                        decoration: const InputDecoration(
+                          hintText: 'https://api.example.com/v1',
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'API Token',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _apiTokenController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Bearer token',
+                    FieldWrapper(
+                      label: 'API Token',
+                      field: TextField(
+                        controller: _apiTokenController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Bearer token',
+                        ),
                       ),
                     ),
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -8,8 +9,11 @@ class DownloadItem extends StatefulWidget {
   final double? progress;
   final bool isInstalled;
   final bool canRemove;
+  final bool canDeleteDownloadedFile;
   final VoidCallback onDownload;
   final VoidCallback onRemove;
+  final VoidCallback onCancelDownload;
+  final VoidCallback onDeleteDownloadedFile;
   final VoidCallback onEdit;
 
   const DownloadItem({
@@ -18,8 +22,11 @@ class DownloadItem extends StatefulWidget {
     required this.progress,
     required this.isInstalled,
     required this.canRemove,
+    required this.canDeleteDownloadedFile,
     required this.onDownload,
     required this.onRemove,
+    required this.onCancelDownload,
+    required this.onDeleteDownloadedFile,
     required this.onEdit,
   });
 
@@ -46,6 +53,7 @@ class _DownloadItemState extends State<DownloadItem> {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 6,
           children: [
             InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -53,6 +61,7 @@ class _DownloadItemState extends State<DownloadItem> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
+                  spacing: 4,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     HugeIcon(
@@ -63,6 +72,7 @@ class _DownloadItemState extends State<DownloadItem> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 4,
                         children: [
                           Text(
                             model.name,
@@ -136,7 +146,22 @@ class _DownloadItemState extends State<DownloadItem> {
                     ),
                     if (isDownloading) ...[
                       const SizedBox(height: 10),
-                      LinearProgressIndicator(value: progress),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LinearProgressIndicator(value: progress),
+                          ),
+                          IconButton(
+                            tooltip: 'Cancel download',
+                            onPressed: widget.onCancelDownload,
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                     const SizedBox(height: 12),
                     Row(
@@ -149,33 +174,45 @@ class _DownloadItemState extends State<DownloadItem> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: isDownloading
-                                ? null
-                                : isRemote
-                                ? null
-                                : widget.isInstalled
-                                ? null
-                                : widget.onDownload,
-                            icon: isRemote
-                                ? const Icon(Icons.cloud_done_rounded, size: 18)
-                                : isNetworkSource
-                                ? const Icon(Icons.download_rounded, size: 18)
-                                : const HugeIcon(
-                                    icon: HugeIcons.strokeRoundedComputerAdd,
-                                    size: 18,
-                                  ),
-                            label: Text(
-                              isRemote
-                                  ? 'Remote'
-                                  : (widget.isInstalled
-                                        ? 'Installed'
-                                        : 'Download'),
-                            ),
+                        IconButton.outlined(
+                          onPressed: isDownloading
+                              ? null
+                              : isRemote
+                              ? null
+                              : widget.isInstalled
+                              ? null
+                              : widget.onDownload,
+                          icon: isRemote
+                              ? HugeIcon(
+                                  icon: HugeIcons.strokeRoundedCloudDownload,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )
+                              : isNetworkSource
+                              ? HugeIcon(
+                                  icon: HugeIcons.strokeRoundedDownload01,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )
+                              : const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedComputerAdd,
+                                  size: 18,
+                                ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: 'Delete downloaded file',
+                          onPressed:
+                              widget.canDeleteDownloadedFile && !isDownloading
+                              ? () => _confirmDeleteDownloadedFile(context)
+                              : null,
+                          icon: const Icon(
+                            Icons.delete_sweep_outlined,
+                            size: 18,
                           ),
                         ),
                         const SizedBox(width: 8),
+                        if (isDownloading) const SizedBox(width: 8),
                         IconButton.filledTonal(
                           tooltip: widget.canRemove
                               ? 'Remove model'
@@ -228,39 +265,38 @@ class _DownloadItemState extends State<DownloadItem> {
     }
 
     return Text(
-      'Ready',
+      'Not installed',
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
 
   Future<void> _confirmRemove(BuildContext context) async {
-    final shouldRemove = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Remove Model'),
-          content: Text(
-            'Remove "${widget.model.name}" from your device and database?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Remove'),
-            ),
-          ],
-        );
-      },
+    final shouldRemove = await showConfirmActionSheet(
+      context,
+      title: 'Remove Model',
+      message: 'Remove "${widget.model.name}" from your device and database?',
+      confirmLabel: 'Remove',
     );
 
-    if (shouldRemove == true) {
+    if (shouldRemove) {
       widget.onRemove();
+    }
+  }
+
+  Future<void> _confirmDeleteDownloadedFile(BuildContext context) async {
+    final shouldDelete = await showConfirmActionSheet(
+      context,
+      title: 'Delete Downloaded File',
+      message:
+          'Delete downloaded file for "${widget.model.name}"? The model entry will stay in your list.',
+      confirmLabel: 'Delete',
+    );
+
+    if (shouldDelete) {
+      widget.onDeleteDownloadedFile();
     }
   }
 

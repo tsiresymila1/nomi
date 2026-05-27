@@ -37,6 +37,11 @@ class WorkspaceActions {
           db.WorkspacesCompanion.insert(
             name: name,
             generalInstruction: const Value(systemPrompt),
+            nativeToolsEnabled: const Value(true),
+            nativeOpenUrlEnabled: const Value(true),
+            nativeOpenAppEnabled: const Value(true),
+            nativeSendEmailEnabled: const Value(true),
+            nativeFlashlightEnabled: const Value(true),
           ),
         );
 
@@ -178,7 +183,7 @@ class WorkspaceActions {
     if (shouldReselectWorkspace) {
       final fallbackWorkspace =
           await (database.select(database.workspaces)
-                ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+                ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
                 ..limit(1))
               .getSingleOrNull();
       final fallbackWorkspaceId = fallbackWorkspace?.id.toString();

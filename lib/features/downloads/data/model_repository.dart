@@ -5,9 +5,9 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/features/downloads/data/default_seed_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:smart_background_tasks/smart_background_tasks.dart';
 
 final modelRepositoryProvider = StreamProvider<List<ModelInfo>>((ref) {
   final database = ref.watch(genaDatabaseProvider);
@@ -68,8 +68,8 @@ class DefaultModelSeeder {
 
   DefaultModelSeeder(this.ref);
 
-  Future<void> ensureSeeded() async {
-    if (_seeded) return;
+  Future<void> ensureSeeded({bool force = false}) async {
+    if (_seeded && !force) return;
     final currentTask = _inFlight;
     if (currentTask != null) {
       await currentTask;
@@ -89,6 +89,13 @@ class DefaultModelSeeder {
     }
   }
 
+  Future<void> clearAndReseed() async {
+    final database = ref.read(genaDatabaseProvider);
+    await database.delete(database.models).go();
+    _seeded = false;
+    await ensureSeeded(force: true);
+  }
+
   Future<void> _seedMissingDefaultModels() async {
     final database = ref.read(genaDatabaseProvider);
     final existingRows = await database.select(database.models).get();
@@ -100,9 +107,9 @@ class DefaultModelSeeder {
         .map((row) => _normalizeModelIdentity(row.source))
         .toSet();
 
-    for (final defaultModel in kDefaultFlutterGemmaModelSources) {
-      final normalizedName = _normalizeModelIdentity(defaultModel.name);
-      final normalizedSource = _normalizeModelIdentity(defaultModel.url);
+    for (final defaultModel in kDefaultSeedModels) {
+      final normalizedName = _normalizeModelIdentity(defaultModel.displayName);
+      final normalizedSource = _normalizeModelIdentity(defaultModel.sourceUrl);
       final alreadyExists =
           existingNames.contains(normalizedName) ||
           existingSources.contains(normalizedSource);
@@ -112,26 +119,26 @@ class DefaultModelSeeder {
           .into(database.models)
           .insert(
             db.ModelsCompanion.insert(
-              name: defaultModel.name,
+              name: defaultModel.displayName,
               description: defaultModel.notes,
               modelId: const Value.absent(),
               provider: const Value(ModelProviderType.local),
               apiUrl: const Value.absent(),
               apiToken: const Value.absent(),
-              modelType: _resolveModelTypeForDefault(defaultModel.name),
-              supportImage: const Value(false),
-              supportAudio: const Value(false),
-              supportsFunctionCalls: const Value(false),
-              isThinking: const Value(false),
-              temperature: const Value(0.8),
-              topK: const Value(40),
-              topP: const Value(0.95),
-              maxTokens: const Value(2048),
+              modelType: defaultModel.modelType.name,
+              supportImage: Value(defaultModel.supportImage),
+              supportAudio: Value(defaultModel.supportAudio),
+              supportsFunctionCalls: Value(defaultModel.supportsFunctionCalls),
+              isThinking: Value(defaultModel.isThinking),
+              temperature: Value(defaultModel.temperature),
+              topK: Value(defaultModel.topK),
+              topP: Value(defaultModel.topP),
+              maxTokens: Value(defaultModel.maxTokens),
               tokenBuffer: const Value(256),
               randomSeed: const Value(1),
-              preferredBackend: const Value('gpu'),
+              preferredBackend: Value(defaultModel.preferredBackend.name),
               sourceType: 'network',
-              source: defaultModel.url,
+              source: defaultModel.sourceUrl,
             ),
           );
 
@@ -139,13 +146,6 @@ class DefaultModelSeeder {
       existingSources.add(normalizedSource);
     }
   }
-}
-
-String _resolveModelTypeForDefault(String modelName) {
-  final normalized = _normalizeModelIdentity(modelName);
-  if (normalized.contains('qwen3')) return ModelType.qwen3.name;
-  if (normalized.contains('deepseek')) return ModelType.deepSeek.name;
-  return ModelType.gemma4.name;
 }
 
 String _normalizeModelIdentity(String value) {
@@ -293,5 +293,9 @@ class ModelRepositoryActions {
     final database = ref.read(genaDatabaseProvider);
     await (database.update(database.models)..where((t) => t.id.equals(id)))
         .write(db.ModelsCompanion(modelId: Value(modelId)));
+  }
+
+  Future<void> clearAndReseedDefaultModels() async {
+    await ref.read(defaultModelSeederProvider).clearAndReseed();
   }
 }

@@ -236,7 +236,7 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Enable Native Action Tools'),
               subtitle: const Text(
-                'Allow model tool calls to request native phone actions with user approval popup.',
+                'Allow model tool calls to request device actions with user approval sheet.',
               ),
               onChanged: (value) => setState(() => _nativeToolsEnabled = value),
             ),
@@ -275,6 +275,14 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
               onChanged: !_nativeToolsEnabled
                   ? null
                   : (value) => setState(() => _nativeFlashlightEnabled = value),
+            ),
+            const SizedBox(height: 4),
+            _NativeToolsListCard(
+              allEnabled: _nativeToolsEnabled,
+              openUrlEnabled: _nativeOpenUrlEnabled,
+              openAppEnabled: _nativeOpenAppEnabled,
+              sendEmailEnabled: _nativeSendEmailEnabled,
+              flashlightEnabled: _nativeFlashlightEnabled,
             ),
             const SizedBox(height: 16),
             Row(
@@ -403,6 +411,122 @@ class _WorkspaceConfigPageState extends ConsumerState<WorkspaceConfigPage> {
       WorkspaceDocumentIngestionStatus.failed =>
         'Failed: ${doc.ingestionError ?? 'Unknown error'}',
     };
+  }
+}
+
+class _NativeToolsListCard extends StatelessWidget {
+  const _NativeToolsListCard({
+    required this.allEnabled,
+    required this.openUrlEnabled,
+    required this.openAppEnabled,
+    required this.sendEmailEnabled,
+    required this.flashlightEnabled,
+  });
+
+  final bool allEnabled;
+  final bool openUrlEnabled;
+  final bool openAppEnabled;
+  final bool sendEmailEnabled;
+  final bool flashlightEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final disabledColor = colorScheme.onSurfaceVariant;
+
+    bool enabled(bool featureEnabled) => allEnabled && featureEnabled;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surfaceContainerLow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Native tools list',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          _ToolListRow(
+            label: 'Open URL',
+            enabled: enabled(openUrlEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Open app / deep link',
+            enabled: enabled(openAppEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Phone call',
+            enabled: enabled(openAppEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Contacts (read/search/create)',
+            enabled: enabled(openAppEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Send SMS',
+            enabled: enabled(openAppEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Send email',
+            enabled: enabled(sendEmailEnabled),
+            disabledColor: disabledColor,
+          ),
+          _ToolListRow(
+            label: 'Flashlight',
+            enabled: enabled(flashlightEnabled),
+            disabledColor: disabledColor,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolListRow extends StatelessWidget {
+  const _ToolListRow({
+    required this.label,
+    required this.enabled,
+    required this.disabledColor,
+  });
+
+  final String label;
+  final bool enabled;
+  final Color disabledColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            enabled ? Icons.check_circle_rounded : Icons.remove_circle_outline,
+            size: 16,
+            color: enabled ? Colors.green : disabledColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: enabled ? null : disabledColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

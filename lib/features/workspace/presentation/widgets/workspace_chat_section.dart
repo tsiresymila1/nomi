@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_history_tile.dart';
+import 'package:gena/presentation/widgets/field_wrapper.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -196,7 +198,7 @@ class WorkspaceChatSection extends ConsumerWidget {
                     ),
                 ],
               ),
-            ).animate().fade(duration:200.ms),
+            ).animate().fade(duration: 200.ms),
         ],
       ),
     );
@@ -204,28 +206,65 @@ class WorkspaceChatSection extends ConsumerWidget {
 
   Future<void> _showRenameDialog(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController(text: group.workspace.name);
-    final renamed = await showDialog<bool>(
+    final renamed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename workspace'),
-        content: TextField(
-          controller: controller,
-          maxLength: 64,
-          decoration: const InputDecoration(hintText: 'Workspace name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Save'),
-          ),
-        ],
+      isScrollControlled: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
       ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Rename workspace',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              FieldWrapper(
+                label: 'Name',
+                field: TextField(
+                  controller: controller,
+                  maxLength: 64,
+                  decoration: const InputDecoration(
+                    hintText: 'My workspace',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Save'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
-    if (renamed != true) return;
+    if (renamed != true) {
+      controller.dispose();
+      return;
+    }
 
     try {
       await ref
@@ -237,29 +276,17 @@ class WorkspaceChatSection extends ConsumerWidget {
     } on WorkspaceGuardException catch (e) {
       await AppToast.show(e.message, type: AppToastType.error);
     }
+    controller.dispose();
   }
 
   Future<void> _showDeleteDialog(BuildContext context, WidgetRef ref) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete workspace'),
-        content: Text(
-          'Delete "${group.workspace.name}" and all its threads/messages?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final shouldDelete = await showConfirmActionSheet(
+      context,
+      title: 'Delete Workspace',
+      message: 'Delete "${group.workspace.name}" and all its threads/messages?',
+      confirmLabel: 'Delete',
     );
-    if (shouldDelete != true) return;
+    if (!shouldDelete) return;
 
     try {
       await ref

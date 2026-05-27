@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/chat/data/providers/chat_provider.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class ChatHistoryTile extends ConsumerWidget {
@@ -17,32 +16,62 @@ class ChatHistoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedChatId = ref.watch(selectedChatIdProvider);
     final isSelected = selectedChatId == chat.id;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return ListTile(
-      leading: HugeIcon(
-        icon: isSelected
-            ? HugeIcons.strokeRoundedMessageDone01
-            : HugeIcons.strokeRoundedMessage01,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
+          unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? colorScheme.primary.withValues(alpha: 0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              HugeIcon(
+                icon: isSelected
+                    ? HugeIcons.strokeRoundedMessageDone01
+                    : HugeIcons.strokeRoundedMessage01,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chat.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatDate(chat.updatedAt),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const HugeIcon(icon: HugeIcons.strokeRoundedDelete03),
+                tooltip: 'Archive chat',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => unawaited(_onArchivePressed(context, ref)),
+              ),
+            ],
+          ),
+        ),
       ),
-      title: Text(chat.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        _formatDate(chat.updatedAt),
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: IconButton(
-        icon: const HugeIcon(icon: HugeIcons.strokeRoundedDelete03),
-        tooltip: 'Archive chat',
-        onPressed: () => unawaited(_onArchivePressed(context, ref)),
-      ),
-      selected: isSelected,
-      onTap: () {
-        if (context.mounted) {
-          Navigator.pop(context);
-        }
-        unawaited(ref.read(chatPageActionsProvider).selectChat(chat.id));
-
-      },
-      dense: true,
     );
   }
 
@@ -55,29 +84,15 @@ class ChatHistoryTile extends ConsumerWidget {
   }
 
   Future<void> _onArchivePressed(BuildContext context, WidgetRef ref) async {
-    final shouldArchive = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Archive Chat'),
-          content: const Text(
-            'This will delete this chat and all its messages from the database. Continue?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Archive'),
-            ),
-          ],
-        ).animate().fade(duration: 240.ms).slideY(begin: 0.08, end: 0);
-      },
+    final shouldArchive = await showConfirmActionSheet(
+      context,
+      title: 'Delete Thread',
+      message:
+          'This will delete this thread and all its messages from the database. Continue?',
+      confirmLabel: 'Delete',
     );
 
-    if (shouldArchive != true || !context.mounted) return;
+    if (!shouldArchive || !context.mounted) return;
 
     try {
       ref

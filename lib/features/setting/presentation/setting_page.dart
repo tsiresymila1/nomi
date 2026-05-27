@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -15,16 +16,17 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text(
           'Settings',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
           SwitchListTile(
-                title: const Text('Dark mode'),
+                title: const Text('Dark mode', style: TextStyle(fontSize: 14)),
                 subtitle: Text(
                   isDark ? 'Dark theme enabled' : 'Light theme enabled',
+                  style: TextStyle(fontSize: 13),
                 ),
                 value: isDark,
                 onChanged: (_) {
@@ -34,6 +36,23 @@ class SettingsPage extends ConsumerWidget {
               )
               .animate()
               .fadeIn(duration: 220.ms, delay: 60.ms)
+              .slideY(begin: 0.08, end: 0),
+          const SizedBox(height: 8,),
+          ListTile(
+                title: const Text(
+                  'Remote servers',
+                  style: TextStyle(fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Manage scanned/manual servers and sync remote model catalog',
+                  style: TextStyle(fontSize: 13),
+                ),
+                leading: const Icon(Icons.cloud_outlined),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () => context.pushNamed('remote-servers'),
+              )
+              .animate()
+              .fadeIn(duration: 220.ms, delay: 100.ms)
               .slideY(begin: 0.08, end: 0),
         ],
       ),

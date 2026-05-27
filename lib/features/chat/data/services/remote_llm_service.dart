@@ -2,31 +2,26 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
-import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
-import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
-import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
-import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
 import 'package:openai_dart/openai_dart.dart';
-
 
 class RemoteGenerationCancelled implements Exception {
   const RemoteGenerationCancelled();
 }
 
 class RemoteChatTurnResult {
-  final String generatedText;
-  final List<ToolCall> toolCalls;
-
   const RemoteChatTurnResult({
     required this.generatedText,
     required this.toolCalls,
   });
+
+  final String generatedText;
+  final List<ToolCall> toolCalls;
 
   bool get hasToolCalls => toolCalls.isNotEmpty;
 }
@@ -73,7 +68,6 @@ Future<RemoteChatTurnResult> runRemoteChatTurnStreamed({
     );
 
     await for (final event in stream) {
-      logger.d('Remote delta: ${event.textDelta}');
       accumulator.add(event);
       final delta = event.textDelta;
       if (delta == null || delta.isEmpty) continue;
@@ -95,7 +89,6 @@ Future<RemoteChatTurnResult> runRemoteChatTurnStreamed({
   if (generatedText.trim().isEmpty && toolCalls.isEmpty) {
     throw StateError('Remote API returned neither text nor tool calls.');
   }
-  logger.i('Generated Text: $generatedText');
 
   return RemoteChatTurnResult(
     generatedText: generatedText,
@@ -177,16 +170,14 @@ String _normalizeBaseUrl(String input) {
 }
 
 Future<void> generateRemoteAssistantResponse({
-  required Ref ref,
+  required ChatRuntimeDependencies deps,
   required db.GenaDatabase database,
   required int chatId,
   required ModelInfo activeModel,
   required Future<void> abortTrigger,
   required bool Function() isCancelled,
 }) async {
-  final activeWorkspace =
-      ref.read(activeWorkspaceProvider) ??
-      await resolveActiveWorkspace(ref, database: database);
+  final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
   final systemInstruction = buildSystemInstruction(basePrompt);
   final remoteTools = buildRemoteChatTools(
@@ -241,9 +232,7 @@ Future<void> generateRemoteAssistantResponse({
       abortTrigger: abortTrigger,
       onTextDelta: (delta) {
         responseBuffer.write(delta);
-        ref
-            .read(chatDraftResponseProvider.notifier)
-            .setDraft(responseBuffer.toString());
+        deps.chatDraftResponseCubit.setDraft(responseBuffer.toString());
       },
     );
 
@@ -256,24 +245,17 @@ Future<void> generateRemoteAssistantResponse({
       responseBuffer.write(
         'I could not complete the request because too many consecutive tool calls were generated.',
       );
-      ref
-          .read(chatDraftResponseProvider.notifier)
-          .setDraft(responseBuffer.toString());
+      deps.chatDraftResponseCubit.setDraft(responseBuffer.toString());
       break;
     }
 
     remoteMessages.add(
-      ChatMessage.assistant(
-        content: null,
-        toolCalls: turnResult.toolCalls,
-      ),
+      ChatMessage.assistant(content: null, toolCalls: turnResult.toolCalls),
     );
 
     for (final call in turnResult.toolCalls) {
       if (isCancelled()) return;
-      ref
-          .read(chatToolWaitingProvider.notifier)
-          .setWaitingTool(call.function.name);
+      deps.chatToolWaitingCubit.setWaitingTool(call.function.name);
       try {
         final parsedArgs = _decodeToolArguments(call.function.arguments);
         final toolResult = await executeChatToolByName(
@@ -281,8 +263,7 @@ Future<void> generateRemoteAssistantResponse({
           parsedArgs,
           ragToolHandler: activeWorkspace == null
               ? null
-              : (query, {topK = 4, threshold = 0.15}) => ref
-                    .read(workspaceRagActionsProvider)
+              : (query, {topK = 4, threshold = 0.15}) => deps.workspaceRagActions
                     .runRagTool(
                       workspaceId: activeWorkspace.id,
                       query: query,
@@ -295,8 +276,7 @@ Future<void> generateRemoteAssistantResponse({
                 toolName: call.function.name,
               )
               ? null
-              : (toolName, args) => ref
-                    .read(nativeToolActionsProvider)
+              : (toolName, args) => deps.nativeToolActions
                     .requestAndExecute(toolName: toolName, args: args),
         );
 
@@ -318,7 +298,7 @@ Future<void> generateRemoteAssistantResponse({
           ),
         );
       } finally {
-        ref.read(chatToolWaitingProvider.notifier).clear();
+        deps.chatToolWaitingCubit.clear();
       }
     }
   }

@@ -1,30 +1,17 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
+import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/providers/workspace_actions_provider.dart';
-import 'package:gena/features/workspace/data/providers/workspace_embedder_install_provider.dart';
-
-final workspaceConfigActionsProvider = Provider<WorkspaceConfigActions>(
-  (ref) => WorkspaceConfigActions(ref),
-);
 
 class WorkspaceConfigValidationException implements Exception {
-  final String message;
   const WorkspaceConfigValidationException(this.message);
+
+  final String message;
 
   @override
   String toString() => message;
 }
 
 class WorkspaceConfigSaveInput {
-  final String workspaceId;
-  final String generalInstruction;
-  final bool ragEnabled;
-  final bool nativeToolsEnabled;
-  final bool nativeOpenUrlEnabled;
-  final bool nativeOpenAppEnabled;
-  final bool nativeSendEmailEnabled;
-  final bool nativeFlashlightEnabled;
-
   const WorkspaceConfigSaveInput({
     required this.workspaceId,
     required this.generalInstruction,
@@ -35,11 +22,29 @@ class WorkspaceConfigSaveInput {
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
   });
+
+  final String workspaceId;
+  final String generalInstruction;
+  final bool ragEnabled;
+  final bool nativeToolsEnabled;
+  final bool nativeOpenUrlEnabled;
+  final bool nativeOpenAppEnabled;
+  final bool nativeSendEmailEnabled;
+  final bool nativeFlashlightEnabled;
 }
 
 class WorkspaceConfigActions {
-  final Ref ref;
-  WorkspaceConfigActions(this.ref);
+  WorkspaceConfigActions({
+    required WorkspaceEmbedderInstallCubit embedderInstallCubit,
+    required WorkspaceActions workspaceActions,
+    required ChatSessionController chatSessionController,
+  }) : _embedderInstallCubit = embedderInstallCubit,
+       _workspaceActions = workspaceActions,
+       _chatSessionController = chatSessionController;
+
+  final WorkspaceEmbedderInstallCubit _embedderInstallCubit;
+  final WorkspaceActions _workspaceActions;
+  final ChatSessionController _chatSessionController;
 
   Future<void> save(WorkspaceConfigSaveInput input) async {
     if (input.workspaceId.trim().isEmpty) {
@@ -47,39 +52,29 @@ class WorkspaceConfigActions {
     }
 
     if (input.ragEnabled) {
-      await ref
-          .read(workspaceEmbedderInstallStateProvider.notifier)
-          .ensureInstalled();
+      await _embedderInstallCubit.ensureInstalled();
     }
 
-    await ref
-        .read(workspaceActionsProvider)
-        .updateGeneralInstruction(
-          workspaceId: input.workspaceId,
-          instruction: input.generalInstruction,
-        );
-    await ref
-        .read(workspaceActionsProvider)
-        .updateRagEnabled(
-          workspaceId: input.workspaceId,
-          enabled: input.ragEnabled,
-        );
-    await ref
-        .read(workspaceActionsProvider)
-        .updateNativeToolsEnabled(
-          workspaceId: input.workspaceId,
-          enabled: input.nativeToolsEnabled,
-        );
-    await ref
-        .read(workspaceActionsProvider)
-        .updateNativeToolPermissions(
-          workspaceId: input.workspaceId,
-          openUrlEnabled: input.nativeOpenUrlEnabled,
-          openAppEnabled: input.nativeOpenAppEnabled,
-          sendEmailEnabled: input.nativeSendEmailEnabled,
-          flashlightEnabled: input.nativeFlashlightEnabled,
-        );
+    await _workspaceActions.updateGeneralInstruction(
+      workspaceId: input.workspaceId,
+      instruction: input.generalInstruction,
+    );
+    await _workspaceActions.updateRagEnabled(
+      workspaceId: input.workspaceId,
+      enabled: input.ragEnabled,
+    );
+    await _workspaceActions.updateNativeToolsEnabled(
+      workspaceId: input.workspaceId,
+      enabled: input.nativeToolsEnabled,
+    );
+    await _workspaceActions.updateNativeToolPermissions(
+      workspaceId: input.workspaceId,
+      openUrlEnabled: input.nativeOpenUrlEnabled,
+      openAppEnabled: input.nativeOpenAppEnabled,
+      sendEmailEnabled: input.nativeSendEmailEnabled,
+      flashlightEnabled: input.nativeFlashlightEnabled,
+    );
 
-    ref.invalidate(activeGemmaChatProvider);
+    _chatSessionController.resetActiveChatSession();
   }
 }

@@ -1,57 +1,75 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
-import 'package:gena/features/chat/data/providers/chat_model_switching_provider.dart';
+import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
-import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
-import 'package:gena/features/downloads/data/model_readiness.dart';
+import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
-import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
-
-final chatPageActionsProvider = Provider<ChatPageActions>(
-  (ref) => ChatPageActions(ref),
-);
+import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 
 class ChatPageActions {
-  final Ref ref;
-  ChatPageActions(this.ref);
+  ChatPageActions({
+    required SelectedChatCubit selectedChatCubit,
+    required SelectedWorkspaceCubit selectedWorkspaceCubit,
+    required ChatThreadActions chatThreadActions,
+    required DownloadsCubit downloadsCubit,
+    required ChatModelSwitchingCubit chatModelSwitchingCubit,
+    required SelectedModelCubit selectedModelCubit,
+    required ActiveModelInfoResolver activeModelInfoResolver,
+    required ModelInstallerService modelInstallerService,
+    required ChatSessionController chatSessionController,
+  }) : _selectedChatCubit = selectedChatCubit,
+       _selectedWorkspaceCubit = selectedWorkspaceCubit,
+       _chatThreadActions = chatThreadActions,
+       _downloadsCubit = downloadsCubit,
+       _chatModelSwitchingCubit = chatModelSwitchingCubit,
+       _selectedModelCubit = selectedModelCubit,
+       _activeModelInfoResolver = activeModelInfoResolver,
+       _modelInstallerService = modelInstallerService,
+       _chatSessionController = chatSessionController;
+
+  final SelectedChatCubit _selectedChatCubit;
+  final SelectedWorkspaceCubit _selectedWorkspaceCubit;
+  final ChatThreadActions _chatThreadActions;
+  final DownloadsCubit _downloadsCubit;
+  final ChatModelSwitchingCubit _chatModelSwitchingCubit;
+  final SelectedModelCubit _selectedModelCubit;
+  final ActiveModelInfoResolver _activeModelInfoResolver;
+  final ModelInstallerService _modelInstallerService;
+  final ChatSessionController _chatSessionController;
 
   Future<void> createNewThread() async {
     _requestStopGenerationInBackground();
-    await ref.read(selectedChatIdProvider.notifier).createNewThread();
+    await _selectedChatCubit.createNewThread();
   }
 
   Future<void> createNewThreadInWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
-    ref.read(selectedWorkspaceIdProvider.notifier).selectWorkspace(workspaceId);
-    await ref
-        .read(selectedChatIdProvider.notifier)
-        .createNewThread(workspaceId: workspaceId);
+    _selectedWorkspaceCubit.selectWorkspace(workspaceId);
+    await _selectedChatCubit.createNewThread(workspaceId: workspaceId);
   }
 
   Future<void> selectChat(String chatId) async {
     _requestStopGenerationInBackground();
-    ref.read(selectedChatIdProvider.notifier).selectChat(chatId);
+    _selectedChatCubit.selectChat(chatId);
   }
 
   Future<void> selectWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
-    ref.read(selectedWorkspaceIdProvider.notifier).selectWorkspace(workspaceId);
-    await ref
-        .read(selectedChatIdProvider.notifier)
-        .ensureSelectionForWorkspace(workspaceId);
+    _selectedWorkspaceCubit.selectWorkspace(workspaceId);
+    await _selectedChatCubit.ensureSelectionForWorkspace(workspaceId);
   }
 
   Future<void> installModel(ModelInfo model) async {
-    final hasActiveInstall = ref.read(activeModelInstallProvider) != null;
-    final isSwitching = ref.read(chatModelSwitchingProvider);
+    final hasActiveInstall = _downloadsCubit.state.activeInstall != null;
+    final isSwitching = _chatModelSwitchingCubit.state;
     if (hasActiveInstall || isSwitching) {
       await AppToast.show(
         'Model is already installing/loading. Please wait.',
@@ -60,27 +78,27 @@ class ChatPageActions {
       return;
     }
 
-    ref.read(chatModelSwitchingProvider.notifier).start();
+    _chatModelSwitchingCubit.start();
     try {
-      await ref.read(chatThreadActionsProvider).stopGeneration();
+      await _chatThreadActions.stopGeneration();
       if (model.provider == ModelProviderType.local) {
-        await ref.read(downloadProvider.notifier).installModel(model);
+        await _downloadsCubit.installModel(model);
       }
       await _setModelAsActive(model.id);
-    } catch (e) {
+    } catch (error) {
       await AppToast.show(
-        'Failed to install model: $e',
+        'Failed to install model: $error',
         type: AppToastType.error,
       );
       rethrow;
     } finally {
-      ref.read(chatModelSwitchingProvider.notifier).stop();
+      _chatModelSwitchingCubit.stop();
     }
   }
 
   Future<void> selectModel(ModelInfo model) async {
-    final hasActiveInstall = ref.read(activeModelInstallProvider) != null;
-    final isSwitching = ref.read(chatModelSwitchingProvider);
+    final hasActiveInstall = _downloadsCubit.state.activeInstall != null;
+    final isSwitching = _chatModelSwitchingCubit.state;
     if (hasActiveInstall || isSwitching) {
       await AppToast.show(
         'Model is already installing/loading. Please wait.',
@@ -90,8 +108,13 @@ class ChatPageActions {
     }
 
     if (model.provider == ModelProviderType.local) {
-      final installedModels = await ref.read(modelInstallerProvider.future);
-      if (!isModelReady(model, installedModels)) {
+      final installedModels = await _modelInstallerService.listInstalledModels();
+      final isReady = installedModels.contains(model.modelId) ||
+          installedModels.any(
+            (entry) => entry.toLowerCase() ==
+                model.source.split(RegExp(r'[/\\]')).last.toLowerCase(),
+          );
+      if (!isReady) {
         await AppToast.show(
           'Model is not installed yet. Install it from Manage.',
           type: AppToastType.info,
@@ -100,32 +123,31 @@ class ChatPageActions {
       }
     }
 
-    ref.read(chatModelSwitchingProvider.notifier).start();
+    _chatModelSwitchingCubit.start();
     try {
-      await ref.read(chatThreadActionsProvider).stopGeneration();
+      await _chatThreadActions.stopGeneration();
       await _setModelAsActive(model.id);
-    } catch (e) {
+    } catch (error) {
       await AppToast.show(
-        'Failed to switch model: $e',
+        'Failed to switch model: $error',
         type: AppToastType.error,
       );
       rethrow;
     } finally {
-      ref.read(chatModelSwitchingProvider.notifier).stop();
+      _chatModelSwitchingCubit.stop();
     }
   }
 
   Future<void> _setModelAsActive(int modelId) async {
-    await ref.read(selectedModelIdProvider.notifier).selectModel(modelId);
-    ref.invalidate(activeModelInfoProvider);
-    ref.invalidate(activeGemmaModelRuntimeProvider);
-    ref.invalidate(activeGemmaChatProvider);
+    await _selectedModelCubit.selectModel(modelId);
+    await _activeModelInfoResolver.getActiveModelInfo();
+    _chatSessionController.resetRuntime();
+    _chatSessionController.resetActiveChatSession();
   }
 
   void _requestStopGenerationInBackground() {
     unawaited(
-      ref
-          .read(chatThreadActionsProvider)
+      _chatThreadActions
           .stopGeneration(
             triggerLocalModelCancel: false,
             waitForLocalModelCancel: false,

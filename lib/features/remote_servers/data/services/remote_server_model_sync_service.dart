@@ -1,20 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_entry.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_model_spec.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-final remoteServerModelSyncServiceProvider =
-    Provider<RemoteServerModelSyncService>(
-      (ref) => RemoteServerModelSyncService(ref),
-    );
 
 class RemoteServerModelSyncService {
-  RemoteServerModelSyncService(this._ref);
+  RemoteServerModelSyncService(this._database);
 
-  final Ref _ref;
+  final db.GenaDatabase _database;
 
   static String sourceForModel({
     required String serverId,
@@ -33,7 +26,6 @@ class RemoteServerModelSyncService {
     required String effectiveApiBaseUrl,
     required List<RemoteServerModelSpec> models,
   }) async {
-    final database = _ref.read(genaDatabaseProvider);
     final seenSources = <String>{};
 
     for (final remoteModel in models) {
@@ -42,7 +34,7 @@ class RemoteServerModelSyncService {
         modelId: remoteModel.id,
       );
       seenSources.add(source);
-      final existing = await _findModelBySource(database, source);
+      final existing = await _findModelBySource(_database, source);
       final companion = _toCompanion(
         server: server,
         effectiveApiBaseUrl: effectiveApiBaseUrl,
@@ -51,16 +43,16 @@ class RemoteServerModelSyncService {
       );
 
       if (existing == null) {
-        await database.into(database.models).insert(companion);
+        await _database.into(_database.models).insert(companion);
       } else {
-        await (database.update(
-          database.models,
+        await (_database.update(
+          _database.models,
         )..where((t) => t.id.equals(existing.id))).write(companion);
       }
     }
 
     await _removeStaleModelsForServer(
-      database: database,
+      database: _database,
       serverId: server.id,
       validSources: seenSources,
     );
@@ -69,10 +61,9 @@ class RemoteServerModelSyncService {
   }
 
   Future<void> deleteAllModelsForServer(String serverId) async {
-    final database = _ref.read(genaDatabaseProvider);
     final prefix = sourcePrefixForServer(serverId);
-    await (database.delete(
-      database.models,
+    await (_database.delete(
+      _database.models,
     )..where((t) => t.source.like('$prefix%'))).go();
   }
 

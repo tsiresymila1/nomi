@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/features/downloads/data/providers/download_notifier.dart';
 
-class ActiveModelInstallOverlay extends ConsumerWidget {
+class ActiveModelInstallOverlay extends StatelessWidget {
   const ActiveModelInstallOverlay({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeInstall = ref.watch(activeModelInstallProvider);
-    final downloads = ref.watch(downloadProvider);
+  Widget build(BuildContext context) {
+    final state = context.watch<DownloadsCubit>().state;
+    final activeInstall = state.activeInstall;
+    final downloads = state.progressByKey;
 
     if (activeInstall == null) {
       return const SizedBox.shrink();

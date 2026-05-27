@@ -1,21 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/providers/chat_provider.dart';
-import 'package:gena/presentation/widgets/field_wrapper.dart';
-import 'package:gena/features/workspace/data/providers/workspace_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
+import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
+import 'package:gena/features/workspace/data/services/workspace_actions.dart';
+import 'package:gena/features/workspace/data/services/workspace_queries_service.dart';
 import 'package:gena/features/workspace/presentation/widgets/workspace_chat_section.dart';
+import 'package:gena/presentation/widgets/field_wrapper.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-class ChatDrawer extends ConsumerWidget {
+class ChatDrawer extends StatelessWidget {
   const ChatDrawer({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final groupsAsync = ref.watch(workspaceChatGroupsProvider);
+  Widget build(BuildContext context) {
+    final workspaceQueriesService = sl<WorkspaceQueriesService>();
 
     return Drawer(
       width: 350,
@@ -46,13 +49,13 @@ class ChatDrawer extends ConsumerWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     tooltip: 'New workspace',
-                    onPressed: () => _showCreateWorkspaceDialog(context, ref),
+                    onPressed: () => _showCreateWorkspaceDialog(context),
                     icon: const Icon(Icons.create_new_folder_outlined),
                   ),
                   IconButton(
                     tooltip: 'New thread',
                     onPressed: () async {
-                      await ref.read(chatPageActionsProvider).createNewThread();
+                      await sl<ChatPageActions>().createNewThread();
                       if (context.mounted) {
                         context.pop();
                       }
@@ -66,8 +69,22 @@ class ChatDrawer extends ConsumerWidget {
             ),
             const Divider(),
             Expanded(
-              child: groupsAsync.when(
-                data: (groups) {
+              child: StreamBuilder<List<WorkspaceChatGroup>>(
+                stream: workspaceQueriesService.watchWorkspaceChatGroups(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final groups = snapshot.data ?? [];
                   if (groups.isEmpty) {
                     return const Center(child: Text('No workspace'));
                   }
@@ -77,14 +94,6 @@ class ChatDrawer extends ConsumerWidget {
                         WorkspaceChatSection(group: groups[index]),
                   );
                 },
-                loading: () => const Center(
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-                error: (error, _) => Center(child: Text('Error: $error')),
               ),
             ),
             const Divider(),
@@ -103,12 +112,10 @@ class ChatDrawer extends ConsumerWidget {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                         onPressed: () async {
-                          await ref
-                              .read(chatThreadActionsProvider)
-                              .stopGeneration(
-                                triggerLocalModelCancel: false,
-                                waitForLocalModelCancel: false,
-                              );
+                          await sl<ChatThreadActions>().stopGeneration(
+                            triggerLocalModelCancel: false,
+                            waitForLocalModelCancel: false,
+                          );
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('download');
@@ -120,12 +127,10 @@ class ChatDrawer extends ConsumerWidget {
                           icon: HugeIcons.strokeRoundedSettings02,
                         ),
                         onPressed: () async {
-                          await ref
-                              .read(chatThreadActionsProvider)
-                              .stopGeneration(
-                                triggerLocalModelCancel: false,
-                                waitForLocalModelCancel: false,
-                              );
+                          await sl<ChatThreadActions>().stopGeneration(
+                            triggerLocalModelCancel: false,
+                            waitForLocalModelCancel: false,
+                          );
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
                           context.pushNamed('setting');
@@ -161,10 +166,7 @@ class ChatDrawer extends ConsumerWidget {
     );
   }
 
-  Future<void> _showCreateWorkspaceDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
+  Future<void> _showCreateWorkspaceDialog(BuildContext context) async {
     final controller = TextEditingController();
     final shouldCreate = await showModalBottomSheet<bool>(
       context: context,
@@ -226,7 +228,7 @@ class ChatDrawer extends ConsumerWidget {
     }
 
     try {
-      await ref.read(workspaceActionsProvider).createWorkspace(controller.text);
+      await sl<WorkspaceActions>().createWorkspace(controller.text);
     } on WorkspaceGuardException catch (e) {
       await AppToast.show(e.message, type: AppToastType.error);
     }

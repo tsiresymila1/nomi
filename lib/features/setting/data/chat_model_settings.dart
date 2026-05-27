@@ -35,6 +35,38 @@ class ChatModelSettings {
     );
   }
 
+  factory ChatModelSettings.fromJson(Map<String, dynamic> json) {
+    final defaults = ChatModelSettings.defaults();
+    return ChatModelSettings(
+      temperature:
+          (json['temperature'] as num?)?.toDouble() ?? defaults.temperature,
+      topK: (json['topK'] as num?)?.toInt() ?? defaults.topK,
+      topP: (json['topP'] as num?)?.toDouble() ?? defaults.topP,
+      maxTokens: (json['maxTokens'] as num?)?.toInt() ?? defaults.maxTokens,
+      tokenBuffer:
+          (json['tokenBuffer'] as num?)?.toInt() ?? defaults.tokenBuffer,
+      randomSeed: (json['randomSeed'] as num?)?.toInt() ?? defaults.randomSeed,
+      preferredBackend:
+          (json['preferredBackend'] as String?) ?? defaults.preferredBackend,
+      isThinkingOverride: json.containsKey('isThinkingOverride')
+          ? json['isThinkingOverride'] as bool?
+          : defaults.isThinkingOverride,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'temperature': temperature,
+      'topK': topK,
+      'topP': topP,
+      'maxTokens': maxTokens,
+      'tokenBuffer': tokenBuffer,
+      'randomSeed': randomSeed,
+      'preferredBackend': preferredBackend,
+      'isThinkingOverride': isThinkingOverride,
+    };
+  }
+
   ChatModelSettings copyWith({
     double? temperature,
     int? topK,

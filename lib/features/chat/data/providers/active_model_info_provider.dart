@@ -1,54 +1,66 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+
+import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-final selectedModelIdProvider = NotifierProvider<SelectedModelIdNotifier, int?>(
-  SelectedModelIdNotifier.new,
-);
+class ActiveModelInfoResolver {
+  ActiveModelInfoResolver({
+    required ModelRepository modelRepository,
+    required SelectedModelCubit selectedModelCubit,
+  }) : _modelRepository = modelRepository,
+       _selectedModelCubit = selectedModelCubit;
 
-class SelectedModelIdNotifier extends Notifier<int?> {
-  static const _prefsKey = 'chat_selected_model_id';
-  bool _hydrated = false;
+  final ModelRepository _modelRepository;
+  final SelectedModelCubit _selectedModelCubit;
 
-  @override
-  int? build() {
-    _hydrate();
-    return stateOrNull;
-  }
-
-  Future<void> _hydrate() async {
-    if (_hydrated) return;
-    _hydrated = true;
-    final prefs = await SharedPreferences.getInstance();
-    state = prefs.getInt(_prefsKey);
-  }
-
-  Future<void> selectModel(int modelId) async {
-    if (state == modelId) return;
-    state = modelId;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_prefsKey, modelId);
-  }
-
-  Future<void> clearSelection() async {
-    state = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefsKey);
-  }
-}
-
-final activeModelInfoProvider = Provider<ModelInfo?>((ref) {
-  final modelsAsync = ref.watch(modelRepositoryProvider);
-  final models = modelsAsync.hasValue ? modelsAsync.value : null;
-  if (models == null || models.isEmpty) return null;
-
-  final selectedId = ref.watch(selectedModelIdProvider);
-  if (selectedId != null) {
+  Future<ModelInfo?> getActiveModelInfo() async {
+    final models = await _modelRepository.watchModels().first;
+    final selectedId = _selectedModelCubit.state;
+    if (selectedId == null) return null;
     for (final model in models) {
       if (model.id == selectedId) return model;
     }
+    return null;
   }
 
-  return null;
-});
+  Stream<ModelInfo?> watchActiveModelInfo() {
+    late final StreamController<ModelInfo?> controller;
+    StreamSubscription<List<ModelInfo>>? modelsSub;
+    StreamSubscription<int?>? selectedSub;
+    List<ModelInfo> models = const <ModelInfo>[];
+
+    void emitCurrent() {
+      final selectedId = _selectedModelCubit.state;
+      ModelInfo? active;
+      if (selectedId != null) {
+        for (final model in models) {
+          if (model.id == selectedId) {
+            active = model;
+            break;
+          }
+        }
+      }
+      if (!controller.isClosed) {
+        controller.add(active);
+      }
+    }
+
+    controller = StreamController<ModelInfo?>.broadcast(
+      onListen: () {
+        modelsSub = _modelRepository.watchModels().listen((next) {
+          models = next;
+          emitCurrent();
+        });
+        selectedSub = _selectedModelCubit.stream.listen((_) => emitCurrent());
+        emitCurrent();
+      },
+      onCancel: () async {
+        await modelsSub?.cancel();
+        await selectedSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+}

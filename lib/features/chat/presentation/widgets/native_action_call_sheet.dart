@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
 import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
@@ -19,13 +19,15 @@ String _toolLabel(String toolName) {
   };
 }
 
-class NativeActionCallSheet extends ConsumerWidget {
+class NativeActionCallSheet extends StatelessWidget {
   final NativeToolRequest request;
 
-  const NativeActionCallSheet( {super.key, required this.request});
+  const NativeActionCallSheet({super.key, required this.request});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final nativeToolActions = sl<NativeToolActions>();
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -52,9 +54,7 @@ class NativeActionCallSheet extends ConsumerWidget {
               Text(
                 request.args.isEmpty
                     ? 'No arguments'
-                    : ref
-                          .read(nativeToolActionsProvider)
-                          .formatArgsForDisplay(request.args),
+                    : nativeToolActions.formatArgsForDisplay(request.args),
                 style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
               ),
               const SizedBox(height: 14),

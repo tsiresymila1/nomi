@@ -1,114 +1,93 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
-import 'package:hugeicons/hugeicons.dart';
 
-class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  final Color gradColor;
-
+class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ChatAppBar({super.key, required this.gradColor});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeModel = ref.watch(activeModelInfoProvider);
-    final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
-    final hasActiveInstall = ref.watch(activeModelInstallProvider) != null;
-    final isSwitchingModel = ref.watch(chatModelSwitchingProvider);
-    final usesLocalRuntime = activeModel?.provider == 'local';
-    final hasActiveRuntimeValue = activeRuntime.hasValue;
-    final isModelLoading =
-        isSwitchingModel ||
-        (usesLocalRuntime &&
-            (hasActiveInstall ||
-                (activeRuntime.isLoading && !hasActiveRuntimeValue)));
-    final modelLabel = _resolveModelLabel(activeModel, isModelLoading);
-    final modelColor = usesLocalRuntime && !isModelLoading
-        ? Theme.of(context).colorScheme.primary
-        : null;
+  final Color gradColor;
 
-    return AppBar(
-      scrolledUnderElevation: 0,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              gradColor.withAlpha(0),
-              gradColor.withAlpha(125),
-              gradColor.withAlpha(250),
-            ],
-          ),
-        ),
-      ),
-      title: InkWell(
-        onTap: () => _showModelSelector(context, ref),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            // border: Border.all(color: Theme.of(context).highlightColor),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: Text(
-                  modelLabel,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: modelColor,
-                    fontWeight: FontWeight.bold,
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<ModelInfo?>(
+      stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
+      builder: (context, snapshot) {
+        final activeModel = snapshot.data;
+        return BlocBuilder<ChatModelSwitchingCubit, bool>(
+          bloc: sl<ChatModelSwitchingCubit>(),
+          builder: (context, isSwitchingModel) {
+            final modelLabel = _resolveModelLabel(activeModel, isSwitchingModel);
+            return AppBar(
+              scrolledUnderElevation: 0,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      gradColor.withAlpha(0),
+                      gradColor.withAlpha(125),
+                      gradColor.withAlpha(250),
+                    ],
                   ),
                 ),
               ),
-              HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01),
-            ],
-          ),
-        ),
-      ),
-      centerTitle: true,
-      leading: Builder(
-        builder: (context) {
-          return IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedMenu02, size: 28),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          );
-        },
-      ),
-      actions: [
-        IconButton(
-          icon: const HugeIcon(
-            icon: HugeIcons.strokeRoundedPencilEdit02,
-            size: 28,
-          ),
-          onPressed: () => ref.read(chatPageActionsProvider).createNewThread(),
-        ),
-      ],
+              title: InkWell(
+                onTap: () => _showModelSelector(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        modelLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded),
+                  ],
+                ),
+              ),
+              centerTitle: true,
+              leading: Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: const Icon(Icons.menu_rounded, size: 28),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  );
+                },
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit_note_rounded, size: 28),
+                  onPressed: () => sl<ChatPageActions>().createNewThread(),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Future<void> _showModelSelector(BuildContext context, WidgetRef ref) async {
+  Future<void> _showModelSelector(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      sheetAnimationStyle: const AnimationStyle(
-        duration: Duration(milliseconds: 400),
-        reverseDuration: Duration(milliseconds: 200),
-      ),
-      builder: (context) {
-        return const SafeArea(child: ChatModelSelectionSheet());
-      },
+      builder: (_) => const SafeArea(child: ChatModelSelectionSheet()),
     );
   }
 
@@ -123,6 +102,6 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       return 'No active model';
     }
     final providerLabel = activeModel.provider == 'remote' ? 'Remote' : 'Local';
-    return '$providerLabel · ${activeModel.name}';
+    return '$providerLabel - ${activeModel.name}';
   }
 }

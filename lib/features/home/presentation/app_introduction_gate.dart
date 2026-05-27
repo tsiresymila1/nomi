@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gena/features/home/presentation/widgets/intro_icon.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -66,25 +67,25 @@ class _AppIntroductionGateState extends State<AppIntroductionGate> {
           title: 'Welcome to Gena',
           body:
               'Your private AI workspace for local and remote chat models, all in one app.',
-          image: const _IntroIcon(icon: Icons.smart_toy_rounded),
+          image: const IntroIcon(icon: Icons.smart_toy_rounded),
         ),
         PageViewModel(
           title: 'Manage Models',
           body:
               'Add model files or URLs, install them, and switch active models anytime.',
-          image: const _IntroIcon(icon: Icons.download_for_offline_rounded),
+          image: const IntroIcon(icon: Icons.download_for_offline_rounded),
         ),
         PageViewModel(
           title: 'Chat with Tools',
           body:
               'Use chat threads with optional tools, vision, and workspace context for better answers.',
-          image: const _IntroIcon(icon: Icons.chat_bubble_outline_rounded),
+          image: const IntroIcon(icon: Icons.chat_bubble_outline_rounded),
         ),
         PageViewModel(
           title: 'You are ready',
           body:
               'Open Downloads to install a model, then start chatting from Home.',
-          image: const _IntroIcon(icon: Icons.rocket_launch_rounded),
+          image: const IntroIcon(icon: Icons.rocket_launch_rounded),
         ),
       ],
       showSkipButton: true,
@@ -104,27 +105,6 @@ class _AppIntroductionGateState extends State<AppIntroductionGate> {
       ),
       controlsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       globalBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    );
-  }
-}
-
-class _IntroIcon extends StatelessWidget {
-  const _IntroIcon({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Container(
-      width: 180,
-      height: 180,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Icon(icon, size: 72, color: color),
     );
   }
 }

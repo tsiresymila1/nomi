@@ -2,22 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/presentation/widgets/download_item_actions.dart';
+import 'package:gena/features/downloads/presentation/widgets/download_item_capability_chip.dart';
+import 'package:gena/features/downloads/presentation/widgets/download_item_status_badge.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class DownloadItem extends StatefulWidget {
-  final ModelInfo model;
-  final double? progress;
-  final bool isInstalled;
-  final bool canRemove;
-  final bool canDeleteDownloadedFile;
-  final VoidCallback onDownload;
-  final VoidCallback onRemove;
-  final VoidCallback onCancelDownload;
-  final VoidCallback onDeleteDownloadedFile;
-  final VoidCallback onEdit;
-
   const DownloadItem({
-    super.key,
     required this.model,
     required this.progress,
     required this.isInstalled,
@@ -28,7 +19,19 @@ class DownloadItem extends StatefulWidget {
     required this.onCancelDownload,
     required this.onDeleteDownloadedFile,
     required this.onEdit,
+    super.key,
   });
+
+  final ModelInfo model;
+  final double? progress;
+  final bool isInstalled;
+  final bool canRemove;
+  final bool canDeleteDownloadedFile;
+  final VoidCallback onDownload;
+  final VoidCallback onRemove;
+  final VoidCallback onCancelDownload;
+  final VoidCallback onDeleteDownloadedFile;
+  final VoidCallback onEdit;
 
   @override
   State<DownloadItem> createState() => _DownloadItemState();
@@ -53,7 +56,6 @@ class _DownloadItemState extends State<DownloadItem> {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 6,
           children: [
             InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -61,7 +63,6 @@ class _DownloadItemState extends State<DownloadItem> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
-                  spacing: 4,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     HugeIcon(
@@ -72,7 +73,6 @@ class _DownloadItemState extends State<DownloadItem> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 4,
                         children: [
                           Text(
                             model.name,
@@ -81,7 +81,7 @@ class _DownloadItemState extends State<DownloadItem> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 6),
                           Text(
                             model.description,
                             maxLines: _expanded ? 4 : 2,
@@ -92,10 +92,10 @@ class _DownloadItemState extends State<DownloadItem> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _statusBadge(
-                      context,
+                    DownloadItemStatusBadge(
                       isDownloading: isDownloading,
                       progress: progress,
+                      isInstalled: widget.isInstalled,
                     ),
                     Icon(
                       _expanded
@@ -117,28 +117,23 @@ class _DownloadItemState extends State<DownloadItem> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        _capabilityChip(
-                          context,
+                        DownloadItemCapabilityChip(
                           label: 'Type: ${model.modelType}',
                           enabled: true,
                         ),
-                        _capabilityChip(
-                          context,
+                        DownloadItemCapabilityChip(
                           label: 'Image',
                           enabled: model.supportImage,
                         ),
-                        _capabilityChip(
-                          context,
+                        DownloadItemCapabilityChip(
                           label: 'Audio',
                           enabled: model.supportAudio,
                         ),
-                        _capabilityChip(
-                          context,
+                        DownloadItemCapabilityChip(
                           label: 'Functions',
                           enabled: model.supportsFunctionCalls,
                         ),
-                        _capabilityChip(
-                          context,
+                        DownloadItemCapabilityChip(
                           label: 'Thinking',
                           enabled: model.isThinking,
                         ),
@@ -164,68 +159,19 @@ class _DownloadItemState extends State<DownloadItem> {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: widget.onEdit,
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: const Text('Edit'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.outlined(
-                          onPressed: isDownloading
-                              ? null
-                              : isRemote
-                              ? null
-                              : widget.isInstalled
-                              ? null
-                              : widget.onDownload,
-                          icon: isRemote
-                              ? HugeIcon(
-                                  icon: HugeIcons.strokeRoundedCloudDownload,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : isNetworkSource
-                              ? HugeIcon(
-                                  icon: HugeIcons.strokeRoundedDownload01,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : const HugeIcon(
-                                  icon: HugeIcons.strokeRoundedComputerAdd,
-                                  size: 18,
-                                ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.filledTonal(
-                          tooltip: 'Delete downloaded file',
-                          onPressed:
-                              widget.canDeleteDownloadedFile && !isDownloading
-                              ? () => _confirmDeleteDownloadedFile(context)
-                              : null,
-                          icon: const Icon(
-                            Icons.delete_sweep_outlined,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (isDownloading) const SizedBox(width: 8),
-                        IconButton.filledTonal(
-                          tooltip: widget.canRemove
-                              ? 'Remove model'
-                              : 'Static default model',
-                          onPressed: !widget.canRemove || isDownloading
-                              ? null
-                              : () => _confirmRemove(context),
-                          icon: const HugeIcon(
-                            icon: HugeIcons.strokeRoundedDelete02,
-                            size: 18,
-                          ),
-                        ),
-                      ],
+                    DownloadItemActions(
+                      isDownloading: isDownloading,
+                      isRemote: isRemote,
+                      isNetworkSource: isNetworkSource,
+                      canRemove: widget.canRemove,
+                      canDeleteDownloadedFile: widget.canDeleteDownloadedFile,
+                      isInstalled: widget.isInstalled,
+                      onEdit: widget.onEdit,
+                      onDownload: widget.onDownload,
+                      onRemove: () => _confirmRemove(context),
+                      onDeleteDownloadedFile: () {
+                        _confirmDeleteDownloadedFile(context);
+                      },
                     ),
                   ],
                 ),
@@ -241,38 +187,6 @@ class _DownloadItemState extends State<DownloadItem> {
     );
   }
 
-  Widget _statusBadge(
-    BuildContext context, {
-    required bool isDownloading,
-    required double? progress,
-  }) {
-    if (isDownloading) {
-      return SizedBox(
-        width: 50,
-        child: Text(
-          '${((progress ?? 0) * 100).toStringAsFixed(0)}%',
-          textAlign: TextAlign.end,
-          style: const TextStyle(fontSize: 12),
-        ),
-      );
-    }
-    if (widget.isInstalled) {
-      return const HugeIcon(
-        icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-        color: Colors.green,
-        size: 18,
-      );
-    }
-
-    return Text(
-      'Not installed',
-      style: TextStyle(
-        fontSize: 11,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-
   Future<void> _confirmRemove(BuildContext context) async {
     final shouldRemove = await showConfirmActionSheet(
       context,
@@ -280,10 +194,7 @@ class _DownloadItemState extends State<DownloadItem> {
       message: 'Remove "${widget.model.name}" from your device and database?',
       confirmLabel: 'Remove',
     );
-
-    if (shouldRemove) {
-      widget.onRemove();
-    }
+    if (shouldRemove) widget.onRemove();
   }
 
   Future<void> _confirmDeleteDownloadedFile(BuildContext context) async {
@@ -294,34 +205,6 @@ class _DownloadItemState extends State<DownloadItem> {
           'Delete downloaded file for "${widget.model.name}"? The model entry will stay in your list.',
       confirmLabel: 'Delete',
     );
-
-    if (shouldDelete) {
-      widget.onDeleteDownloadedFile();
-    }
-  }
-
-  Widget _capabilityChip(
-    BuildContext context, {
-    required String label,
-    required bool enabled,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: enabled
-            ? colorScheme.primary.withValues(alpha: 0.15)
-            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        enabled ? label : '$label: No',
-        style: TextStyle(
-          fontSize: 11,
-          color: enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
+    if (shouldDelete) widget.onDeleteDownloadedFile();
   }
 }

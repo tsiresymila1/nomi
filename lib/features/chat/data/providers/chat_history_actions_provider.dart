@@ -1,48 +1,54 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
-import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
-import 'package:gena/features/workspace/data/providers/selected_workspace_provider.dart';
-
-final chatHistoryActionsProvider = Provider<ChatHistoryActions>(
-  (ref) => ChatHistoryActions(ref),
-);
+import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 
 class ChatHistoryActions {
-  final Ref ref;
-  ChatHistoryActions(this.ref);
+  ChatHistoryActions({
+    required db.GenaDatabase database,
+    required SelectedChatCubit selectedChatCubit,
+    required SelectedWorkspaceCubit selectedWorkspaceCubit,
+    required ChatThreadActions chatThreadActions,
+  }) : _database = database,
+       _selectedChatCubit = selectedChatCubit,
+       _selectedWorkspaceCubit = selectedWorkspaceCubit,
+       _chatThreadActions = chatThreadActions;
+
+  final db.GenaDatabase _database;
+  final SelectedChatCubit _selectedChatCubit;
+  final SelectedWorkspaceCubit _selectedWorkspaceCubit;
+  final ChatThreadActions _chatThreadActions;
 
   Future<void> archiveChat(String chatId) async {
     final parsedChatId = int.tryParse(chatId);
     if (parsedChatId == null) return;
 
-    final selectedChatId = ref.read(selectedChatIdProvider);
+    final selectedChatId = _selectedChatCubit.state;
     final isActiveChat = selectedChatId == chatId;
-    final database = ref.read(genaDatabaseProvider);
     final chat =
-        await (database.select(database.chats)
+        await (_database.select(_database.chats)
               ..where((t) => t.id.equals(parsedChatId))
               ..limit(1))
             .getSingleOrNull();
     if (chat == null) return;
-    final selectedWorkspaceId = ref.read(selectedWorkspaceIdProvider);
+    final selectedWorkspaceId = _selectedWorkspaceCubit.state;
     final isInSelectedWorkspace =
         selectedWorkspaceId == chat.workspace.toString();
 
-    await database.transaction(() async {
-      await (database.delete(
-        database.messages,
+    await _database.transaction(() async {
+      await (_database.delete(
+        _database.messages,
       )..where((t) => t.chat.equals(parsedChatId))).go();
-      await (database.delete(
-        database.chats,
+      await (_database.delete(
+        _database.chats,
       )..where((t) => t.id.equals(parsedChatId))).go();
     });
 
     if (isActiveChat || isInSelectedWorkspace) {
-      await ref.read(chatThreadActionsProvider).stopGeneration();
-      await ref
-          .read(selectedChatIdProvider.notifier)
-          .ensureSelectionForWorkspace(chat.workspace.toString());
+      await _chatThreadActions.stopGeneration();
+      await _selectedChatCubit.ensureSelectionForWorkspace(
+        chat.workspace.toString(),
+      );
     }
   }
 }

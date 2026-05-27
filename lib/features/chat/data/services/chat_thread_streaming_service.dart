@@ -2,21 +2,21 @@ import 'dart:convert';
 
 import 'package:flutter_gemma/core/function_call_parser.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
+import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
 
 class StreamingTurnResult {
-  final List<gemma.FunctionCallResponse> toolCalls;
-  final bool wasCancelled;
-
   const StreamingTurnResult({
     required this.toolCalls,
     this.wasCancelled = false,
   });
+
+  final List<gemma.FunctionCallResponse> toolCalls;
+  final bool wasCancelled;
 }
 
 Future<StreamingTurnResult> runStreamingTurn({
-  required Ref ref,
+  required ChatDraftResponseCubit chatDraftResponseCubit,
+  required ChatDraftThinkingCubit chatDraftThinkingCubit,
   required gemma.InferenceChat chat,
   required StringBuffer responseBuffer,
   required StringBuffer thinkingBuffer,
@@ -40,17 +40,13 @@ Future<StreamingTurnResult> runStreamingTurn({
         turnTextBuffer.toString(),
         stripTrailingOpenTag: true,
       );
-      ref
-          .read(chatDraftResponseProvider.notifier)
-          .setDraft(responseBuffer.toString() + preview);
+      chatDraftResponseCubit.setDraft(responseBuffer.toString() + preview);
       continue;
     }
 
     if (response is gemma.ThinkingResponse && shouldHandleThinking) {
       thinkingBuffer.write(response.content);
-      ref
-          .read(chatDraftThinkingProvider.notifier)
-          .setDraft(thinkingBuffer.toString());
+      chatDraftThinkingCubit.setDraft(thinkingBuffer.toString());
       continue;
     }
 
@@ -83,9 +79,7 @@ Future<StreamingTurnResult> runStreamingTurn({
 
   final visibleTurnText = sanitizeToolMarkupForDisplay(turnText);
   responseBuffer.write(visibleTurnText);
-  ref
-      .read(chatDraftResponseProvider.notifier)
-      .setDraft(responseBuffer.toString());
+  chatDraftResponseCubit.setDraft(responseBuffer.toString());
   return StreamingTurnResult(toolCalls: toolCalls);
 }
 
@@ -108,8 +102,8 @@ String sanitizeToolMarkupForDisplay(
   sanitized = sanitized.replaceAll('<|"|>', '"');
   try {
     jsonDecode(sanitized);
-    return "";
-  } catch (e) {
+    return '';
+  } catch (_) {
     return sanitized;
   }
 }

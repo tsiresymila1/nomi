@@ -1,27 +1,23 @@
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/features/chat/data/cubits/native_tool_execution_cubit.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
-import 'package:gena/features/chat/data/providers/native_tool_execution_provider.dart';
 import 'package:gena/features/chat/data/services/native_tool_bridge_service.dart';
 
-final nativeToolBridgeServiceProvider = Provider<NativeToolBridgeService>(
-  (ref) => NativeToolBridgeService(),
-);
-
-final nativeToolActionsProvider = Provider<NativeToolActions>(
-  (ref) => NativeToolActions(ref),
-);
-
 class NativeToolActions {
-  final Ref ref;
-  NativeToolActions(this.ref);
+  NativeToolActions({
+    required NativeToolBridgeService bridgeService,
+    required NativeToolExecutionCubit executionCubit,
+  }) : _bridgeService = bridgeService,
+       _executionCubit = executionCubit;
+
+  final NativeToolBridgeService _bridgeService;
+  final NativeToolExecutionCubit _executionCubit;
 
   Future<Map<String, dynamic>> requestAndExecute({
     required String toolName,
     required Map<String, dynamic> args,
   }) async {
-    final service = ref.read(nativeToolBridgeServiceProvider);
     final needApproval = _requiresApproval(toolName);
 
     final request = NativeToolRequest(
@@ -32,9 +28,7 @@ class NativeToolActions {
       createdAt: DateTime.now(),
     );
 
-    final approved = await ref
-        .read(nativeToolExecutionProvider.notifier)
-        .requestApproval(request);
+    final approved = await _executionCubit.requestApproval(request);
     if (!approved) {
       return <String, dynamic>{
         'status': 'cancelled',
@@ -43,7 +37,7 @@ class NativeToolActions {
       };
     }
 
-    return service.execute(toolName: toolName, args: args);
+    return _bridgeService.execute(toolName: toolName, args: args);
   }
 
   String formatArgsForDisplay(Map<String, dynamic> args) {

@@ -1,32 +1,55 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
-import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
-import 'package:gena/features/chat/data/providers/selected_chat_provider.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_execution_service.dart';
 import 'package:gena/features/chat/data/services/chat_title_service.dart';
 import 'package:gena/features/chat/data/services/remote_llm_service.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 
-final chatThreadActionsProvider = Provider<ChatThreadActions>(
-  (ref) => ChatThreadActions(ref),
-);
-
 class ChatThreadActions {
-  final Ref ref;
+  ChatThreadActions({
+    required db.GenaDatabase database,
+    required SelectedChatCubit selectedChatCubit,
+    required ActiveModelInfoResolver activeModelInfoResolver,
+    required ChatSessionController sessionController,
+    required ChatGeneratingCubit chatGeneratingCubit,
+    required ChatDraftResponseCubit chatDraftResponseCubit,
+    required ChatDraftThinkingCubit chatDraftThinkingCubit,
+    required ChatToolWaitingCubit chatToolWaitingCubit,
+    required ChatRuntimeDependencies runtimeDependencies,
+  }) : _database = database,
+       _selectedChatCubit = selectedChatCubit,
+       _activeModelInfoResolver = activeModelInfoResolver,
+       _sessionController = sessionController,
+       _chatGeneratingCubit = chatGeneratingCubit,
+       _chatDraftResponseCubit = chatDraftResponseCubit,
+       _chatDraftThinkingCubit = chatDraftThinkingCubit,
+       _chatToolWaitingCubit = chatToolWaitingCubit,
+       _runtimeDependencies = runtimeDependencies;
+
+  final db.GenaDatabase _database;
+  final SelectedChatCubit _selectedChatCubit;
+  final ActiveModelInfoResolver _activeModelInfoResolver;
+  final ChatSessionController _sessionController;
+  final ChatGeneratingCubit _chatGeneratingCubit;
+  final ChatDraftResponseCubit _chatDraftResponseCubit;
+  final ChatDraftThinkingCubit _chatDraftThinkingCubit;
+  final ChatToolWaitingCubit _chatToolWaitingCubit;
+  final ChatRuntimeDependencies _runtimeDependencies;
+
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
   Completer<void>? _remoteAbortCompleter;
   GemmaChatSession? _activeLocalGenerationSession;
-
-  ChatThreadActions(this.ref);
 
   Future<void> sendMessage(String rawText, {String? imagePath}) async {
     final text = rawText.trim();
@@ -35,15 +58,13 @@ class ChatThreadActions {
         normalizedImagePath != null && normalizedImagePath.isNotEmpty;
     if (text.isEmpty && !hasImage) return;
 
-    var chatId = ref.read(selectedChatIdProvider);
-    chatId ??= await ref
-        .read(selectedChatIdProvider.notifier)
-        .createNewThread();
+    var chatId = _selectedChatCubit.state;
+    chatId ??= await _selectedChatCubit.createNewThread();
 
     final parsedChatId = int.tryParse(chatId);
     if (parsedChatId == null) return;
 
-    final activeModel = ref.read(activeModelInfoProvider);
+    final activeModel = await _activeModelInfoResolver.getActiveModelInfo();
     if (activeModel == null) {
       await AppToast.show(
         'No model selected. Please add/select a model first.',
@@ -57,26 +78,25 @@ class ChatThreadActions {
     _remoteAbortCompleter = null;
 
     try {
-      final database = ref.read(genaDatabaseProvider);
       await storeUserMessage(
-        database: database,
+        database: _database,
         chatId: parsedChatId,
         text: text,
         hasImage: hasImage,
         imagePath: normalizedImagePath,
       );
-      ref.read(chatGeneratingProvider.notifier).setGenerating(true);
-      ref.read(chatDraftResponseProvider.notifier).setDraft('');
-      ref.read(chatDraftThinkingProvider.notifier).clear();
-      ref.read(chatToolWaitingProvider.notifier).clear();
+      _chatGeneratingCubit.setGenerating(true);
+      _chatDraftResponseCubit.setDraft('');
+      _chatDraftThinkingCubit.clear();
+      _chatToolWaitingCubit.clear();
 
       if (activeModel.provider == ModelProviderType.remote) {
         final remoteAbortCompleter = Completer<void>();
         _remoteAbortCompleter = remoteAbortCompleter;
 
         await generateRemoteAssistantResponse(
-          ref: ref,
-          database: database,
+          deps: _runtimeDependencies,
+          database: _database,
           chatId: parsedChatId,
           activeModel: activeModel,
           abortTrigger: remoteAbortCompleter.future,
@@ -86,8 +106,8 @@ class ChatThreadActions {
         if (_cancelGenerationSerial == currentGeneration) return;
 
         scheduleThreadTitleUpdate(
-          ref: ref,
-          database: database,
+          sessionController: _sessionController,
+          database: _database,
           chatId: parsedChatId,
           messageText: text,
           hasImage: hasImage,
@@ -96,14 +116,14 @@ class ChatThreadActions {
       } else {
         GemmaChatSession? session;
         try {
-          session = await ref.read(activeGemmaChatProvider.future);
-        } catch (e, stackTrace) {
-          logger.e(e, error: e);
+          session = await _sessionController.getActiveChatSession();
+        } catch (error, stackTrace) {
+          logger.e(error, error: error);
           if (_cancelGenerationSerial == currentGeneration) {
             return;
           }
           logger.w(
-            'Chat session became unavailable while preparing local generation: $e',
+            'Chat session became unavailable while preparing local generation: $error',
             stackTrace: stackTrace,
           );
           return;
@@ -117,7 +137,7 @@ class ChatThreadActions {
         }
         _activeLocalGenerationSession = session;
 
-        final modelRuntime = await ref.read(activeGemmaModelRuntimeProvider.future);
+        final modelRuntime = await _sessionController.getRuntime();
         if (modelRuntime == null) {
           await AppToast.show(
             'No active model available. Please select or install a model.',
@@ -131,8 +151,8 @@ class ChatThreadActions {
             supportsThinkingModel(modelRuntime.modelType);
 
         await prepareContext(
-          ref: ref,
-          database: database,
+          deps: _runtimeDependencies,
+          database: _database,
           chatId: parsedChatId,
           chat: session.chat,
           maxTokens: modelRuntime.maxTokens,
@@ -142,11 +162,11 @@ class ChatThreadActions {
         if (_cancelGenerationSerial == currentGeneration) return;
 
         await generateAssistantResponse(
-          ref: ref,
+          deps: _runtimeDependencies,
           session: session,
           modelType: modelRuntime.modelType,
           shouldHandleThinking: shouldHandleThinking,
-          database: database,
+          database: _database,
           chatId: parsedChatId,
           isCancelled: () => _cancelGenerationSerial == currentGeneration,
         );
@@ -154,35 +174,35 @@ class ChatThreadActions {
         if (_cancelGenerationSerial == currentGeneration) return;
 
         scheduleThreadTitleUpdate(
-          ref: ref,
-          database: database,
+          sessionController: _sessionController,
+          database: _database,
           chatId: parsedChatId,
           messageText: text,
           hasImage: hasImage,
           activeModel: activeModel,
         );
       }
-    } catch (e, stackTrace) {
+    } catch (error, stackTrace) {
       if (_cancelGenerationSerial == currentGeneration ||
-          e is RemoteGenerationCancelled) {
+          error is RemoteGenerationCancelled) {
         return;
       }
       logger.e(
         'Failed to send/generate chat response',
-        error: e,
+        error: error,
         stackTrace: stackTrace,
       );
-      await AppToast.show('Message failed: $e', type: AppToastType.error);
+      await AppToast.show('Message failed: $error', type: AppToastType.error);
     } finally {
       _activeLocalGenerationSession = null;
       _remoteAbortCompleter = null;
       if (_cancelGenerationSerial == currentGeneration) {
         _cancelGenerationSerial = null;
       }
-      ref.read(chatGeneratingProvider.notifier).setGenerating(false);
-      ref.read(chatDraftResponseProvider.notifier).clear();
-      ref.read(chatDraftThinkingProvider.notifier).clear();
-      ref.read(chatToolWaitingProvider.notifier).clear();
+      _chatGeneratingCubit.setGenerating(false);
+      _chatDraftResponseCubit.clear();
+      _chatDraftThinkingCubit.clear();
+      _chatToolWaitingCubit.clear();
     }
   }
 
@@ -190,14 +210,14 @@ class ChatThreadActions {
     bool triggerLocalModelCancel = true,
     bool waitForLocalModelCancel = true,
   }) async {
-    if (!ref.read(chatGeneratingProvider)) return;
+    if (!_chatGeneratingCubit.state) return;
 
     _cancelGenerationSerial = _generationSerial;
     if (_remoteAbortCompleter != null && !_remoteAbortCompleter!.isCompleted) {
       _remoteAbortCompleter!.complete();
     }
 
-    final selectedModel = ref.read(activeModelInfoProvider);
+    final selectedModel = await _activeModelInfoResolver.getActiveModelInfo();
     final localSession = _activeLocalGenerationSession;
     if (triggerLocalModelCancel &&
         selectedModel?.provider == ModelProviderType.local &&
@@ -220,8 +240,8 @@ class ChatThreadActions {
       }
     }
 
-    ref.read(chatGeneratingProvider.notifier).setGenerating(false);
-    ref.read(chatDraftThinkingProvider.notifier).clear();
-    ref.read(chatToolWaitingProvider.notifier).clear();
+    _chatGeneratingCubit.setGenerating(false);
+    _chatDraftThinkingCubit.clear();
+    _chatToolWaitingCubit.clear();
   }
 }

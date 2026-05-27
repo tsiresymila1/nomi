@@ -1,18 +1,24 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
-import 'package:gena/features/workspace/data/providers/workspace_rag_core_provider.dart';
+import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 
 class WorkspaceRagIngestionQueue {
-  WorkspaceRagIngestionQueue(this.ref);
+  WorkspaceRagIngestionQueue({
+    required db.GenaDatabase database,
+    required WorkspaceDocumentParser parser,
+    required WorkspaceRagVectorStore vectorStore,
+  }) : _database = database,
+       _parser = parser,
+       _vectorStore = vectorStore;
 
-  final Ref ref;
+  final db.GenaDatabase _database;
+  final WorkspaceDocumentParser _parser;
+  final WorkspaceRagVectorStore _vectorStore;
 
   final List<int> _queue = <int>[];
   final Set<int> _queuedSet = <int>{};
@@ -26,9 +32,8 @@ class WorkspaceRagIngestionQueue {
   }
 
   Future<void> resumePending() async {
-    final database = ref.read(genaDatabaseProvider);
     final rows =
-        await (database.select(database.workspaceDocuments)..where(
+        await (_database.select(_database.workspaceDocuments)..where(
               (t) => t.ingestionStatus.isIn(const ['queued', 'processing']),
             ))
             .get();
@@ -59,11 +64,8 @@ class WorkspaceRagIngestionQueue {
   }
 
   Future<void> _processDocument(int documentId) async {
-    final database = ref.read(genaDatabaseProvider);
-    final parser = ref.read(workspaceDocumentParserProvider);
-
     final row =
-        await (database.select(database.workspaceDocuments)
+        await (_database.select(_database.workspaceDocuments)
               ..where((t) => t.id.equals(documentId))
               ..limit(1))
             .getSingleOrNull();
@@ -76,13 +78,13 @@ class WorkspaceRagIngestionQueue {
     );
 
     try {
-      final parsed = await parser.parseStoredSource(
+      final parsed = await _parser.parseStoredSource(
         sourcePath: row.sourcePath,
         sourceType: row.sourceType,
       );
 
-      await (database.update(
-        database.workspaceDocuments,
+      await (_database.update(
+        _database.workspaceDocuments,
       )..where((t) => t.id.equals(documentId))).write(
         db.WorkspaceDocumentsCompanion(
           content: Value(parsed.content),
@@ -92,16 +94,16 @@ class WorkspaceRagIngestionQueue {
         ),
       );
       await _rebuildReadyIndex();
-    } catch (e, stackTrace) {
+    } catch (error, stackTrace) {
       logger.e(
         'Workspace RAG ingestion failed for document=$documentId',
-        error: e,
+        error: error,
         stackTrace: stackTrace,
       );
       await _setStatus(
         documentId,
         WorkspaceDocumentIngestionStatus.failed,
-        error: e.toString(),
+        error: error.toString(),
       );
       await _rebuildReadyIndex();
     }
@@ -112,9 +114,8 @@ class WorkspaceRagIngestionQueue {
     WorkspaceDocumentIngestionStatus status, {
     String? error,
   }) async {
-    final database = ref.read(genaDatabaseProvider);
-    await (database.update(
-      database.workspaceDocuments,
+    await (_database.update(
+      _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).write(
       db.WorkspaceDocumentsCompanion(
         ingestionStatus: Value(status.value),
@@ -124,12 +125,8 @@ class WorkspaceRagIngestionQueue {
   }
 
   Future<void> _rebuildReadyIndex() async {
-    final database = ref.read(genaDatabaseProvider);
-    final parser = ref.read(workspaceDocumentParserProvider);
-    final vectorStore = ref.read(workspaceRagVectorStoreProvider);
-
     final rows =
-        await (database.select(database.workspaceDocuments)
+        await (_database.select(_database.workspaceDocuments)
               ..where(
                 (t) => t.ingestionStatus.equals(
                   WorkspaceDocumentIngestionStatus.ready.value,
@@ -146,11 +143,11 @@ class WorkspaceRagIngestionQueue {
             documentId: row.id,
             sourceType: row.sourceType,
             name: row.name,
-            chunks: parser.splitText(row.content),
+            chunks: _parser.splitText(row.content),
           ),
         )
         .toList(growable: false);
 
-    await vectorStore.rebuildIndex(docs);
+    await _vectorStore.rebuildIndex(docs);
   }
 }

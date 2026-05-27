@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
 import 'package:gena/features/chat/data/services/chat_thread_execution_service.dart';
@@ -17,7 +16,7 @@ const String _threadTitleSystemInstruction =
     'Return only the title text.';
 
 void scheduleThreadTitleUpdate({
-  required Ref ref,
+  required ChatSessionController sessionController,
   required db.GenaDatabase database,
   required int chatId,
   required String messageText,
@@ -30,7 +29,7 @@ void scheduleThreadTitleUpdate({
     messageText: messageText,
     hasImage: hasImage,
     titleGenerator: (text, {required hasImage}) => _generateAiThreadTitle(
-      ref: ref,
+      sessionController: sessionController,
       activeModel: activeModel,
       messageText: text,
       hasImage: hasImage,
@@ -39,7 +38,7 @@ void scheduleThreadTitleUpdate({
 }
 
 Future<String?> _generateAiThreadTitle({
-  required Ref ref,
+  required ChatSessionController sessionController,
   required ModelInfo activeModel,
   required String messageText,
   required bool hasImage,
@@ -60,7 +59,7 @@ Future<String?> _generateAiThreadTitle({
     }
 
     return await _generateLocalThreadTitle(
-      ref: ref,
+      sessionController: sessionController,
       messageText: content,
       hasImage: hasImage,
     ).timeout(const Duration(seconds: 5));
@@ -74,10 +73,7 @@ Future<String?> _generateRemoteThreadTitle({
   required String messageText,
   required bool hasImage,
 }) async {
-  final userPrompt = _buildTitlePrompt(
-    messageText: messageText,
-    hasImage: hasImage,
-  );
+  final userPrompt = _buildTitlePrompt(messageText: messageText, hasImage: hasImage);
   final result = await runRemoteChatTurnStreamed(
     model: model,
     messages: [
@@ -90,11 +86,11 @@ Future<String?> _generateRemoteThreadTitle({
 }
 
 Future<String?> _generateLocalThreadTitle({
-  required Ref ref,
+  required ChatSessionController sessionController,
   required String messageText,
   required bool hasImage,
 }) async {
-  final runtime = await ref.read(activeGemmaModelRuntimeProvider.future);
+  final runtime = await sessionController.getRuntime();
   if (runtime == null) return null;
 
   final session = await runtime.model.createSession(

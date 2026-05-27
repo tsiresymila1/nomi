@@ -1,21 +1,28 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/core/database/gena_provider.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
-import 'package:gena/features/workspace/data/providers/workspace_rag_core_provider.dart';
+import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_queue.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 
-final workspaceRagActionsProvider = Provider<WorkspaceRagActions>(
-  (ref) => WorkspaceRagActions(ref),
-);
-
 class WorkspaceRagActions {
-  final Ref ref;
-  WorkspaceRagActions(this.ref);
+  WorkspaceRagActions({
+    required db.GenaDatabase database,
+    required WorkspaceDocumentParser parser,
+    required WorkspaceRagIngestionQueue ingestionQueue,
+    required WorkspaceRagVectorStore vectorStore,
+  }) : _database = database,
+       _parser = parser,
+       _ingestionQueue = ingestionQueue,
+       _vectorStore = vectorStore;
+
+  final db.GenaDatabase _database;
+  final WorkspaceDocumentParser _parser;
+  final WorkspaceRagIngestionQueue _ingestionQueue;
+  final WorkspaceRagVectorStore _vectorStore;
 
   Future<void> importDocument({
     required String workspaceId,
@@ -26,38 +33,32 @@ class WorkspaceRagActions {
       throw const FormatException('Invalid workspace id');
     }
 
-    final parser = ref.read(workspaceDocumentParserProvider);
-    final database = ref.read(genaDatabaseProvider);
-
-    final prepared = await parser.prepareSource(
+    final prepared = await _parser.prepareSource(
       workspaceId: workspaceId,
       rawPath: rawPath,
     );
 
-    final insertedId = await database
-        .into(database.workspaceDocuments)
-        .insert(
-          db.WorkspaceDocumentsCompanion.insert(
-            workspace: parsedWorkspaceId,
-            name: prepared.name,
-            sourceType: prepared.sourceType,
-            sourcePath: prepared.sourcePath,
-            content: '',
-            ingestionStatus: Value(
-              WorkspaceDocumentIngestionStatus.queued.value,
-            ),
-            ingestionError: const Value(null),
-            chunkCount: const Value(0),
-          ),
-        );
+    final insertedId = await _database.into(_database.workspaceDocuments).insert(
+      db.WorkspaceDocumentsCompanion.insert(
+        workspace: parsedWorkspaceId,
+        name: prepared.name,
+        sourceType: prepared.sourceType,
+        sourcePath: prepared.sourcePath,
+        content: '',
+        ingestionStatus: Value(
+          WorkspaceDocumentIngestionStatus.queued.value,
+        ),
+        ingestionError: const Value(null),
+        chunkCount: const Value(0),
+      ),
+    );
 
-    await ref.read(workspaceRagIngestionQueueProvider).enqueue(insertedId);
+    await _ingestionQueue.enqueue(insertedId);
   }
 
   Future<void> retryDocumentIngestion(int documentId) async {
-    final database = ref.read(genaDatabaseProvider);
-    await (database.update(
-      database.workspaceDocuments,
+    await (_database.update(
+      _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).write(
       db.WorkspaceDocumentsCompanion(
         ingestionStatus: Value(WorkspaceDocumentIngestionStatus.queued.value),
@@ -65,21 +66,19 @@ class WorkspaceRagActions {
       ),
     );
 
-    await ref.read(workspaceRagIngestionQueueProvider).enqueue(documentId);
+    await _ingestionQueue.enqueue(documentId);
   }
 
   Future<void> deleteDocument(int documentId) async {
-    final database = ref.read(genaDatabaseProvider);
-
     final row =
-        await (database.select(database.workspaceDocuments)
+        await (_database.select(_database.workspaceDocuments)
               ..where((t) => t.id.equals(documentId))
               ..limit(1))
             .getSingleOrNull();
     if (row == null) return;
 
-    await (database.delete(
-      database.workspaceDocuments,
+    await (_database.delete(
+      _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).go();
 
     try {
@@ -95,12 +94,8 @@ class WorkspaceRagActions {
   }
 
   Future<void> rebuildAllDocumentsIndex() async {
-    final database = ref.read(genaDatabaseProvider);
-    final parser = ref.read(workspaceDocumentParserProvider);
-    final vectorStore = ref.read(workspaceRagVectorStoreProvider);
-
     final rows =
-        await (database.select(database.workspaceDocuments)
+        await (_database.select(_database.workspaceDocuments)
               ..where(
                 (t) => t.ingestionStatus.equals(
                   WorkspaceDocumentIngestionStatus.ready.value,
@@ -117,12 +112,12 @@ class WorkspaceRagActions {
             documentId: row.id,
             sourceType: row.sourceType,
             name: row.name,
-            chunks: parser.splitText(row.content),
+            chunks: _parser.splitText(row.content),
           ),
         )
         .toList(growable: false);
 
-    await vectorStore.rebuildIndex(docs);
+    await _vectorStore.rebuildIndex(docs);
   }
 
   Future<Map<String, dynamic>> runRagTool({
@@ -131,7 +126,7 @@ class WorkspaceRagActions {
     int topK = 4,
     double threshold = 0.15,
   }) async {
-    ref.read(workspaceRagIngestionBootstrapProvider);
+    await _ingestionQueue.resumePending();
 
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -151,9 +146,8 @@ class WorkspaceRagActions {
       };
     }
 
-    final database = ref.read(genaDatabaseProvider);
     final workspace =
-        await (database.select(database.workspaces)
+        await (_database.select(_database.workspaces)
               ..where((t) => t.id.equals(parsedWorkspaceId))
               ..limit(1))
             .getSingleOrNull();
@@ -173,7 +167,7 @@ class WorkspaceRagActions {
     }
 
     final readyCount =
-        await (database.select(database.workspaceDocuments)..where(
+        await (_database.select(_database.workspaceDocuments)..where(
               (t) =>
                   t.workspace.equals(parsedWorkspaceId) &
                   t.ingestionStatus.equals(
@@ -193,8 +187,7 @@ class WorkspaceRagActions {
     }
 
     try {
-      final vectorStore = ref.read(workspaceRagVectorStoreProvider);
-      final results = await vectorStore.searchWorkspace(
+      final results = await _vectorStore.searchWorkspace(
         workspaceId: workspaceId,
         query: trimmed,
         topK: topK,
@@ -214,12 +207,12 @@ class WorkspaceRagActions {
             )
             .toList(growable: false),
       };
-    } catch (e) {
-      logger.w('workspace_rag_search tool failed: $e');
+    } catch (error) {
+      logger.w('workspace_rag_search tool failed: $error');
       return <String, dynamic>{
         'status': 'error',
         'error': 'rag_search_failed',
-        'message': e.toString(),
+        'message': error.toString(),
       };
     }
   }
@@ -228,7 +221,7 @@ class WorkspaceRagActions {
     required String workspaceId,
     required String userPrompt,
   }) async {
-    ref.read(workspaceRagIngestionBootstrapProvider);
+    await _ingestionQueue.resumePending();
 
     final trimmedPrompt = userPrompt.trim();
     if (trimmedPrompt.isEmpty) return userPrompt;
@@ -236,9 +229,8 @@ class WorkspaceRagActions {
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) return userPrompt;
 
-    final database = ref.read(genaDatabaseProvider);
     final workspace =
-        await (database.select(database.workspaces)
+        await (_database.select(_database.workspaces)
               ..where((t) => t.id.equals(parsedWorkspaceId))
               ..limit(1))
             .getSingleOrNull();
@@ -247,8 +239,7 @@ class WorkspaceRagActions {
     }
 
     try {
-      final vectorStore = ref.read(workspaceRagVectorStoreProvider);
-      final results = await vectorStore.searchWorkspace(
+      final results = await _vectorStore.searchWorkspace(
         workspaceId: workspaceId,
         query: trimmedPrompt,
       );
@@ -266,14 +257,14 @@ class WorkspaceRagActions {
         'Use the workspace knowledge below only when it is relevant to the user request.',
       );
       buffer.writeln('If it is unrelated, ignore it and answer normally.');
-      for (var i = 0; i < snippets.length; i++) {
-        buffer.writeln('[$i] ${snippets[i]}');
+      for (var index = 0; index < snippets.length; index++) {
+        buffer.writeln('[$index] ${snippets[index]}');
       }
       buffer.writeln();
       buffer.writeln('User request: $trimmedPrompt');
       return buffer.toString();
-    } catch (e) {
-      logger.w('RAG search failed, falling back to raw prompt: $e');
+    } catch (error) {
+      logger.w('RAG search failed, falling back to raw prompt: $error');
       return userPrompt;
     }
   }

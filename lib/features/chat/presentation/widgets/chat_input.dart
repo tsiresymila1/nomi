@@ -1,19 +1,23 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/providers/chat_provider.dart';
+import 'package:gena/features/chat/data/cubits/chat_input_cubit.dart';
+import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-class ChatInput extends ConsumerStatefulWidget {
+class ChatInput extends StatefulWidget {
   const ChatInput({super.key});
 
   @override
-  ConsumerState<ChatInput> createState() => _ChatInputState();
+  State<ChatInput> createState() => _ChatInputState();
 }
 
-class _ChatInputState extends ConsumerState<ChatInput> {
+class _ChatInputState extends State<ChatInput> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _wasKeyboardVisible = false;
@@ -48,11 +52,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _sendMessage() async {
     final text = _controller.text;
     _controller.clear();
-    await ref.read(chatInputControllerProvider.notifier).sendMessage(text);
+    await sl<ChatInputCubit>().sendMessage(text);
   }
 
   Future<void> _stopGeneration() async {
-    await ref.read(chatInputControllerProvider.notifier).stopGeneration();
+    await sl<ChatInputCubit>().stopGeneration();
   }
 
   Future<void> _openAttachmentMenu({
@@ -61,7 +65,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     required bool hasSelectedImage,
   }) async {
     if (hasSelectedImage) {
-      ref.read(chatInputControllerProvider.notifier).clearSelectedImage();
+      sl<ChatInputCubit>().clearSelectedImage();
       return;
     }
 
@@ -93,9 +97,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
 
     if (selectedSource == null) return;
-    await ref
-        .read(chatInputControllerProvider.notifier)
-        .pickImage(source: selectedSource);
+    await sl<ChatInputCubit>().pickImage(source: selectedSource);
   }
 
   List<_AttachmentOption> _buildAttachmentOptions({
@@ -121,22 +123,57 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final isGenerating = ref.watch(chatGeneratingProvider);
-    final inputState = ref.watch(chatInputControllerProvider);
-    final activeModel = ref.watch(activeModelInfoProvider);
-    final canAttachImage = activeModel?.supportImage ?? false;
-    final canRecordAudio = activeModel?.supportAudio ?? false;
-    final hasSelectedImage = inputState.selectedImagePath != null;
-    final hasSendableContent = _hasTypedContent || hasSelectedImage;
-    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    if (_wasKeyboardVisible && !keyboardVisible && _focusNode.hasFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _focusNode.unfocus();
-      });
-    }
-    _wasKeyboardVisible = keyboardVisible;
+    final colorScheme = Theme.of(context).colorScheme;
 
+    return BlocBuilder<ChatGeneratingCubit, bool>(
+      builder: (context, isGenerating) {
+        return BlocBuilder<ChatInputCubit, ChatInputState>(
+          builder: (context, inputState) {
+            return StreamBuilder<ModelInfo?>(
+              stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
+              builder: (context, activeModelSnapshot) {
+                final activeModel = activeModelSnapshot.data;
+                final canAttachImage = activeModel?.supportImage ?? false;
+                final canRecordAudio = activeModel?.supportAudio ?? false;
+                final hasSelectedImage = inputState.selectedImagePath != null;
+                final hasSendableContent = _hasTypedContent || hasSelectedImage;
+                final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+                if (_wasKeyboardVisible && !keyboardVisible && _focusNode.hasFocus) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _focusNode.unfocus();
+                  });
+                }
+                _wasKeyboardVisible = keyboardVisible;
+
+                return _buildInputField(
+                  context: context,
+                  colorScheme: colorScheme,
+                  isGenerating: isGenerating,
+                  inputState: inputState,
+                  canAttachImage: canAttachImage,
+                  canRecordAudio: canRecordAudio,
+                  hasSelectedImage: hasSelectedImage,
+                  hasSendableContent: hasSendableContent,
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildInputField({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required bool isGenerating,
+    required ChatInputState inputState,
+    required bool canAttachImage,
+    required bool canRecordAudio,
+    required bool hasSelectedImage,
+    required bool hasSendableContent,
+  }) {
     Widget suffixActionButton({
       required dynamic icon,
       required VoidCallback? onPressed,
@@ -153,8 +190,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         splashRadius: 16,
       );
     }
-
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -191,7 +226,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
-                      // border: Border.all(color: colorScheme.outline)
                       color: colorScheme.surfaceContainerHigh,
                     ),
                     child: Column(
@@ -224,12 +258,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                               colorScheme.surfaceContainerHigh,
                                         ),
                                         onTap: () {
-                                          ref
-                                              .read(
-                                                chatInputControllerProvider
-                                                    .notifier,
-                                              )
-                                              .clearSelectedImage();
+                                          sl<ChatInputCubit>().clearSelectedImage();
                                         },
                                       ),
                                     ),

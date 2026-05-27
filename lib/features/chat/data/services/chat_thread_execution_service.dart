@@ -11,7 +11,6 @@ import 'package:gena/features/chat/data/services/chat_thread_streaming_service.d
 import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
-import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
 import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
 
@@ -147,7 +146,7 @@ Future<void> generateAssistantResponse({
       try {
         final activeWorkspace = ref.read(activeWorkspaceProvider);
         final workspaceId = activeWorkspace?.id;
-        final nativeToolAllowed = _isNativeToolAllowed(
+        final nativeToolAllowed = isNativeToolAllowed(
           workspace: activeWorkspace,
           toolName: call.name,
         );
@@ -498,17 +497,3 @@ String? _normalizeGeneratedThreadTitle(String? raw) {
   return normalized;
 }
 
-bool _isNativeToolAllowed({
-  required WorkspaceEntity? workspace,
-  required String toolName,
-}) {
-  if (workspace == null) return false;
-  if (!workspace.nativeToolsEnabled) return false;
-  return switch (toolName) {
-    nativeOpenUrlToolName => workspace.nativeOpenUrlEnabled,
-    nativeOpenAppToolName => workspace.nativeOpenAppEnabled,
-    nativeSendEmailToolName => workspace.nativeSendEmailEnabled,
-    nativeFlashlightToolName => workspace.nativeFlashlightEnabled,
-    _ => true,
-  };
-}

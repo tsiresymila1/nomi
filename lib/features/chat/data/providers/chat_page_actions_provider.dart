@@ -117,6 +117,7 @@ class ChatPageActions {
 
   Future<void> _setModelAsActive(int modelId) async {
     await ref.read(selectedModelIdProvider.notifier).selectModel(modelId);
+    ref.invalidate(activeModelInfoProvider);
     ref.invalidate(activeGemmaModelRuntimeProvider);
     ref.invalidate(activeGemmaChatProvider);
   }

@@ -10,6 +10,7 @@ import 'package:gena/features/chat/presentation/widgets/chat_app_bar.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_drawer.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_view.dart';
+import 'package:gena/features/chat/presentation/widgets/native_action_call_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
 
@@ -38,63 +39,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       isDismissible: false,
       enableDrag: false,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              16 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Approve Native Action',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'The assistant requests action: ${_toolLabel(request.toolName)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    request.args.isEmpty
-                        ? 'No arguments'
-                        : ref
-                              .read(nativeToolActionsProvider)
-                              .formatArgsForDisplay(request.args),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Reject'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Approve'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+        return NativeActionCallSheet(request: request);
       },
     );
 
@@ -108,61 +53,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _lastNativeRequestId = null;
   }
 
-  String _toolLabel(String toolName) {
-    return switch (toolName) {
-      nativeOpenUrlToolName => 'Open URL',
-      nativeOpenAppToolName => 'Open App',
-      nativePhoneCallToolName => 'Direct Phone Call',
-      nativeReadContactsToolName => 'Read Contacts',
-      nativeSearchContactsToolName => 'Search Contacts',
-      nativeCreateContactToolName => 'Create Contact',
-      nativeSendSmsToolName => 'Send SMS',
-      nativeSendEmailToolName => 'Send Email',
-      nativeFlashlightToolName => 'Flashlight',
-      _ => toolName,
-    };
+  bool _hasSessionConfigChange(ModelInfo previous, ModelInfo next) {
+    return previous.provider != next.provider ||
+        previous.modelType != next.modelType ||
+        previous.supportImage != next.supportImage ||
+        previous.supportAudio != next.supportAudio ||
+        previous.supportsFunctionCalls != next.supportsFunctionCalls ||
+        previous.isThinking != next.isThinking ||
+        previous.temperature != next.temperature ||
+        previous.topK != next.topK ||
+        previous.topP != next.topP ||
+        previous.maxTokens != next.maxTokens ||
+        previous.tokenBuffer != next.tokenBuffer ||
+        previous.randomSeed != next.randomSeed ||
+        previous.preferredBackend != next.preferredBackend ||
+        previous.sourceType != next.sourceType ||
+        previous.source != next.source ||
+        previous.modelId != next.modelId ||
+        previous.apiUrl != next.apiUrl ||
+        previous.apiToken != next.apiToken;
+  }
+
+
+  Widget reveal(Widget child, {int delayMs = 0}) {
+    return child
+        .animate()
+        .fade(duration: 500.ms, delay: delayMs.ms)
+        .scale(
+          delay: (delayMs + 120).ms,
+          duration: 260.ms,
+          begin: const Offset(0.98, 0.98),
+          end: const Offset(1, 1),
+          curve: Curves.easeOutCubic,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<NativeToolExecutionState>(nativeToolExecutionProvider, (
-      previous,
-      next,
-    ) {
-      final request = next.currentRequest;
-      if (request == null) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _showNativeActionSheet(context, request);
-      });
-    });
-
-    ref.listen<ModelInfo?>(activeModelInfoProvider, (previous, next) {
-      if (previous == null || next == null) return;
-      if (previous.id != next.id) return;
-
-      if (!_hasSessionConfigChange(previous, next)) return;
-
-      logger.i(
-        'Active model config changed for id=${next.id} (${next.name}). Reloading runtime/chat session.',
-      );
-      ref.invalidate(activeGemmaModelRuntimeProvider);
-      ref.invalidate(activeGemmaChatProvider);
-    });
-
-    Widget reveal(Widget child, {int delayMs = 0}) {
-      return child
-          .animate()
-          .fade(duration: 500.ms, delay: delayMs.ms)
-          .scale(
-            delay: (delayMs + 120).ms,
-            duration: 260.ms,
-            begin: const Offset(0.98, 0.98),
-            end: const Offset(1, 1),
-            curve: Curves.easeOutCubic,
-          );
-    }
-
     final selectedChat = ref.watch(selectedChatIdProvider);
     final activeModel = ref.watch(activeModelInfoProvider);
     final activeRuntime = ref.watch(activeGemmaModelRuntimeProvider);
@@ -201,6 +128,32 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
             child: const SafeArea(child: ChatInput()),
           );
+
+    // listener for tool call
+    ref.listen<NativeToolExecutionState>(nativeToolExecutionProvider, (
+        previous,
+        next,
+        ) {
+      final request = next.currentRequest;
+      if (request == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showNativeActionSheet(context, request);
+      });
+    });
+    // listen for workspace config change
+    ref.listen<ModelInfo?>(activeModelInfoProvider, (previous, next) {
+      if (previous == null || next == null) return;
+      if (previous.id != next.id) return;
+
+      if (!_hasSessionConfigChange(previous, next)) return;
+
+      logger.i(
+        'Active model config changed for id=${next.id} (${next.name}). Reloading runtime/chat session.',
+      );
+      ref.invalidate(activeGemmaModelRuntimeProvider);
+      ref.invalidate(activeGemmaChatProvider);
+    });
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -249,27 +202,35 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       '${isSwitchingModel}_${selectedChat ?? "none"}_${activeModel?.id ?? "nomodel"}',
                     ),
                     child: Visibility(
-                      visible: isModelLoading && selectedChat != null && activeModel != null,
+                      visible:
+                          isModelLoading &&
+                          selectedChat != null &&
+                          activeModel != null,
                       replacement: body,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 4,
-                        children: [
-                          SizedBox(
-                            width: 24,
-                            height: 12,
-                            child: SpinKitThreeBounce(
-                              size: 10,
-                              color: coloScheme.primary,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          spacing: 4,
+                          children: [
+                            SizedBox(
+                              width: 24,
+                              height: 12,
+                              child: SpinKitThreeBounce(
+                                size: 10,
+                                color: coloScheme.primary,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Preparing model session...',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Text(
+                              isModelLoading
+                                  ? 'Loading model...'
+                                  : 'No active chat',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -280,26 +241,5 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ],
       ),
     );
-  }
-
-  bool _hasSessionConfigChange(ModelInfo previous, ModelInfo next) {
-    return previous.provider != next.provider ||
-        previous.modelType != next.modelType ||
-        previous.supportImage != next.supportImage ||
-        previous.supportAudio != next.supportAudio ||
-        previous.supportsFunctionCalls != next.supportsFunctionCalls ||
-        previous.isThinking != next.isThinking ||
-        previous.temperature != next.temperature ||
-        previous.topK != next.topK ||
-        previous.topP != next.topP ||
-        previous.maxTokens != next.maxTokens ||
-        previous.tokenBuffer != next.tokenBuffer ||
-        previous.randomSeed != next.randomSeed ||
-        previous.preferredBackend != next.preferredBackend ||
-        previous.sourceType != next.sourceType ||
-        previous.source != next.source ||
-        previous.modelId != next.modelId ||
-        previous.apiUrl != next.apiUrl ||
-        previous.apiToken != next.apiToken;
   }
 }

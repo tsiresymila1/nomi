@@ -1,8 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/logger.dart';
+import 'package:gena/features/chat/data/providers/chat_ui_state_provider.dart';
+import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
+import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
+import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
+import 'package:gena/features/workspace/data/providers/workspace_rag_actions_provider.dart';
 import 'package:openai_dart/openai_dart.dart';
+
 
 class RemoteGenerationCancelled implements Exception {
   const RemoteGenerationCancelled();
@@ -62,9 +73,7 @@ Future<RemoteChatTurnResult> runRemoteChatTurnStreamed({
     );
 
     await for (final event in stream) {
-      print("========================");
-      print("=== ${event.textDelta} ");
-      print("========================");
+      logger.d('Remote delta: ${event.textDelta}');
       accumulator.add(event);
       final delta = event.textDelta;
       if (delta == null || delta.isEmpty) continue;
@@ -86,7 +95,7 @@ Future<RemoteChatTurnResult> runRemoteChatTurnStreamed({
   if (generatedText.trim().isEmpty && toolCalls.isEmpty) {
     throw StateError('Remote API returned neither text nor tool calls.');
   }
-  print('Generated Text: $generatedText');
+  logger.i('Generated Text: $generatedText');
 
   return RemoteChatTurnResult(
     generatedText: generatedText,
@@ -166,3 +175,195 @@ String _normalizeBaseUrl(String input) {
 
   return normalized;
 }
+
+Future<void> generateRemoteAssistantResponse({
+  required Ref ref,
+  required db.GenaDatabase database,
+  required int chatId,
+  required ModelInfo activeModel,
+  required Future<void> abortTrigger,
+  required bool Function() isCancelled,
+}) async {
+  final activeWorkspace = ref.read(activeWorkspaceProvider);
+  final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
+  final systemInstruction = buildSystemInstruction(basePrompt);
+  final remoteTools = buildRemoteChatTools(
+    supportsFunctionCalls: activeModel.supportsFunctionCalls,
+    enableRagTool: activeWorkspace?.ragEnabled ?? false,
+    enableNativeOpenUrlTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenUrlEnabled ?? false),
+    enableNativeOpenAppTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativePhoneCallTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeContactsTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeSmsTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeSendEmailTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeSendEmailEnabled ?? false),
+    enableNativeFlashlightTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeFlashlightEnabled ?? false),
+  );
+
+  final storedMessages =
+      await (database.select(database.messages)
+            ..where((t) => t.chat.equals(chatId))
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+          .get();
+
+  if (isCancelled()) return;
+
+  final remoteMessages = buildRemoteMessagesFromStoredMessages(
+    systemInstruction: systemInstruction,
+    storedMessages: storedMessages,
+  );
+
+  final responseBuffer = StringBuffer();
+  var toolTurns = 0;
+
+  while (true) {
+    if (isCancelled()) return;
+
+    final turnResult = await runRemoteChatTurnStreamed(
+      model: activeModel,
+      messages: remoteMessages,
+      tools: remoteTools,
+      abortTrigger: abortTrigger,
+      onTextDelta: (delta) {
+        responseBuffer.write(delta);
+        ref
+            .read(chatDraftResponseProvider.notifier)
+            .setDraft(responseBuffer.toString());
+      },
+    );
+
+    if (!turnResult.hasToolCalls) {
+      break;
+    }
+
+    if (toolTurns++ >= 4) {
+      if (responseBuffer.isNotEmpty) responseBuffer.write('\n\n');
+      responseBuffer.write(
+        'I could not complete the request because too many consecutive tool calls were generated.',
+      );
+      ref
+          .read(chatDraftResponseProvider.notifier)
+          .setDraft(responseBuffer.toString());
+      break;
+    }
+
+    remoteMessages.add(
+      ChatMessage.assistant(
+        content: null,
+        toolCalls: turnResult.toolCalls,
+      ),
+    );
+
+    for (final call in turnResult.toolCalls) {
+      if (isCancelled()) return;
+      ref
+          .read(chatToolWaitingProvider.notifier)
+          .setWaitingTool(call.function.name);
+      try {
+        final parsedArgs = _decodeToolArguments(call.function.arguments);
+        final toolResult = await executeChatToolByName(
+          call.function.name,
+          parsedArgs,
+          ragToolHandler: activeWorkspace == null
+              ? null
+              : (query, {topK = 4, threshold = 0.15}) => ref
+                    .read(workspaceRagActionsProvider)
+                    .runRagTool(
+                      workspaceId: activeWorkspace.id,
+                      query: query,
+                      topK: topK,
+                      threshold: threshold,
+                    ),
+          nativeToolHandler:
+              !isNativeToolAllowed(
+                workspace: activeWorkspace,
+                toolName: call.function.name,
+              )
+              ? null
+              : (toolName, args) => ref
+                    .read(nativeToolActionsProvider)
+                    .requestAndExecute(toolName: toolName, args: args),
+        );
+
+        await database
+            .into(database.messages)
+            .insert(
+              db.MessagesCompanion.insert(
+                chat: chatId,
+                role: 'assistant',
+                kind: const Value('tool_trace'),
+                content: _formatRemoteToolTraceMessage(call, toolResult),
+              ),
+            );
+
+        remoteMessages.add(
+          ChatMessage.tool(
+            toolCallId: call.id,
+            content: jsonEncode(toolResult),
+          ),
+        );
+      } finally {
+        ref.read(chatToolWaitingProvider.notifier).clear();
+      }
+    }
+  }
+
+  final responseText = responseBuffer.toString().trim();
+  if (responseText.isEmpty) {
+    throw StateError(
+      'Remote API returned no final assistant text after tool execution.',
+    );
+  }
+
+  if (isCancelled()) return;
+
+  await database
+      .into(database.messages)
+      .insert(
+        db.MessagesCompanion.insert(
+          chat: chatId,
+          role: 'assistant',
+          kind: const Value('text'),
+          content: responseText,
+        ),
+      );
+}
+
+Map<String, dynamic> _decodeToolArguments(String rawArguments) {
+  final decoded = jsonDecode(rawArguments);
+  if (decoded is Map<String, dynamic>) return decoded;
+  if (decoded is Map) {
+    return decoded.map((key, value) => MapEntry(key.toString(), value));
+  }
+  return <String, dynamic>{};
+}
+
+String _formatRemoteToolTraceMessage(
+  ToolCall call,
+  Map<String, dynamic> result,
+) {
+  final payload = <String, dynamic>{
+    'call': <String, dynamic>{
+      'id': call.id,
+      'name': call.function.name,
+      'args': call.function.arguments,
+    },
+    'result': result,
+  };
+  const encoder = JsonEncoder.withIndent('  ');
+  return 'Function trace\n${encoder.convert(payload)}';
+}
+

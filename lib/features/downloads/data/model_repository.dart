@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
@@ -46,7 +46,7 @@ final modelRepositoryProvider = StreamProvider<List<ModelInfo>>((ref) {
 });
 
 final modelInstallerProvider = FutureProvider<List<String>>((ref) async {
-  return await FlutterGemma.listInstalledModels();
+  return await gemma.FlutterGemma.listInstalledModels();
 });
 
 final defaultModelSeedingProvider = Provider<void>((ref) {
@@ -137,7 +137,7 @@ class DefaultModelSeeder {
               tokenBuffer: const Value(256),
               randomSeed: const Value(1),
               preferredBackend: Value(defaultModel.preferredBackend.name),
-              sourceType: 'network',
+              sourceType: 'file',
               source: defaultModel.sourceUrl,
             ),
           );

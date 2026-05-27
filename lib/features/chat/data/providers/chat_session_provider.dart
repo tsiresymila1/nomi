@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
@@ -49,8 +50,6 @@ class ActiveGemmaModelRuntime {
 final activeGemmaModelRuntimeProvider = FutureProvider<ActiveGemmaModelRuntime?>((
   ref,
 ) async {
-  var disposed = false;
-
   final activeModel = ref.watch(activeModelInfoProvider);
   if (activeModel == null || activeModel.provider != ModelProviderType.local) {
     logger.e('Runtime provider: no local active model, returning null.');
@@ -59,44 +58,25 @@ final activeGemmaModelRuntimeProvider = FutureProvider<ActiveGemmaModelRuntime?>
   logger.i(
     'Runtime provider: building for model id=${activeModel.id}, name=${activeModel.name}, thinking=${activeModel.isThinking}, temp=${activeModel.temperature}, topK=${activeModel.topK}, topP=${activeModel.topP}, maxTokens=${activeModel.maxTokens}, tokenBuffer=${activeModel.tokenBuffer}, backend=${activeModel.preferredBackend}',
   );
+  logger.i("-----------------Installing model---------------------");
   await _ensureLocalModelActive(activeModel);
-
+  logger.i("-----------------Installation done---------------------");
   final preferredBackend = _parsePreferredBackend(activeModel.preferredBackend);
-  final model = await (() async {
-    try {
-      return await getActiveModelWithBackendFallbacks(
-        maxTokens: activeModel.maxTokens,
-        preferredBackend: preferredBackend,
-        supportImage: activeModel.supportImage,
-        supportAudio: activeModel.supportAudio,
-      );
-    } catch (e) {
-      if (!isActiveModelUnavailableError(e)) rethrow;
-      logger.w(
-        'Runtime provider: active model became unavailable while building id=${activeModel.id}, name=${activeModel.name}. Returning null runtime.',
-      );
-      return null;
-    }
-  })();
-  if (model == null) return null;
-
+  final model =  await getActiveModelWithBackendFallbacks(
+    maxTokens: activeModel.maxTokens,
+    preferredBackend: preferredBackend,
+    supportImage: activeModel.supportImage,
+    supportAudio: activeModel.supportAudio,
+  );
+  logger.i(
+    'Runtime provider: ready for model id=${activeModel.id}, name=${activeModel.name}.',
+  );
   ref.onDispose(() {
     logger.i(
       'Runtime provider: disposing runtime for model id=${activeModel.id}, name=${activeModel.name}.',
     );
-    disposed = true;
     unawaited(model.close());
   });
-
-  if (disposed) {
-    logger.i('Runtime provider: disposed while loading runtime, closing.');
-    await model.close();
-    return null;
-  }
-
-  logger.i(
-    'Runtime provider: ready for model id=${activeModel.id}, name=${activeModel.name}.',
-  );
   return ActiveGemmaModelRuntime(
     model: model,
     supportImage: activeModel.supportImage,
@@ -138,16 +118,17 @@ final activeGemmaChatProvider = FutureProvider.autoDispose<GemmaChatSession?>((
     );
     return null;
   }
-  var runtime = modelRuntime;
   try {
     logger.i(
-      'Chat session provider: creating chat session for chat=$parsedChatId, modelType=${runtime.modelType.name}, thinking=${runtime.defaultIsThinking}, functions=${runtime.supportsFunctionCalls}',
+      'Chat session provider: creating chat session for chat=$parsedChatId, modelType=${modelRuntime.modelType.name}, thinking=${modelRuntime.defaultIsThinking}, functions=${modelRuntime.supportsFunctionCalls}',
     );
     final systemPrompt = activeWorkspace?.generalInstruction.trim() ?? '';
+    logger.i("Workspace prompts:: $activeWorkspace");
+    logger.i("Workspace:: $systemPrompt");
     final systemInstruction = buildSystemInstruction(systemPrompt);
-    final effectiveThinking = runtime.defaultIsThinking;
+    final effectiveThinking = modelRuntime.defaultIsThinking;
     final tools = buildChatTools(
-      supportsFunctionCalls: runtime.supportsFunctionCalls,
+      supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
       enableRagTool: activeWorkspace?.ragEnabled ?? false,
       enableNativeOpenUrlTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
@@ -172,36 +153,37 @@ final activeGemmaChatProvider = FutureProvider.autoDispose<GemmaChatSession?>((
           (activeWorkspace?.nativeFlashlightEnabled ?? false),
     );
 
-    final chat = await runtime.model.createChat(
-      temperature: runtime.temperature,
-      randomSeed: runtime.randomSeed,
-      topK: runtime.topK,
-      topP: runtime.topP,
-      tokenBuffer: runtime.tokenBuffer,
-      supportImage: runtime.supportImage,
-      supportAudio: runtime.supportAudio,
-      supportsFunctionCalls: runtime.supportsFunctionCalls,
+    final chat = await modelRuntime.model.createChat(
+      temperature: modelRuntime.temperature,
+      randomSeed: modelRuntime.randomSeed,
+      topK: modelRuntime.topK,
+      topP: modelRuntime.topP,
+      tokenBuffer: modelRuntime.tokenBuffer,
+      supportImage: modelRuntime.supportImage,
+      supportAudio: modelRuntime.supportAudio,
+      supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
       tools: tools,
       isThinking: effectiveThinking,
-      modelType: runtime.modelType,
+      modelType: modelRuntime.modelType,
       systemInstruction: systemInstruction.isEmpty ? null : systemInstruction,
     );
     logger.i('Chat session provider: ready for chat=$parsedChatId.');
+    logger.i("System instruction: $systemInstruction");
     await replayStoredMessages(
       database: database,
       chatId: parsedChatId,
       chat: chat,
     );
-    return GemmaChatSession(model: runtime.model, chat: chat);
+    return GemmaChatSession(model: modelRuntime.model, chat: chat);
   } catch (e) {
     logger.e(e);
-    logger.w(
-      'Chat session provider: model instance was closed while creating chat=$parsedChatId. Refreshing runtime and retrying once.',
-    );
-    ref.invalidate(activeGemmaModelRuntimeProvider);
-    final refreshedRuntime = await ref.read(
-      activeGemmaModelRuntimeProvider.future,
-    );
+    if (_isClosedModelError(e)) {
+      logger.w(
+        'Chat session provider: model instance was closed while creating chat=$parsedChatId. Refreshing runtime and retrying once.',
+      );
+      ref.invalidate(activeGemmaModelRuntimeProvider);
+      await ref.read(activeGemmaModelRuntimeProvider.future);
+    }
   }
   return null;
 });
@@ -230,7 +212,10 @@ Future<void> _ensureLocalModelActive(ModelInfo model) async {
     return;
   }
 
-  if (gemma.FlutterGemma.hasActiveModel()) return;
+  if (gemma.FlutterGemma.hasActiveModel()) {
+    logger.i("Already has active model ");
+    return ;
+  };
   logger.i(
     'Runtime provider: no active model in engine, activating "${model.name}".',
   );
@@ -254,7 +239,7 @@ bool _isSelectedModelActive(ModelInfo model) {
 
 Future<void> _activateCatalogModel(ModelInfo model) async {
   logger.i(
-    'Runtime provider: activating catalog model id=${model.id}, name=${model.name}, sourceType=${model.sourceType}.',
+    'Activating runtime :  id=${model.id}, name=${model.name}, sourceType=${model.sourceType}.',
   );
   final sourcePath = await resolveModelSourceForInstall(
     modelName: model.name,
@@ -269,6 +254,6 @@ Future<void> _activateCatalogModel(ModelInfo model) async {
   final builder = installer.fromFile(sourcePath);
   await builder.install();
   logger.i(
-    'Runtime provider: activation complete for model id=${model.id}, name=${model.name}.',
+    'Runtime activated : activation complete for model id=${model.id}, name=${model.name}.',
   );
 }

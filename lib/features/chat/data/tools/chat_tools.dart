@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
+import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
+
 
 const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
@@ -781,3 +783,24 @@ double _toDouble(Object? value, {required double fallback}) {
   if (value is int) return value.toDouble();
   return double.tryParse(value.toString()) ?? fallback;
 }
+
+bool isNativeToolAllowed({
+  required WorkspaceEntity? workspace,
+  required String toolName,
+}) {
+  if (workspace == null) return false;
+  if (!workspace.nativeToolsEnabled) return false;
+  return switch (toolName) {
+    nativeOpenUrlToolName => workspace.nativeOpenUrlEnabled,
+    nativeOpenAppToolName => workspace.nativeOpenAppEnabled,
+    nativePhoneCallToolName => workspace.nativeOpenAppEnabled,
+    nativeReadContactsToolName => workspace.nativeOpenAppEnabled,
+    nativeSearchContactsToolName => workspace.nativeOpenAppEnabled,
+    nativeCreateContactToolName => workspace.nativeOpenAppEnabled,
+    nativeSendSmsToolName => workspace.nativeOpenAppEnabled,
+    nativeSendEmailToolName => workspace.nativeSendEmailEnabled,
+    nativeFlashlightToolName => workspace.nativeFlashlightEnabled,
+    _ => true,
+  };
+}
+

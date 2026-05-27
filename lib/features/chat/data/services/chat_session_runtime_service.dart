@@ -1,6 +1,7 @@
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/setting/data/chat_model_settings.dart';
 
@@ -73,9 +74,9 @@ Future<gemma.InferenceModel> getActiveModelWithBackendFallbacks({
 
   addBackend(preferredBackend);
   addBackend(null);
-  addBackend(gemma.PreferredBackend.cpu);
-  addBackend(gemma.PreferredBackend.gpu);
   addBackend(gemma.PreferredBackend.npu);
+  addBackend(gemma.PreferredBackend.gpu);
+  addBackend(gemma.PreferredBackend.cpu);
 
   Object? lastError;
   for (final backend in backends) {
@@ -93,6 +94,8 @@ Future<gemma.InferenceModel> getActiveModelWithBackendFallbacks({
       }
       return model;
     } catch (e) {
+      logger.e(e, error: e);
+      await AppToast.show(e.toString(), type: AppToastType.error);
       if (isActiveModelUnavailableError(e)) {
         logger.w(
           'Backend attempt aborted (${backendName(backend)}): active model is unavailable.',

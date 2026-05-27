@@ -23,6 +23,7 @@ class SelectedWorkspaceIdNotifier extends Notifier<String?> {
   Future<void> _hydrateInitialSelection() async {
     if (_initialized) return;
     _initialized = true;
+    if (state != null) return;
 
     final database = ref.read(genaDatabaseProvider);
     final firstWorkspace =
@@ -31,12 +32,14 @@ class SelectedWorkspaceIdNotifier extends Notifier<String?> {
               ..limit(1))
             .getSingleOrNull();
 
+    if (state != null) return;
     if (firstWorkspace != null) {
       state = firstWorkspace.id.toString();
       return;
     }
 
     final createdWorkspaceId = await _createDefaultWorkspace();
+    if (state != null) return;
     state = createdWorkspaceId;
   }
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gena/core/database/gena_provider.dart';
@@ -98,7 +97,7 @@ final activeGemmaChatProvider = FutureProvider.autoDispose<GemmaChatSession?>((
   ref,
 ) async {
   final selectedChatId = ref.watch(selectedChatIdProvider);
-  final activeWorkspace = ref.watch(activeWorkspaceProvider);
+  final activeWorkspaceSnapshot = ref.watch(activeWorkspaceProvider);
   final database = ref.watch(genaDatabaseProvider);
 
   if (selectedChatId == null) {
@@ -119,6 +118,9 @@ final activeGemmaChatProvider = FutureProvider.autoDispose<GemmaChatSession?>((
     return null;
   }
   try {
+    final activeWorkspace =
+        activeWorkspaceSnapshot ??
+        await resolveActiveWorkspace(ref, database: database);
     logger.i(
       'Chat session provider: creating chat session for chat=$parsedChatId, modelType=${modelRuntime.modelType.name}, thinking=${modelRuntime.defaultIsThinking}, functions=${modelRuntime.supportsFunctionCalls}',
     );
@@ -214,8 +216,8 @@ Future<void> _ensureLocalModelActive(ModelInfo model) async {
 
   if (gemma.FlutterGemma.hasActiveModel()) {
     logger.i("Already has active model ");
-    return ;
-  };
+    return;
+  }
   logger.i(
     'Runtime provider: no active model in engine, activating "${model.name}".',
   );

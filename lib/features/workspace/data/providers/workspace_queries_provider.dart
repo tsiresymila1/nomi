@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/database/gena_provider.dart';
+import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
@@ -34,6 +36,8 @@ final workspaceListProvider = StreamProvider<List<WorkspaceEntity>>((ref) {
 final activeWorkspaceProvider = Provider<WorkspaceEntity?>((ref) {
   final selectedWorkspaceId = ref.watch(selectedWorkspaceIdProvider);
   final workspaces = ref.watch(workspaceListProvider).asData?.value;
+  logger.i(selectedWorkspaceId);
+  logger.i(workspaces);
   if (selectedWorkspaceId == null || workspaces == null) {
     return null;
   }
@@ -45,6 +49,48 @@ final activeWorkspaceProvider = Provider<WorkspaceEntity?>((ref) {
   }
   return null;
 });
+
+Future<WorkspaceEntity?> resolveActiveWorkspace(
+  Ref ref, {
+  db.GenaDatabase? database,
+}) async {
+  final selectedWorkspaceId = ref.read(selectedWorkspaceIdProvider);
+  if (selectedWorkspaceId == null) return null;
+
+  final loadedWorkspaces = ref.read(workspaceListProvider).asData?.value;
+  if (loadedWorkspaces != null) {
+    for (final workspace in loadedWorkspaces) {
+      if (workspace.id == selectedWorkspaceId) {
+        return workspace;
+      }
+    }
+  }
+
+  final parsedWorkspaceId = int.tryParse(selectedWorkspaceId);
+  if (parsedWorkspaceId == null) return null;
+
+  final db.GenaDatabase effectiveDatabase =
+      database ?? ref.read(genaDatabaseProvider);
+  final row =
+      await (effectiveDatabase.select(effectiveDatabase.workspaces)
+            ..where((t) => t.id.equals(parsedWorkspaceId))
+            ..limit(1))
+          .getSingleOrNull();
+  if (row == null) return null;
+
+  return WorkspaceEntity(
+    id: row.id.toString(),
+    name: row.name,
+    generalInstruction: row.generalInstruction,
+    ragEnabled: row.ragEnabled,
+    nativeToolsEnabled: row.nativeToolsEnabled,
+    nativeOpenUrlEnabled: row.nativeOpenUrlEnabled,
+    nativeOpenAppEnabled: row.nativeOpenAppEnabled,
+    nativeSendEmailEnabled: row.nativeSendEmailEnabled,
+    nativeFlashlightEnabled: row.nativeFlashlightEnabled,
+    createdAt: row.createdAt,
+  );
+}
 
 final workspaceChatGroupsProvider = StreamProvider<List<WorkspaceChatGroup>>((
   ref,

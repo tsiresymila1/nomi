@@ -56,11 +56,6 @@ class ChatThreadActions {
     _cancelGenerationSerial = null;
     _remoteAbortCompleter = null;
 
-    ref.read(chatGeneratingProvider.notifier).setGenerating(true);
-    ref.read(chatDraftResponseProvider.notifier).setDraft('');
-    ref.read(chatDraftThinkingProvider.notifier).clear();
-    ref.read(chatToolWaitingProvider.notifier).clear();
-
     try {
       final database = ref.read(genaDatabaseProvider);
       await storeUserMessage(
@@ -70,6 +65,10 @@ class ChatThreadActions {
         hasImage: hasImage,
         imagePath: normalizedImagePath,
       );
+      ref.read(chatGeneratingProvider.notifier).setGenerating(true);
+      ref.read(chatDraftResponseProvider.notifier).setDraft('');
+      ref.read(chatDraftThinkingProvider.notifier).clear();
+      ref.read(chatToolWaitingProvider.notifier).clear();
 
       if (activeModel.provider == ModelProviderType.remote) {
         final remoteAbortCompleter = Completer<void>();

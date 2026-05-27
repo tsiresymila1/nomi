@@ -144,7 +144,9 @@ Future<void> generateAssistantResponse({
       if (isCancelled?.call() ?? false) return;
       ref.read(chatToolWaitingProvider.notifier).setWaitingTool(call.name);
       try {
-        final activeWorkspace = ref.read(activeWorkspaceProvider);
+        final activeWorkspace =
+            ref.read(activeWorkspaceProvider) ??
+            await resolveActiveWorkspace(ref, database: database);
         final workspaceId = activeWorkspace?.id;
         final nativeToolAllowed = isNativeToolAllowed(
           workspace: activeWorkspace,
@@ -496,4 +498,3 @@ String? _normalizeGeneratedThreadTitle(String? raw) {
 
   return normalized;
 }
-

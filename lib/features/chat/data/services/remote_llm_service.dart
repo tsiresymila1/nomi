@@ -184,7 +184,9 @@ Future<void> generateRemoteAssistantResponse({
   required Future<void> abortTrigger,
   required bool Function() isCancelled,
 }) async {
-  final activeWorkspace = ref.read(activeWorkspaceProvider);
+  final activeWorkspace =
+      ref.read(activeWorkspaceProvider) ??
+      await resolveActiveWorkspace(ref, database: database);
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
   final systemInstruction = buildSystemInstruction(basePrompt);
   final remoteTools = buildRemoteChatTools(
@@ -366,4 +368,3 @@ String _formatRemoteToolTraceMessage(
   const encoder = JsonEncoder.withIndent('  ');
   return 'Function trace\n${encoder.convert(payload)}';
 }
-

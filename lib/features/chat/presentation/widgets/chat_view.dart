@@ -205,11 +205,21 @@ class _ChatViewState extends ConsumerState<ChatView> {
           itemBuilder: (context, index) {
             if (index < messages.length) {
               final message = messages[index];
+              if (message.role == 'user') {
+                return ChatBubble(
+                  key: ValueKey('chat-message-${message.id}'),
+                  message: message.content,
+                  isUser: true,
+                  kind: message.kind,
+                  mediaPath: message.mediaPath,
+                  isStreaming: false,
+                );
+              }
               final delayMs = (index * 45).clamp(0, 360);
               return ChatBubble(
                     key: ValueKey('chat-message-${message.id}'),
                     message: message.content,
-                    isUser: message.role == 'user',
+                    isUser: false,
                     kind: message.kind,
                     mediaPath: message.mediaPath,
                     isStreaming: false,

@@ -102,7 +102,19 @@ class ChatThreadActions {
           hasImage: hasImage,
           imagePath: normalizedImagePath,
         );
-        final session = await ref.read(activeGemmaChatProvider.future);
+        GemmaChatSession? session;
+        try {
+          session = await ref.read(activeGemmaChatProvider.future);
+        } catch (e, stackTrace) {
+          if (_cancelGenerationSerial == currentGeneration) {
+            return;
+          }
+          logger.w(
+            'Chat session became unavailable while preparing local generation: $e',
+            stackTrace: stackTrace,
+          );
+          return;
+        }
         if (session == null) {
           await AppToast.show(
             'Model is not ready yet. Please wait a moment and try again.',

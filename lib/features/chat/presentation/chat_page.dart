@@ -248,51 +248,35 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     key: ValueKey(
                       '${isSwitchingModel}_${selectedChat ?? "none"}_${activeModel?.id ?? "nomodel"}',
                     ),
-                    child: body,
+                    child: Visibility(
+                      visible: isModelLoading && selectedChat != null && activeModel != null,
+                      replacement: body,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 4,
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 12,
+                            child: SpinKitThreeBounce(
+                              size: 10,
+                              color: coloScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Preparing model session...',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          if (isModelLoading && selectedChat != null && activeModel != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              top: MediaQuery.of(context).padding.top + 8,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 12,
-                        child: SpinKitThreeBounce(
-                          size: 10,
-                          color: coloScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Preparing model session...',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

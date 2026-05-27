@@ -8,17 +8,18 @@ class AppToast {
     String message, {
     AppToastType type = AppToastType.info,
   }) {
-    final textColor = switch (type) {
+    final bgColor = switch (type) {
       AppToastType.success => Colors.green,
       AppToastType.error => Colors.red,
-      AppToastType.info => null,
+      AppToastType.info => Colors.white12,
     };
 
     return Fluttertoast.showToast(
       msg: message,
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
-      textColor: textColor,
+      textColor: Colors.white,
+      backgroundColor: bgColor
     );
   }
 }

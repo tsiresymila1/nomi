@@ -19,10 +19,7 @@ Future<gemma.InferenceModel?> loadActiveModelWithRecovery({
       supportAudio: supportAudio,
     );
   } catch (e) {
-    final message = e.toString();
-    final isRecoverable =
-        message.contains('Active model is no longer installed') ||
-        message.contains('No active inference model set');
+    final isRecoverable = isActiveModelUnavailableError(e);
 
     if (!isRecoverable || installedModels.isEmpty) {
       logger.e(
@@ -96,6 +93,12 @@ Future<gemma.InferenceModel> getActiveModelWithBackendFallbacks({
       }
       return model;
     } catch (e) {
+      if (isActiveModelUnavailableError(e)) {
+        logger.w(
+          'Backend attempt aborted (${backendName(backend)}): active model is unavailable.',
+        );
+        rethrow;
+      }
       lastError = e;
       logger.w(
         'Backend attempt failed: ${backendName(backend)}. Trying next fallback.',
@@ -106,6 +109,12 @@ Future<gemma.InferenceModel> getActiveModelWithBackendFallbacks({
   throw Exception(
     'Failed to create engine on all backend attempts. Last error: $lastError',
   );
+}
+
+bool isActiveModelUnavailableError(Object error) {
+  final message = error.toString();
+  return message.contains('Active model is no longer installed') ||
+      message.contains('No active inference model set');
 }
 
 String backendName(gemma.PreferredBackend? backend) {

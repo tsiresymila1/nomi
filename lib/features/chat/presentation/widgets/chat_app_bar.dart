@@ -6,6 +6,7 @@ import 'package:gena/features/chat/data/providers/active_model_info_provider.dar
 import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ChatAppBar({super.key, required this.gradColor});
@@ -68,14 +69,20 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               leading: Builder(
                 builder: (context) {
                   return IconButton(
-                    icon: const Icon(Icons.menu_rounded, size: 28),
+                    icon:  HugeIcon(
+                      icon: HugeIcons.strokeRoundedListTree,
+                      size: 24,
+                    ),
                     onPressed: () => Scaffold.of(context).openDrawer(),
                   );
                 },
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit_note_rounded, size: 28),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedPencil,
+                    size: 24,
+                  ),
                   onPressed: () => sl<ChatPageActions>().createNewThread(),
                 ),
               ],

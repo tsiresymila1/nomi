@@ -1,7 +1,9 @@
+import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/cubits/chat_input_cubit.dart';
 import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/cubits/native_tool_execution_cubit.dart';
+import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_history_actions_provider.dart';
@@ -12,7 +14,11 @@ import 'package:gena/features/chat/data/providers/native_tool_actions_provider.d
 import 'package:gena/features/chat/data/repositories/chat_queries_repository.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/native_tool_bridge_service.dart';
+import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
+import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 
 void registerChatDependencies() {
   // Cubits (no deps)
@@ -71,7 +77,7 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ActiveModelInfoResolver>()) {
     sl.registerLazySingleton<ActiveModelInfoResolver>(
       () => ActiveModelInfoResolver(
-        modelRepository: sl(),
+        modelRepository: sl<ModelRepository>(),
         selectedModelCubit: sl<SelectedModelCubit>(),
       ),
     );
@@ -79,24 +85,30 @@ void registerChatDependencies() {
 
   if (!sl.isRegistered<WorkspaceQueries>()) {
     sl.registerLazySingleton<WorkspaceQueries>(
-      () => WorkspaceQueries(database: sl(), selectedWorkspaceCubit: sl()),
+      () => WorkspaceQueries(
+        database: sl<GenaDatabase>(),
+        selectedWorkspaceCubit: sl<SelectedWorkspaceCubit>(),
+      ),
     );
   }
 
   if (!sl.isRegistered<ChatSessionController>()) {
     sl.registerLazySingleton<ChatSessionController>(
       () => ChatSessionController(
-        database: sl(),
+        database: sl<GenaDatabase>(),
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
         workspaceQueries: sl<WorkspaceQueries>(),
-        selectedChatCubit: sl(),
+        selectedChatCubit: sl<SelectedChatCubit>(),
       ),
     );
   }
 
   if (!sl.isRegistered<ChatQueriesRepository>()) {
     sl.registerLazySingleton<ChatQueriesRepository>(
-      () => ChatQueriesRepository(database: sl(), selectedWorkspaceCubit: sl()),
+      () => ChatQueriesRepository(
+        database: sl<GenaDatabase>(),
+        selectedWorkspaceCubit: sl<SelectedWorkspaceCubit>(),
+      ),
     );
   }
 
@@ -109,7 +121,7 @@ void registerChatDependencies() {
         chatContextWindowCubit: sl<ChatContextWindowCubit>(),
         nativeToolActions: sl<NativeToolActions>(),
         workspaceQueries: sl<WorkspaceQueries>(),
-        workspaceRagActions: sl(),
+        workspaceRagActions: sl<WorkspaceRagActions>(),
       ),
     );
   }
@@ -117,8 +129,8 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatThreadActions>()) {
     sl.registerLazySingleton<ChatThreadActions>(
       () => ChatThreadActions(
-        database: sl(),
-        selectedChatCubit: sl(),
+        database: sl<GenaDatabase>(),
+        selectedChatCubit: sl<SelectedChatCubit>(),
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
         sessionController: sl<ChatSessionController>(),
         chatGeneratingCubit: sl<ChatGeneratingCubit>(),
@@ -133,9 +145,9 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatHistoryActions>()) {
     sl.registerLazySingleton<ChatHistoryActions>(
       () => ChatHistoryActions(
-        database: sl(),
-        selectedChatCubit: sl(),
-        selectedWorkspaceCubit: sl(),
+        database: sl<GenaDatabase>(),
+        selectedChatCubit: sl<SelectedChatCubit>(),
+        selectedWorkspaceCubit: sl<SelectedWorkspaceCubit>(),
         chatThreadActions: sl<ChatThreadActions>(),
       ),
     );
@@ -150,14 +162,14 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatPageActions>()) {
     sl.registerLazySingleton<ChatPageActions>(
       () => ChatPageActions(
-        selectedChatCubit: sl(),
-        selectedWorkspaceCubit: sl(),
+        selectedChatCubit: sl<SelectedChatCubit>(),
+        selectedWorkspaceCubit: sl<SelectedWorkspaceCubit>(),
         chatThreadActions: sl<ChatThreadActions>(),
-        downloadsCubit: sl(),
+        downloadsCubit: sl<DownloadsCubit>(),
         chatModelSwitchingCubit: sl<ChatModelSwitchingCubit>(),
         selectedModelCubit: sl<SelectedModelCubit>(),
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
-        modelInstallerService: sl(),
+        modelInstallerService: sl<ModelInstallerService>(),
         chatSessionController: sl<ChatSessionController>(),
       ),
     );

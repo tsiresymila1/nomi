@@ -31,8 +31,10 @@ class ChatModelSelectionSheet extends StatelessWidget {
     }
 
     final downloadsCubit = sl<DownloadsCubit>();
+    final selectedModelCubit = sl<SelectedModelCubit>();
 
     return BlocBuilder<SelectedModelCubit, int?>(
+      bloc: selectedModelCubit,
       builder: (context, selectedId) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

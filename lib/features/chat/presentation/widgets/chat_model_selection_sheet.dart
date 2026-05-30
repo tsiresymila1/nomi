@@ -69,6 +69,7 @@ class ChatModelSelectionSheet extends StatelessWidget {
                   final models = state.models;
                   final installedModels = state.installedModels;
                   final downloads = state.progressByKey;
+                  final activeInstall = state.activeInstall;
                   if (models.isEmpty) {
                     return reveal(
                       const Padding(
@@ -90,12 +91,16 @@ class ChatModelSelectionSheet extends StatelessWidget {
                           model,
                         );
                         final progress = downloads[installKey];
+                        final isActiveInstallingThisModel =
+                            activeInstall?.key == installKey;
                         final isDownloading =
                             model.provider == ModelProviderType.local &&
-                            progress != null &&
-                            progress >= 0 &&
-                            progress < 1;
+                            (isActiveInstallingThisModel ||
+                                (progress != null &&
+                                    progress >= 0 &&
+                                    progress < 1));
                         final isSelected = selectedId == model.id;
+                        final downloadProgress = progress ?? 0.0;
                         final localNotReady =
                             model.provider == ModelProviderType.local &&
                             !isReady;
@@ -103,8 +108,10 @@ class ChatModelSelectionSheet extends StatelessWidget {
                         final statusLabel =
                             model.provider == ModelProviderType.remote
                             ? 'Ready'
+                            : isActiveInstallingThisModel
+                            ? 'Installing...'
                             : isDownloading
-                            ? 'Downloading ${(progress * 100).toStringAsFixed(0)}%'
+                            ? 'Downloading ${(downloadProgress * 100).toStringAsFixed(0)}%'
                             : localNotReady
                             ? 'Not installed'
                             : 'Ready';
@@ -121,6 +128,16 @@ class ChatModelSelectionSheet extends StatelessWidget {
                               ),
                               trailing: isSelected
                                   ? const Icon(Icons.check_rounded)
+                                  : isActiveInstallingThisModel
+                                  ? IconButton(
+                                      tooltip: 'Cancel download',
+                                      icon: const Icon(Icons.cancel_outlined),
+                                      onPressed: () async {
+                                        await downloadsCubit.cancelDownload(
+                                          model,
+                                        );
+                                      },
+                                    )
                                   : isDownloading
                                   ? SizedBox(
                                       width: 18,
@@ -132,6 +149,10 @@ class ChatModelSelectionSheet extends StatelessWidget {
                                     )
                                   : const Icon(Icons.chevron_right),
                               onTap: () async {
+                                if (isActiveInstallingThisModel) {
+                                  await downloadsCubit.cancelDownload(model);
+                                  return;
+                                }
                                 if (isDownloading) {
                                   await AppToast.show(
                                     'Model is downloading. Please wait until install is complete.',

@@ -148,11 +148,16 @@ class ModelBackgroundDownloadService {
     return completer.future;
   }
 
-  Future<void> cancelDownload(String modelKey) async {
+  bool hasRunningDownload(String modelKey) {
+    return _taskIdByModelKey.containsKey(modelKey);
+  }
+
+  Future<bool> cancelDownload(String modelKey) async {
     await _ensureInitialized();
     final taskId = _taskIdByModelKey[modelKey];
-    if (taskId == null) return;
+    if (taskId == null) return false;
     await _controller.cancelTask(taskId);
+    return true;
   }
 
   Future<_DownloadDestination> _resolveDestination(

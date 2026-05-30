@@ -231,12 +231,21 @@ class DownloadsCubit extends Cubit<DownloadsState> {
 
   Future<void> cancelDownload(ModelInfo model) async {
     final installKey = installKeyForModel(model);
-    _installInProgress = false;
-    final nextState = {...state.progressByKey}..remove(installKey);
-    emit(state.copyWith(progressByKey: nextState, clearActiveInstall: true));
 
     try {
-      await ModelBackgroundDownloadService.instance.cancelDownload(installKey);
+      final cancelled = await ModelBackgroundDownloadService.instance
+          .cancelDownload(installKey);
+      if (!cancelled) {
+        await AppToast.show(
+          'This install is already finalizing and can no longer be cancelled.',
+          type: AppToastType.info,
+        );
+        return;
+      }
+
+      _installInProgress = false;
+      final nextState = {...state.progressByKey}..remove(installKey);
+      emit(state.copyWith(progressByKey: nextState, clearActiveInstall: true));
       await AppToast.show('Download cancelled', type: AppToastType.info);
     } catch (error, stackTrace) {
       logger.e(error, error: error, stackTrace: stackTrace);

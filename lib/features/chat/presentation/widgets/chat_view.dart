@@ -63,12 +63,18 @@ class _ChatViewState extends State<ChatView> {
                         final hasToolWaitingName = (waitingToolName ?? '')
                             .trim()
                             .isNotEmpty;
+                        final hasStreamingPlaceholder =
+                            isGenerating &&
+                            !hasDraft &&
+                            !hasThinkingDraft &&
+                            !hasToolWaitingName;
 
                         final totalCount =
                             messages.length +
                             (hasToolWaitingName ? 1 : 0) +
                             (hasThinkingDraft ? 1 : 0) +
-                            (hasDraft ? 1 : 0);
+                            (hasDraft ? 1 : 0) +
+                            (hasStreamingPlaceholder ? 1 : 0);
 
                         if (totalCount == 0) {
                           const quickPrompts = <String>[
@@ -113,13 +119,13 @@ class _ChatViewState extends State<ChatView> {
                                                 onTap: isGenerating
                                                     ? null
                                                     : () async {
-                                                      await sl<
+                                                        await sl<
                                                               ChatInputCubit
                                                             >()
                                                             .sendMessage(
                                                               entry.value,
                                                             );
-                                                    },
+                                                      },
                                                 child: Container(
                                                   padding:
                                                       const EdgeInsets.symmetric(
@@ -210,6 +216,19 @@ class _ChatViewState extends State<ChatView> {
                                 message: thinkingDraft ?? '',
                                 isUser: false,
                                 kind: 'thinking',
+                                isStreaming: true,
+                              );
+                            }
+
+                            if (hasStreamingPlaceholder &&
+                                index ==
+                                    messages.length +
+                                        (hasToolWaitingName ? 1 : 0) +
+                                        (hasThinkingDraft ? 1 : 0)) {
+                              return const ChatBubble(
+                                key: ValueKey('chat-draft-placeholder'),
+                                message: '',
+                                isUser: false,
                                 isStreaming: true,
                               );
                             }

@@ -67,6 +67,8 @@ class ChatSessionController {
   String? _sessionChatId;
   int? _sessionModelId;
 
+  GemmaChatSession? get currentChatSession => _chatSession;
+
   Future<ActiveGemmaModelRuntime?> getRuntime() async {
     final activeModel = await _activeModelInfoResolver.getActiveModelInfo();
     if (activeModel == null ||

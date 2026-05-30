@@ -147,13 +147,55 @@ class ChatThreadActions {
     bool triggerLocalModelCancel = true,
     bool waitForLocalModelCancel = true,
   }) async {
-    if (!_chatGeneratingCubit.state) return;
-
     _cancelGenerationSerial = _generationSerial;
-    await _activeModelInfoResolver.getActiveModelInfo();
+    final activeModel = await _activeModelInfoResolver.getActiveModelInfo();
+
+    if (triggerLocalModelCancel && activeModel?.provider == 'local') {
+      final cancelFuture = _cancelActiveLocalGeneration();
+      if (waitForLocalModelCancel) {
+        await cancelFuture;
+      } else {
+        unawaited(cancelFuture);
+      }
+    }
 
     _chatGeneratingCubit.setGenerating(false);
     _chatDraftThinkingCubit.clear();
     _chatToolWaitingCubit.clear();
+  }
+
+  Future<void> _cancelActiveLocalGeneration() async {
+    try {
+      final activeSession = _sessionController.currentChatSession;
+      if (activeSession != null) {
+        await activeSession.chat.stopGeneration();
+      }
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to cancel active local chat session generation: $error',
+        stackTrace: stackTrace,
+      );
+    }
+
+    try {
+      final runtime = await _sessionController.getRuntime();
+      final model = runtime?.model;
+      if (model == null) return;
+
+      final activeChat = model.chat;
+      if (activeChat != null) {
+        await activeChat.stopGeneration();
+      }
+
+      final sessions = model.sessions;
+      for (final session in sessions) {
+        await session.stopGeneration();
+      }
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to cancel active local model generation sessions: $error',
+        stackTrace: stackTrace,
+      );
+    }
   }
 }

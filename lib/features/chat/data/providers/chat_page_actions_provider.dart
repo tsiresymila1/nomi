@@ -101,11 +101,10 @@ class ChatPageActions {
   }
 
   Future<void> selectModel(ModelInfo model) async {
-    final hasActiveInstall = _downloadsCubit.state.activeInstall != null;
     final isSwitching = _chatModelSwitchingCubit.state;
-    if (hasActiveInstall || isSwitching) {
+    if (isSwitching) {
       await AppToast.show(
-        'Model is already installing/loading. Please wait.',
+        'Model is currently loading. Please wait.',
         type: AppToastType.info,
       );
       return;

@@ -19,6 +19,7 @@ class SmartServiceTaskHandler extends TaskHandler {
 
   static const String _localChannelId = 'smart_background_tasks_per_task';
   static const String _localChannelName = 'Smart Background Tasks';
+  static const String _cancelActionId = 'cancel_task';
 
   final Map<String, _RunningTask> _tasks = <String, _RunningTask>{};
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -437,6 +438,15 @@ class SmartServiceTaskHandler extends TaskHandler {
           progress: progressValue,
           ongoing: !task.snapshot.isTerminal,
           autoCancel: task.snapshot.isTerminal,
+          actions: task.snapshot.isTerminal
+              ? null
+              : const <AndroidNotificationAction>[
+                  AndroidNotificationAction(
+                    _cancelActionId,
+                    'Cancel',
+                    cancelNotification: false,
+                  ),
+                ],
         );
 
     final NotificationDetails details = NotificationDetails(
@@ -454,6 +464,7 @@ class SmartServiceTaskHandler extends TaskHandler {
       task.snapshot.name,
       subtitle,
       details,
+      payload: task.snapshot.id,
     );
   }
 
@@ -469,8 +480,24 @@ class SmartServiceTaskHandler extends TaskHandler {
       android: androidInit,
     );
 
-    await _localNotifications.initialize(initSettings);
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onLocalNotificationResponse,
+    );
     _localNotificationsInitialized = true;
+  }
+
+  void _onLocalNotificationResponse(NotificationResponse response) {
+    if (response.actionId != _cancelActionId) {
+      return;
+    }
+
+    final taskId = response.payload;
+    if (taskId == null || taskId.isEmpty) {
+      return;
+    }
+
+    unawaited(_handleCancel(taskId));
   }
 
   void _emitState({String? message}) {

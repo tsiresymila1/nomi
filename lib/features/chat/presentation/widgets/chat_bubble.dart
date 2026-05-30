@@ -25,7 +25,7 @@ class ChatBubble extends StatelessWidget {
     final isThinking = kind == 'thinking' && !isUser;
     final isTool = kind == 'tool_trace' || kind == 'tool_waiting';
     final bubbleColor = isUser
-        ? Colors.green[900]
+        ? Theme.of(context).colorScheme.primary
         : isThinking || isTool
         ? Theme.of(context).colorScheme.surfaceContainerHighest
         : Colors.transparent;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
@@ -50,6 +51,17 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (isSwitchingModel) ...[
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: SpinKitThreeBounce(
+                          size: 5.5,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Flexible(
                       child: Text(
                         modelLabel,
@@ -69,7 +81,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               leading: Builder(
                 builder: (context) {
                   return IconButton(
-                    icon:  HugeIcon(
+                    icon: HugeIcon(
                       icon: HugeIcons.strokeRoundedMenu02,
                       size: 24,
                     ),
@@ -83,7 +95,9 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                     icon: HugeIcons.strokeRoundedPencilEdit02,
                     size: 24,
                   ),
-                  onPressed: () => sl<ChatPageActions>().createNewThread(),
+                  onPressed: isSwitchingModel
+                      ? null
+                      : () => sl<ChatPageActions>().createNewThread(),
                 ),
               ],
             );

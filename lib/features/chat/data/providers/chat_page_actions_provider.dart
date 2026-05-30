@@ -154,11 +154,25 @@ class ChatPageActions {
   }
 
   void _warmupLocalSessionInBackground() {
-    unawaited(
-      _warmupLocalSession().catchError((error, stackTrace) {
-        logger.w('Local model warm-up skipped/failed: $error', stackTrace: stackTrace);
-      }),
-    );
+    unawaited(_warmupLocalSessionWithLoadingIndicator());
+  }
+
+  Future<void> _warmupLocalSessionWithLoadingIndicator() async {
+    if (_downloadsCubit.state.activeInstall != null) return;
+    final model = await _activeModelInfoResolver.getActiveModelInfo();
+    if (model == null || model.provider != ModelProviderType.local) return;
+
+    _chatModelSwitchingCubit.start();
+    try {
+      await _warmupLocalSession();
+    } catch (error, stackTrace) {
+      logger.w(
+        'Local model warm-up skipped/failed: $error',
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _chatModelSwitchingCubit.stop();
+    }
   }
 
   Future<void> _warmupLocalSession() async {

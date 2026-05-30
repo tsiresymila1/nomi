@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/core/widgets/confirm_action_sheet.dart';
+import 'package:gena/features/chat/data/providers/chat_history_actions_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
@@ -69,6 +74,16 @@ class WorkspaceChatSectionThreads extends StatelessWidget {
                           fontWeight: isSelected ? FontWeight.w600 : null,
                         ),
                       ),
+                      trailing: IconButton(
+                        tooltip: 'Delete thread',
+                        visualDensity: VisualDensity.compact,
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedDelete03,
+                          size: 18,
+                        ),
+                        onPressed: () =>
+                            unawaited(_onDeleteThreadPressed(context, chat.id)),
+                      ),
                       onTap: () async {
                         await sl<ChatPageActions>().selectWorkspace(
                           chat.workspaceId,
@@ -86,5 +101,32 @@ class WorkspaceChatSectionThreads extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _onDeleteThreadPressed(
+    BuildContext context,
+    String chatId,
+  ) async {
+    final shouldDelete = await showConfirmActionSheet(
+      context,
+      title: 'Delete Thread',
+      message:
+          'This will delete this thread and all its messages from the database. Continue?',
+      confirmLabel: 'Delete',
+    );
+
+    if (!shouldDelete || !context.mounted) return;
+
+    try {
+      await sl<ChatHistoryActions>().archiveChat(chatId);
+      if (!context.mounted) return;
+      await AppToast.show('Thread deleted', type: AppToastType.success);
+    } catch (error) {
+      if (!context.mounted) return;
+      await AppToast.show(
+        'Failed to delete thread: $error',
+        type: AppToastType.error,
+      );
+    }
   }
 }

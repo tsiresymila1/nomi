@@ -75,11 +75,21 @@ class ChatToolWaitingCubit extends Cubit<String?> {
 class ChatModelSwitchingCubit extends Cubit<bool> {
   ChatModelSwitchingCubit() : super(false);
 
+  int _pendingOperations = 0;
+
   void start() {
-    emit(true);
+    _pendingOperations += 1;
+    if (!state) {
+      emit(true);
+    }
   }
 
   void stop() {
-    emit(false);
+    if (_pendingOperations > 0) {
+      _pendingOperations -= 1;
+    }
+    if (_pendingOperations == 0 && state) {
+      emit(false);
+    }
   }
 }

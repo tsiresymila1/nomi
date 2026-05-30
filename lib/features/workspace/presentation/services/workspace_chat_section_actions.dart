@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
-import 'package:gena/features/workspace/presentation/services/workspace_local_chat_actions.dart';
+import 'package:gena/features/workspace/data/services/workspace_actions.dart';
 import 'package:gena/presentation/widgets/field_wrapper.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,7 +21,7 @@ class WorkspaceChatSectionActions {
   ) async {
     switch (action) {
       case WorkspaceMenuAction.newThread:
-        await sl<WorkspaceLocalChatActions>().createNewThreadInWorkspace(
+        await sl<ChatPageActions>().createNewThreadInWorkspace(
           group.workspace.id,
         );
       case WorkspaceMenuAction.rename:
@@ -41,7 +42,7 @@ class WorkspaceChatSectionActions {
     BuildContext context,
     String workspaceId,
   ) async {
-    await sl<WorkspaceLocalChatActions>().selectWorkspace(workspaceId);
+    await sl<ChatPageActions>().selectWorkspace(workspaceId);
     sl<WorkspaceDrawerCubit>().toggle(workspaceId);
   }
 
@@ -109,11 +110,11 @@ class WorkspaceChatSectionActions {
     }
 
     try {
-      await sl<WorkspaceLocalChatActions>().renameWorkspace(
+      await sl<WorkspaceActions>().renameWorkspace(
         workspaceId: group.workspace.id,
         rawName: controller.text,
       );
-    } on WorkspaceActionException catch (error) {
+    } on WorkspaceGuardException catch (error) {
       await AppToast.show(error.message, type: AppToastType.error);
     } finally {
       controller.dispose();
@@ -133,8 +134,8 @@ class WorkspaceChatSectionActions {
     if (!shouldDelete) return;
 
     try {
-      await sl<WorkspaceLocalChatActions>().deleteWorkspace(group.workspace.id);
-    } on WorkspaceActionException catch (error) {
+      await sl<WorkspaceActions>().deleteWorkspace(group.workspace.id);
+    } on WorkspaceGuardException catch (error) {
       await AppToast.show(error.message, type: AppToastType.info);
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const double _defaultFontSize = 13;
@@ -137,8 +138,12 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFFE4E8E1),
       surfaceTint: Colors.transparent,
     );
-    final robotoTextTheme = _scaledTextTheme(base.textTheme);
-    final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
+    final spaceGroteskTextTheme = GoogleFonts.spaceGroteskTextTheme(
+      _scaledTextTheme(base.textTheme),
+    );
+    final spaceGroteskPrimaryTextTheme = GoogleFonts.spaceGroteskTextTheme(
+      _scaledTextTheme(base.primaryTextTheme),
+    );
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -147,8 +152,8 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: robotoTextTheme,
-      primaryTextTheme: robotoPrimaryTextTheme,
+      textTheme: spaceGroteskTextTheme,
+      primaryTextTheme: spaceGroteskPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
@@ -185,8 +190,12 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFF252C28),
       surfaceTint: Colors.transparent,
     );
-    final robotoTextTheme = _scaledTextTheme(base.textTheme);
-    final robotoPrimaryTextTheme = _scaledTextTheme(base.primaryTextTheme);
+    final spaceGroteskTextTheme = GoogleFonts.spaceGroteskTextTheme(
+      _scaledTextTheme(base.textTheme),
+    );
+    final spaceGroteskPrimaryTextTheme = GoogleFonts.spaceGroteskTextTheme(
+      _scaledTextTheme(base.primaryTextTheme),
+    );
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -195,8 +204,8 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: robotoTextTheme,
-      primaryTextTheme: robotoPrimaryTextTheme,
+      textTheme: spaceGroteskTextTheme,
+      primaryTextTheme: spaceGroteskPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),

@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';

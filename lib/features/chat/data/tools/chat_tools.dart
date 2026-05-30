@@ -35,6 +35,323 @@ const String _nativeMutatingApprovalPolicy =
 const String _nativeMutatingActionApproval =
     'This action requires explicit user approval.';
 
+class UnifiedChatToolDefinition {
+  const UnifiedChatToolDefinition({
+    required this.name,
+    required this.description,
+    required this.parameters,
+  });
+
+  final String name;
+  final String description;
+  final Map<String, dynamic> parameters;
+}
+
+List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
+  required bool supportsFunctionCalls,
+  required bool enableRagTool,
+  required bool enableNativeOpenUrlTool,
+  required bool enableNativeOpenAppTool,
+  required bool enableNativePhoneCallTool,
+  required bool enableNativeContactsTool,
+  required bool enableNativeSmsTool,
+  required bool enableNativeSendEmailTool,
+  required bool enableNativeFlashlightTool,
+}) {
+  if (!supportsFunctionCalls) return const <UnifiedChatToolDefinition>[];
+
+  final tools = <UnifiedChatToolDefinition>[
+    UnifiedChatToolDefinition(
+      name: getCurrentDayToolName,
+      description:
+          'Get the current local day and date from the device clock. Use this when the user asks what day it is or asks for today date.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      },
+    ),
+    UnifiedChatToolDefinition(
+      name: getDeviceInfoToolName,
+      description:
+          'Get basic device and runtime information from the current device. Use this when the user asks about device details or system info.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      },
+    ),
+    UnifiedChatToolDefinition(
+      name: webSearchToolName,
+      description:
+          'Search the public web and return top results plus extracted markdown from pages. If workspace RAG is available, do NOT use web search first. Use workspace_rag_search first for knowledge/context questions, then use web_search only when the user needs fresh/latest external information or when RAG does not contain the answer.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{
+          'query': <String, dynamic>{
+            'type': 'string',
+            'description': 'Search query text.',
+          },
+          'max_results': <String, dynamic>{
+            'type': 'integer',
+            'description': 'Maximum number of search results to return (1-10).',
+          },
+          'max_content_pages': <String, dynamic>{
+            'type': 'integer',
+            'description':
+                'Maximum number of pages to fetch content from (1-5).',
+          },
+        },
+        'required': <String>['query'],
+      },
+    ),
+  ];
+
+  if (enableRagTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: ragSearchToolName,
+        description:
+            'Search the current workspace knowledge base (RAG documents) and return relevant snippets. This is the preferred first step for factual questions when RAG is enabled. Use this before web_search for non-fresh information.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'Question or search query against workspace documents.',
+            },
+            'top_k': <String, dynamic>{
+              'type': 'integer',
+              'description': 'Max snippets to return (1-8).',
+            },
+            'threshold': <String, dynamic>{
+              'type': 'number',
+              'description': 'Similarity threshold between 0.0 and 1.0.',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeOpenUrlTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativeOpenUrlToolName,
+        description:
+            'Open an external URL on the device browser. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'url': <String, dynamic>{
+              'type': 'string',
+              'description': 'HTTP/HTTPS URL to open.',
+            },
+          },
+          'required': <String>['url'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeOpenAppTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativeOpenAppToolName,
+        description:
+            'Open another app through a deep link URI on the device. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'uri': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'URI/deep-link to launch (for example maps:, or custom app scheme).',
+            },
+          },
+          'required': <String>['uri'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativePhoneCallTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativePhoneCallToolName,
+        description:
+            'Place a direct phone call using native device APIs. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'phone_number': <String, dynamic>{
+              'type': 'string',
+              'description': 'Target phone number to call directly.',
+            },
+          },
+          'required': <String>['phone_number'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeContactsTool) {
+    tools.addAll(const <UnifiedChatToolDefinition>[
+      UnifiedChatToolDefinition(
+        name: nativeReadContactsToolName,
+        description:
+            'Read contacts from the device address book. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 50, max 200).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+      UnifiedChatToolDefinition(
+        name: nativeSearchContactsToolName,
+        description:
+            'Search contacts by name or query text in device address book. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'query': <String, dynamic>{
+              'type': 'string',
+              'description': 'Name or query to search contacts.',
+            },
+            'limit': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  'Maximum contacts to return (default 20, max 100).',
+            },
+          },
+          'required': <String>['query'],
+        },
+      ),
+      UnifiedChatToolDefinition(
+        name: nativeCreateContactToolName,
+        description:
+            'Create a new contact in the device address book. $_nativeMutatingActionApproval',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'given_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact first/given name.',
+            },
+            'family_name': <String, dynamic>{
+              'type': 'string',
+              'description': 'Contact last/family name.',
+            },
+            'phone_numbers': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of phone numbers to save.',
+            },
+            'emails': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description': 'List of email addresses to save.',
+            },
+            'company': <String, dynamic>{
+              'type': 'string',
+              'description': 'Company name (optional).',
+            },
+            'job_title': <String, dynamic>{
+              'type': 'string',
+              'description': 'Job title (optional).',
+            },
+          },
+          'required': <String>[],
+        },
+      ),
+    ]);
+  }
+
+  if (enableNativeSmsTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativeSendSmsToolName,
+        description:
+            'Send an SMS/MMS using native messaging APIs. $_nativeMutatingActionApproval',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'message': <String, dynamic>{
+              'type': 'string',
+              'description': 'SMS body content.',
+            },
+            'recipients': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description':
+                  'List of recipient phone numbers (one or multiple).',
+            },
+          },
+          'required': <String>['message', 'recipients'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeSendEmailTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativeSendEmailToolName,
+        description:
+            'Compose an email in the user email app. $_nativeMutatingActionApproval',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'to': <String, dynamic>{
+              'type': 'string',
+              'description': 'Recipient email address.',
+            },
+            'subject': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email subject.',
+            },
+            'body': <String, dynamic>{
+              'type': 'string',
+              'description': 'Email body.',
+            },
+          },
+          'required': <String>['to'],
+        },
+      ),
+    );
+  }
+
+  if (enableNativeFlashlightTool) {
+    tools.add(
+      const UnifiedChatToolDefinition(
+        name: nativeFlashlightToolName,
+        description:
+            'Turn the device flashlight on or off. $_nativeMutatingApprovalPolicy',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'mode': <String, dynamic>{
+              'type': 'string',
+              'description': 'Use "on" or "off".',
+            },
+          },
+          'required': <String>['mode'],
+        },
+      ),
+    );
+  }
+
+  return tools;
+}
+
 List<gemma.Tool> buildChatTools({
   required bool supportsFunctionCalls,
   required bool enableRagTool,

@@ -48,23 +48,27 @@ class ChatPageActions {
   Future<void> createNewThread() async {
     _requestStopGenerationInBackground();
     await _selectedChatCubit.createNewThread();
+    _warmupLocalSessionInBackground();
   }
 
   Future<void> createNewThreadInWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.createNewThread(workspaceId: workspaceId);
+    _warmupLocalSessionInBackground();
   }
 
   Future<void> selectChat(String chatId) async {
     _requestStopGenerationInBackground();
     _selectedChatCubit.selectChat(chatId);
+    _warmupLocalSessionInBackground();
   }
 
   Future<void> selectWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.ensureSelectionForWorkspace(workspaceId);
+    _warmupLocalSessionInBackground();
   }
 
   Future<void> installModel(ModelInfo model) async {
@@ -146,6 +150,23 @@ class ChatPageActions {
     await _activeModelInfoResolver.getActiveModelInfo();
     _chatSessionController.resetRuntime();
     _chatSessionController.resetActiveChatSession();
+    _warmupLocalSessionInBackground();
+  }
+
+  void _warmupLocalSessionInBackground() {
+    unawaited(
+      _warmupLocalSession().catchError((error, stackTrace) {
+        logger.w('Local model warm-up skipped/failed: $error', stackTrace: stackTrace);
+      }),
+    );
+  }
+
+  Future<void> _warmupLocalSession() async {
+    if (_downloadsCubit.state.activeInstall != null) return;
+    final model = await _activeModelInfoResolver.getActiveModelInfo();
+    if (model == null || model.provider != ModelProviderType.local) return;
+    await _chatSessionController.getRuntime();
+    await _chatSessionController.getActiveChatSession();
   }
 
   void _requestStopGenerationInBackground() {

@@ -169,6 +169,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  code_builder:
+    dependency: transitive
+    description:
+      name: code_builder
+      sha256: "6a6cab2ba4680d6423f34a9b972a4c9a94ebe1b62ecec4e1a1f2cba91fd1319d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.11.1"
   collection:
     dependency: transitive
     description:
@@ -257,6 +265,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.2"
+  decimal:
+    dependency: transitive
+    description:
+      name: decimal
+      sha256: fc706a5618b81e5b367b01dd62621def37abc096f2b46a9bd9068b64c1fa36d0
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.4"
   dio:
     dependency: "direct main"
     description:
@@ -313,6 +329,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.0"
+  email_validator:
+    dependency: transitive
+    description:
+      name: email_validator
+      sha256: b19aa5d92fdd76fbc65112060c94d45ba855105a28bb6e462de7ff03b12fa1fb
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   fake_async:
     dependency: transitive
     description:
@@ -672,6 +696,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  genkit:
+    dependency: "direct main"
+    description:
+      name: genkit
+      sha256: b55e406a0feacc25510fa1486ec2af0b9f7b6cacb786a2bf8672d2d00a562740
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.13.2"
+  genkit_flutter_gemma:
+    dependency: "direct main"
+    description:
+      name: genkit_flutter_gemma
+      sha256: "82f6a72e05f20b66e7cbdcd6d682fa3799a7d59d778f1def895c44249dcfcebe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
+  genkit_openai:
+    dependency: "direct main"
+    description:
+      name: genkit_openai
+      sha256: "76ccca99358c750635ab5f8cba049b78fd88eebaf490949b80d2d39f617bf69c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
   get_it:
     dependency: "direct main"
     description:
@@ -696,6 +744,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "17.2.3"
+  google_fonts:
+    dependency: "direct main"
+    description:
+      name: google_fonts
+      sha256: ba03d03bcaa2f6cb7bd920e3b5027181db75ab524f8891c8bc3aa603885b8055
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.3.3"
   gpt_markdown:
     dependency: "direct main"
     description:
@@ -920,6 +976,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.11.0"
+  json_schema_builder:
+    dependency: transitive
+    description:
+      name: json_schema_builder
+      sha256: "65035d48d028401ad0ffc8c2f173209c7b1441e465a942a0f909070fae33170c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.3"
   json_serializable:
     dependency: "direct dev"
     description:
@@ -1072,6 +1136,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
+  opentelemetry:
+    dependency: transitive
+    description:
+      name: opentelemetry
+      sha256: "92d63a2e0731d34a7548add82420b8f3819ccda569f9bdfdcc4b25e00fe88da4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.18.11"
   package_config:
     dependency: transitive
     description:
@@ -1184,6 +1256,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.0"
+  protobuf:
+    dependency: transitive
+    description:
+      name: protobuf
+      sha256: "75ec242d22e950bdcc79ee38dd520ce4ee0bc491d7fadc4ea47694604d22bf06"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.0"
   provider:
     dependency: transitive
     description:
@@ -1216,6 +1296,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.2"
+  rational:
+    dependency: transitive
+    description:
+      name: rational
+      sha256: cb808fb6f1a839e6fc5f7d8cb3b0a10e1db48b3be102de73938c627f0b636336
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.3"
   recase:
     dependency: transitive
     description:
@@ -1232,6 +1320,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
+  schemantic:
+    dependency: "direct main"
+    description:
+      name: schemantic
+      sha256: b593e339f89658b68ebaac3151379c65da487364512a6269daeddbce2407a70d
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.3"
   shared_preferences:
     dependency: "direct main"
     description:

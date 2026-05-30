@@ -70,7 +70,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                 builder: (context) {
                   return IconButton(
                     icon:  HugeIcon(
-                      icon: HugeIcons.strokeRoundedListTree,
+                      icon: HugeIcons.strokeRoundedMenu02,
                       size: 24,
                     ),
                     onPressed: () => Scaffold.of(context).openDrawer(),
@@ -80,7 +80,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               actions: [
                 IconButton(
                   icon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedPencil,
+                    icon: HugeIcons.strokeRoundedPencilEdit02,
                     size: 24,
                   ),
                   onPressed: () => sl<ChatPageActions>().createNewThread(),

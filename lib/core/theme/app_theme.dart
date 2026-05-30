@@ -61,14 +61,22 @@ class AppTheme {
     );
   }
 
-  static ListTileThemeData _listTileTheme() {
+  static ListTileThemeData _listTileTheme({required TextTheme textTheme}) {
     return ListTileThemeData(
       dense: true,
       minVerticalPadding: 0,
       horizontalTitleGap: 8,
       contentPadding: EdgeInsets.symmetric(horizontal: 12),
-      titleTextStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      subtitleTextStyle: TextStyle(fontSize: 12, color: Colors.grey),
+      titleTextStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamily: textTheme.bodyMedium?.fontFamily,
+      ),
+      subtitleTextStyle: TextStyle(
+        fontSize: 12,
+        color: Colors.grey,
+        fontFamily: textTheme.bodyMedium?.fontFamily,
+      ),
     );
   }
 
@@ -138,10 +146,10 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFFE4E8E1),
       surfaceTint: Colors.transparent,
     );
-    final spaceGroteskTextTheme = GoogleFonts.spaceGroteskTextTheme(
+    final plusJakartaSansTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       _scaledTextTheme(base.textTheme),
     );
-    final spaceGroteskPrimaryTextTheme = GoogleFonts.spaceGroteskTextTheme(
+    final plusJakartaSansPrimaryTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       _scaledTextTheme(base.primaryTextTheme),
     );
     return base.copyWith(
@@ -152,14 +160,14 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: spaceGroteskTextTheme,
-      primaryTextTheme: spaceGroteskPrimaryTextTheme,
+      textTheme: plusJakartaSansTextTheme,
+      primaryTextTheme: plusJakartaSansPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.light),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
-      listTileTheme: _listTileTheme(),
+      listTileTheme: _listTileTheme(textTheme: plusJakartaSansTextTheme),
       switchTheme: _switchTheme(),
     );
   }
@@ -190,10 +198,10 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFF252C28),
       surfaceTint: Colors.transparent,
     );
-    final spaceGroteskTextTheme = GoogleFonts.spaceGroteskTextTheme(
+    final plusJakartaSansTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       _scaledTextTheme(base.textTheme),
     );
-    final spaceGroteskPrimaryTextTheme = GoogleFonts.spaceGroteskTextTheme(
+    final spaceGroteskPrimaryTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       _scaledTextTheme(base.primaryTextTheme),
     );
     return base.copyWith(
@@ -204,14 +212,14 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: spaceGroteskTextTheme,
+      textTheme: plusJakartaSansTextTheme,
       primaryTextTheme: spaceGroteskPrimaryTextTheme,
       inputDecorationTheme: _inputDecorationTheme(),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.dark),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
-      listTileTheme: _listTileTheme(),
+      listTileTheme: _listTileTheme(textTheme: plusJakartaSansTextTheme),
       switchTheme: _switchTheme(),
     );
   }

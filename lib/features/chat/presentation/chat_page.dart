@@ -122,7 +122,7 @@ class _ChatPageState extends State<ChatPage> {
                         padding: EdgeInsets.only(
                           bottom: MediaQuery.viewInsetsOf(context).bottom,
                         ),
-                        child: const SafeArea(child: ChatInput()),
+                        child: SafeArea(child: ChatInput()),
                       );
 
                 return bottomBar is SizedBox

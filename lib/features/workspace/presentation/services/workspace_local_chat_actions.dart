@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_rag_ingestion_controller.dart';
@@ -18,24 +18,23 @@ class WorkspaceLocalChatActions {
   WorkspaceLocalChatActions({
     required db.GenaDatabase database,
     required SelectedWorkspaceCubit selectedWorkspaceCubit,
-    required SelectedChatCubit selectedChatCubit,
+    required ChatPageActions chatPageActions,
     required WorkspaceDrawerCubit drawerCubit,
     required WorkspaceRagIngestionController ingestionController,
   }) : _database = database,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
-       _selectedChatCubit = selectedChatCubit,
+       _chatPageActions = chatPageActions,
        _drawerCubit = drawerCubit,
        _ingestionController = ingestionController;
 
   final db.GenaDatabase _database;
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
-  final SelectedChatCubit _selectedChatCubit;
+  final ChatPageActions _chatPageActions;
   final WorkspaceDrawerCubit _drawerCubit;
   final WorkspaceRagIngestionController _ingestionController;
 
   Future<void> selectWorkspace(String workspaceId) async {
-    _selectedWorkspaceCubit.selectWorkspace(workspaceId);
-    await _selectedChatCubit.ensureSelectionForWorkspace(workspaceId);
+    await _chatPageActions.selectWorkspace(workspaceId);
   }
 
   Future<void> createNewThreadInWorkspace(String workspaceId) async {
@@ -44,8 +43,7 @@ class WorkspaceLocalChatActions {
       throw const WorkspaceActionException('Invalid workspace selected');
     }
 
-    _selectedWorkspaceCubit.selectWorkspace(workspaceId);
-    await _selectedChatCubit.createNewThread(workspaceId: workspaceId);
+    await _chatPageActions.createNewThreadInWorkspace(workspaceId);
   }
 
   Future<void> renameWorkspace({

@@ -82,8 +82,7 @@ android {
 }
 
 dependencies {
-    // Manually forcing the MediaPipe GenAI dependency often solves the "Unresolved Reference"
-    implementation("com.google.mediapipe:tasks-genai:0.10.14")
+    // Use flutter_gemma's transitive MediaPipe versions to avoid FFI symbol mismatches.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 

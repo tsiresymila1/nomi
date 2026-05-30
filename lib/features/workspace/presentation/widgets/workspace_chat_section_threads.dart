@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -69,11 +69,11 @@ class WorkspaceChatSectionThreads extends StatelessWidget {
                           fontWeight: isSelected ? FontWeight.w600 : null,
                         ),
                       ),
-                      onTap: () {
-                        sl<SelectedWorkspaceCubit>().selectWorkspace(
+                      onTap: () async {
+                        await sl<ChatPageActions>().selectWorkspace(
                           chat.workspaceId,
                         );
-                        sl<SelectedChatCubit>().selectChat(chat.id);
+                        await sl<ChatPageActions>().selectChat(chat.id);
                         if (context.mounted && Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         }

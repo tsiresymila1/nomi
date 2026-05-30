@@ -1,6 +1,6 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
 import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
@@ -60,7 +60,7 @@ void registerWorkspacePresentationDependencies() {
       () => WorkspaceLocalChatActions(
         database: sl<GenaDatabase>(),
         selectedWorkspaceCubit: sl<SelectedWorkspaceCubit>(),
-        selectedChatCubit: sl<SelectedChatCubit>(),
+        chatPageActions: sl<ChatPageActions>(),
         drawerCubit: sl<WorkspaceDrawerCubit>(),
         ingestionController: sl<WorkspaceRagIngestionController>(),
       ),

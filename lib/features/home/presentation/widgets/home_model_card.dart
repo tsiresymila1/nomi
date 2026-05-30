@@ -146,6 +146,10 @@ class HomeModelCard extends StatelessWidget {
     return showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (context) {
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -195,6 +199,10 @@ class HomeModelCard extends StatelessWidget {
     return showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (context) {
         return ListView(
           padding: const EdgeInsets.all(16),

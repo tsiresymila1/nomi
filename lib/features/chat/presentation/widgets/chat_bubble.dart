@@ -197,6 +197,10 @@ class ChatBubble extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (context) {
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.75,

@@ -111,6 +111,10 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (_) => const SafeArea(child: ChatModelSelectionSheet()),
     );
   }

@@ -79,6 +79,10 @@ class _ChatInputState extends State<ChatInput> {
     final selectedSource = await showModalBottomSheet<ChatAttachmentSource>(
       context: context,
       showDragHandle: true,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (sheetContext) {
         return SafeArea(
           child: Column(

@@ -39,6 +39,10 @@ class _ChatPageState extends State<ChatPage> {
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 400),
+        reverseDuration: Duration(milliseconds: 200),
+      ),
       builder: (context) {
         return NativeActionCallSheet(request: request);
       },

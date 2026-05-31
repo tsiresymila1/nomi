@@ -169,6 +169,7 @@ void registerChatDependencies() {
         chatModelSwitchingCubit: sl<ChatModelSwitchingCubit>(),
         selectedModelCubit: sl<SelectedModelCubit>(),
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
+        modelRepository: sl<ModelRepository>(),
         modelInstallerService: sl<ModelInstallerService>(),
         chatSessionController: sl<ChatSessionController>(),
       ),

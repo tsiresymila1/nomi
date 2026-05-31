@@ -8,6 +8,7 @@ import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
 import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
 import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
@@ -23,6 +24,7 @@ class ChatPageActions {
     required ChatModelSwitchingCubit chatModelSwitchingCubit,
     required SelectedModelCubit selectedModelCubit,
     required ActiveModelInfoResolver activeModelInfoResolver,
+    required ModelRepository modelRepository,
     required ModelInstallerService modelInstallerService,
     required ChatSessionController chatSessionController,
   }) : _selectedChatCubit = selectedChatCubit,
@@ -32,6 +34,7 @@ class ChatPageActions {
        _chatModelSwitchingCubit = chatModelSwitchingCubit,
        _selectedModelCubit = selectedModelCubit,
        _activeModelInfoResolver = activeModelInfoResolver,
+       _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
        _chatSessionController = chatSessionController;
 
@@ -42,12 +45,14 @@ class ChatPageActions {
   final ChatModelSwitchingCubit _chatModelSwitchingCubit;
   final SelectedModelCubit _selectedModelCubit;
   final ActiveModelInfoResolver _activeModelInfoResolver;
+  final ModelRepository _modelRepository;
   final ModelInstallerService _modelInstallerService;
   final ChatSessionController _chatSessionController;
 
   Future<void> createNewThread() async {
     _requestStopGenerationInBackground();
     await _selectedChatCubit.createNewThread();
+    await _ensureModelSelectedIfNeeded();
     _warmupLocalSessionInBackground();
   }
 
@@ -55,12 +60,14 @@ class ChatPageActions {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.createNewThread(workspaceId: workspaceId);
+    await _ensureModelSelectedIfNeeded();
     _warmupLocalSessionInBackground();
   }
 
   Future<void> selectChat(String chatId) async {
     _requestStopGenerationInBackground();
     _selectedChatCubit.selectChat(chatId);
+    await _ensureModelSelectedIfNeeded();
     _warmupLocalSessionInBackground();
   }
 
@@ -68,6 +75,7 @@ class ChatPageActions {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.ensureSelectionForWorkspace(workspaceId);
+    await _ensureModelSelectedIfNeeded();
     _warmupLocalSessionInBackground();
   }
 
@@ -150,6 +158,32 @@ class ChatPageActions {
     _chatSessionController.resetRuntime();
     _chatSessionController.resetActiveChatSession();
     _warmupLocalSessionInBackground();
+  }
+
+  Future<void> _ensureModelSelectedIfNeeded() async {
+    final models = await _modelRepository.watchModels().first;
+    if (models.isEmpty) return;
+
+    final installedModels = await _modelInstallerService.listInstalledModels();
+    final readyModels = models
+        .where(
+          (model) =>
+              model.provider == ModelProviderType.remote ||
+              isModelReady(model, installedModels),
+        )
+        .toList(growable: false);
+    if (readyModels.isEmpty) return;
+
+    final selectedId = _selectedModelCubit.state;
+    if (selectedId != null) {
+      for (final model in readyModels) {
+        if (model.id == selectedId) {
+          return;
+        }
+      }
+    }
+
+    await _setModelAsActive(readyModels.first.id);
   }
 
   void _warmupLocalSessionInBackground() {

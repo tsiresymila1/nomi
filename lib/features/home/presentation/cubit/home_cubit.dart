@@ -6,14 +6,18 @@ import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/prompt.dart';
+import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
+import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/home/presentation/cubit/home_state.dart';
+import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
@@ -23,17 +27,21 @@ class HomeCubit extends Cubit<HomeState> {
     required ModelRepositoryActions modelRepositoryActions,
     required DefaultModelSeeder defaultModelSeeder,
     required WorkspaceEmbedderInstaller workspaceEmbedderInstaller,
+    required SelectedModelCubit selectedModelCubit,
+    required SelectedWorkspaceCubit selectedWorkspaceCubit,
+    required SelectedChatCubit selectedChatCubit,
   }) : _database = database,
        _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
        _modelRepositoryActions = modelRepositoryActions,
        _defaultModelSeeder = defaultModelSeeder,
        _workspaceEmbedderInstaller = workspaceEmbedderInstaller,
+       _selectedModelCubit = selectedModelCubit,
+       _selectedWorkspaceCubit = selectedWorkspaceCubit,
+       _selectedChatCubit = selectedChatCubit,
        super(const HomeState()) {
     _init();
   }
-
-  static const selectedModelPrefsKey = 'chat_selected_model_id';
 
   final db.GenaDatabase _database;
   final ModelRepository _modelRepository;
@@ -41,25 +49,38 @@ class HomeCubit extends Cubit<HomeState> {
   final ModelRepositoryActions _modelRepositoryActions;
   final DefaultModelSeeder _defaultModelSeeder;
   final WorkspaceEmbedderInstaller _workspaceEmbedderInstaller;
+  final SelectedModelCubit _selectedModelCubit;
+  final SelectedWorkspaceCubit _selectedWorkspaceCubit;
+  final SelectedChatCubit _selectedChatCubit;
 
   StreamSubscription<List<WorkspaceChatGroup>>? _workspaceGroupsSubscription;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
+  StreamSubscription<int?>? _selectedModelSubscription;
 
   Future<void> _init() async {
     try {
       await _defaultModelSeeder.ensureSeeded();
-      final prefs = await SharedPreferences.getInstance();
-      final selectedModelId = prefs.getInt(selectedModelPrefsKey);
-      emit(state.copyWith(selectedModelId: selectedModelId));
+      emit(state.copyWith(selectedModelId: _selectedModelCubit.state));
 
       _modelsSubscription = _modelRepository.watchModels().listen((models) {
-        emit(state.copyWith(models: models, loading: false, clearError: true));
+        emit(
+          state.copyWith(
+            models: models,
+            selectedModelId: _selectedModelCubit.state,
+            loading: false,
+            clearError: true,
+          ),
+        );
       });
 
       _workspaceGroupsSubscription = _watchWorkspaceChatGroups().listen((
         groups,
       ) {
         emit(state.copyWith(groups: groups, loading: false, clearError: true));
+      });
+
+      _selectedModelSubscription = _selectedModelCubit.stream.listen((modelId) {
+        emit(state.copyWith(selectedModelId: modelId));
       });
 
       final installed = await _modelInstallerService.listInstalledModels();
@@ -82,14 +103,54 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> setSelectedModel(int? modelId) async {
-    final prefs = await SharedPreferences.getInstance();
     if (modelId == null) {
-      await prefs.remove(selectedModelPrefsKey);
+      await _selectedModelCubit.clearSelection();
       emit(state.copyWith(clearSelectedModel: true));
       return;
     }
-    await prefs.setInt(selectedModelPrefsKey, modelId);
+    await _selectedModelCubit.selectModel(modelId);
     emit(state.copyWith(selectedModelId: modelId));
+  }
+
+  Future<void> prepareChatEntry({String? workspaceId}) async {
+    final resolvedWorkspaceId =
+        workspaceId ?? await _selectedWorkspaceCubit.ensureWorkspace();
+    _selectedWorkspaceCubit.selectWorkspace(resolvedWorkspaceId);
+    await _selectedChatCubit.ensureSelectionForWorkspace(resolvedWorkspaceId);
+    await _ensureActiveModelSelected();
+  }
+
+  Future<void> _ensureActiveModelSelected() async {
+    final selectedId = _selectedModelCubit.state;
+    if (selectedId != null &&
+        state.models.any((model) => model.id == selectedId)) {
+      return;
+    }
+
+    final installedModels = state.installedModels.isNotEmpty
+        ? state.installedModels
+        : await _modelInstallerService.listInstalledModels();
+
+    final readyModels = state.models
+        .where(
+          (model) =>
+              model.provider == ModelProviderType.remote ||
+              isModelReady(model, installedModels),
+        )
+        .toList(growable: false);
+
+    if (readyModels.isEmpty) {
+      return;
+    }
+
+    final fallbackModelId = readyModels.first.id;
+    await _selectedModelCubit.selectModel(fallbackModelId);
+    emit(
+      state.copyWith(
+        selectedModelId: fallbackModelId,
+        installedModels: installedModels,
+      ),
+    );
   }
 
   void setSelectedEmbedderModel(String model) {
@@ -245,6 +306,7 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> close() async {
     await _workspaceGroupsSubscription?.cancel();
     await _modelsSubscription?.cancel();
+    await _selectedModelSubscription?.cancel();
     return super.close();
   }
 }

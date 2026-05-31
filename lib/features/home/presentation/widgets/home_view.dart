@@ -83,22 +83,11 @@ class _HomeViewState extends State<HomeView> {
                     else
                       HomeModelCard(
                         models: state.models,
-                        installedModels: state.installedModels,
                         selectedModelId: state.selectedModelId,
                         embedderStatus: state.embedderStatus,
                         selectedEmbedderModel: state.selectedEmbedderModel,
                         onResetSeed: () => _resetSeededModels(context),
                         onOpenModels: () => context.pushNamed('download'),
-                        onSelectModel: (model) async {
-                          await context.read<HomeCubit>().setSelectedModel(
-                            model.id,
-                          );
-                        },
-                        onClearModel: () async {
-                          await context.read<HomeCubit>().setSelectedModel(
-                            null,
-                          );
-                        },
                         onSelectEmbedder: (value) {
                           context.read<HomeCubit>().setSelectedEmbedderModel(
                             value,
@@ -147,7 +136,7 @@ class _HomeViewState extends State<HomeView> {
                               onOpenWorkspaceChat: (workspaceId) async {
                                 await context
                                     .read<HomeCubit>()
-                                    .ensureWorkspaceChatSelection(workspaceId);
+                                    .prepareChatEntry(workspaceId: workspaceId);
                                 if (context.mounted) context.goNamed('chat');
                               },
                             ),
@@ -231,7 +220,7 @@ class _HomeViewState extends State<HomeView> {
     try {
       final selection = await homeCubit.createWorkspace(controller.text);
       final workspaceId = selection.split(':').first;
-      await homeCubit.ensureWorkspaceChatSelection(workspaceId);
+      await homeCubit.prepareChatEntry(workspaceId: workspaceId);
       if (!context.mounted) return;
       if (context.mounted) context.goNamed('chat');
     } catch (error) {

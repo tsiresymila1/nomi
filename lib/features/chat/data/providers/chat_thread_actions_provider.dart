@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
@@ -101,7 +102,10 @@ class ChatThreadActions {
         isCancelled: () => _cancelGenerationSerial == currentGeneration,
       );
 
-      if (_cancelGenerationSerial == currentGeneration) return;
+      if (_cancelGenerationSerial == currentGeneration) {
+        await _persistCancelledDraftIfAny(parsedChatId);
+        return;
+      }
 
       scheduleThreadTitleUpdate(
         sessionController: _sessionController,
@@ -197,5 +201,21 @@ class ChatThreadActions {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  Future<void> _persistCancelledDraftIfAny(int chatId) async {
+    final draft = (_chatDraftResponseCubit.state ?? '').trim();
+    if (draft.isEmpty) return;
+
+    await _database
+        .into(_database.messages)
+        .insert(
+          db.MessagesCompanion.insert(
+            chat: chatId,
+            role: 'assistant',
+            kind: const Value('text'),
+            content: draft,
+          ),
+        );
   }
 }

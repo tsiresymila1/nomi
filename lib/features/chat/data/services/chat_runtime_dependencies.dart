@@ -1,6 +1,6 @@
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
-import 'package:gena/features/chat/data/providers/native_tool_actions_provider.dart';
-import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/services/native_tool_actions_service.dart';
+import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 
 class ChatRuntimeDependencies {

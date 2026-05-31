@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_queue.dart';

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
+import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 

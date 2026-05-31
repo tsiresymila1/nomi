@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_gemma/core/function_call_parser.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 
 class StreamingTurnResult {
   const StreamingTurnResult({

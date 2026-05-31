@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_entry.dart';
-import 'package:gena/features/remote_servers/data/providers/remote_server_providers.dart';
+import 'package:gena/features/remote_servers/presentation/cubit/remote_servers_cubit.dart';
 import 'package:gena/features/remote_servers/presentation/widgets/remote_server_tile.dart';
 
 class RemoteServerList extends StatelessWidget {

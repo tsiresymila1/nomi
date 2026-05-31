@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_chat_section_actions.dart';
 import 'package:hugeicons/hugeicons.dart';

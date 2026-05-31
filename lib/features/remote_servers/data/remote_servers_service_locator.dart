@@ -1,6 +1,6 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/remote_servers/data/providers/remote_server_providers.dart';
+import 'package:gena/features/remote_servers/presentation/cubit/remote_servers_cubit.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_catalog_service.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_model_sync_service.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_network_discovery_service.dart';

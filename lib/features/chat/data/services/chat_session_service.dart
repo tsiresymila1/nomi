@@ -3,15 +3,15 @@ import 'dart:async';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
-import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/data/services/chat_session_history_service.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/workspace/data/providers/workspace_queries_provider.dart';
+import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 
 class ActiveGemmaModelRuntime {
   const ActiveGemmaModelRuntime({

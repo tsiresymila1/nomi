@@ -1,9 +1,9 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_drawer_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';

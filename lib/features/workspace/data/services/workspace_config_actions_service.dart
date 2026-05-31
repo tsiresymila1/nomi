@@ -1,6 +1,6 @@
-import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
-import 'package:gena/features/workspace/data/providers/workspace_actions_provider.dart';
+import 'package:gena/features/chat/data/services/chat_session_service.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
+import 'package:gena/features/workspace/data/services/workspace_actions_service.dart';
 
 class WorkspaceConfigValidationException implements Exception {
   const WorkspaceConfigValidationException(this.message);

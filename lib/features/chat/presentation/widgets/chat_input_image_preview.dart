@@ -35,12 +35,12 @@ class ChatInputImagePreview extends StatelessWidget {
               Positioned(
                 right: 0,
                 child: InkWell(
+                  onTap: onRemove,
                   child: HugeIcon(
                     icon: HugeIcons.strokeRoundedAdd01,
                     size: 22,
                     color: colorScheme.surfaceContainerHigh,
                   ),
-                  onTap: onRemove,
                 ),
               ),
             ],

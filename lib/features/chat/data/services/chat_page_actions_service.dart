@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
-import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
-import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
-import 'package:gena/features/chat/data/providers/chat_thread_actions_provider.dart';
-import 'package:gena/features/chat/data/providers/active_model_info_provider.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
+import 'package:gena/features/chat/data/services/chat_session_service.dart';
+import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
+import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
+import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 
 class ChatPageActions {
   ChatPageActions({

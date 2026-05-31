@@ -5,11 +5,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
-import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
-import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:go_router/go_router.dart';
 
 class ChatModelSelectionSheet extends StatelessWidget {

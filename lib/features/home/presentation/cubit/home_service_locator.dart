@@ -1,10 +1,10 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
-import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/home/presentation/cubit/home_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 
 void registerHomeDependencies() {

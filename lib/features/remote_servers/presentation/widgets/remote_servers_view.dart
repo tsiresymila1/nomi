@@ -6,7 +6,7 @@ import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_entry.dart';
-import 'package:gena/features/remote_servers/data/providers/remote_server_providers.dart';
+import 'package:gena/features/remote_servers/presentation/cubit/remote_servers_cubit.dart';
 import 'package:gena/features/remote_servers/presentation/widgets/remote_server_form_sheet.dart';
 import 'package:gena/features/remote_servers/presentation/widgets/remote_server_list.dart';
 import 'package:hugeicons/hugeicons.dart';

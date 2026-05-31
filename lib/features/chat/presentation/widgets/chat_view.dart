@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/chat/data/cubits/chat_input_cubit.dart';
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
-import 'package:gena/features/chat/data/providers/chat_queries_provider.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/services/chat_queries_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
 class ChatView extends StatefulWidget {

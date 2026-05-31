@@ -5,9 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
-import 'package:gena/features/chat/data/providers/chat_history_actions_provider.dart';
-import 'package:gena/features/chat/data/providers/chat_page_actions_provider.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
+import 'package:gena/features/chat/data/services/chat_history_actions_service.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:hugeicons/hugeicons.dart';
 

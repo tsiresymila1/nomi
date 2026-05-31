@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/setting/data/providers/theme_settings_provider.dart';
+import 'package:gena/features/setting/data/services/theme_settings_service.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {

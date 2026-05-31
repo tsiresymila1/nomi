@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/features/downloads/data/default_static_models.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item.dart';
 import 'package:go_router/go_router.dart';
 

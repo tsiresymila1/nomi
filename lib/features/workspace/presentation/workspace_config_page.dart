@@ -8,7 +8,7 @@ import 'package:gena/features/workspace/presentation/cubit/workspace_config_stat
 import 'package:gena/features/workspace/presentation/widgets/workspace_config_form.dart';
 import 'package:gena/features/workspace/presentation/workspace_presentation_service_locator.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_rag_ingestion_controller.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 
 class WorkspaceConfigPage extends StatelessWidget {
   const WorkspaceConfigPage({super.key, required this.workspaceId});

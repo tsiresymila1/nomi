@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/features/chat/data/providers/chat_session_provider.dart';
+import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_execution_service.dart';
 import 'package:gena/features/chat/data/services/remote_llm_service.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';

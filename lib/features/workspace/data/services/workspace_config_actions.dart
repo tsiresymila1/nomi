@@ -1,4 +1,4 @@
-import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_actions.dart';
 
 class WorkspaceConfigValidationException implements Exception {

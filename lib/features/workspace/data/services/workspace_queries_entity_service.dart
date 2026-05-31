@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/models/chat_entity.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 

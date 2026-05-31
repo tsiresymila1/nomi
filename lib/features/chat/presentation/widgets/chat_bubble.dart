@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fullscreen_image_viewer/fullscreen_image_viewer.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:shimmer/shimmer.dart';
 

@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/prompt.dart';
-import 'package:gena/features/chat/data/cubits/selected_chat_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/selected_workspace_cubit.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_drawer_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 
 class WorkspaceGuardException implements Exception {

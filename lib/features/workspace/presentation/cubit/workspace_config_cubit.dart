@@ -4,7 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/prompt.dart';
-import 'package:gena/features/workspace/data/cubits/workspace_embedder_install_cubit.dart';
+import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';

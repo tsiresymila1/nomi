@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_models_list.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';

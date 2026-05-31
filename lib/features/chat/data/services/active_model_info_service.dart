@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:gena/features/chat/data/cubits/selected_model_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:gena/features/chat/data/cubits/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gena/features/downloads/data/providers/download_notifier.dart';
+import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 
 class ActiveModelInstallOverlay extends StatelessWidget {
   const ActiveModelInstallOverlay({super.key});

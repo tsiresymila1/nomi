@@ -1,8 +1,8 @@
 export 'active_model_info_service.dart';
 export 'chat_page_actions_service.dart';
 export 'chat_model_switching_service.dart';
-export 'native_tool_actions_service.dart';
-export 'native_tool_execution_service.dart';
+export '../tools/native_tool_actions_service.dart';
+export '../tools/native_tool_execution_service.dart';
 export 'chat_queries_service.dart';
 export 'chat_history_actions_service.dart';
 export 'chat_input_controller_service.dart';

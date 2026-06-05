@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:gena/features/chat/presentation/cubit/native_tool_execution_cubit.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
-import 'package:gena/features/chat/data/services/native_tool_bridge_service.dart';
+import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 
 class NativeToolActions {
   NativeToolActions({

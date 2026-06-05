@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
@@ -67,6 +68,8 @@ Future<void> generateAssistantResponseWithGenkit({
     storedMessages: storedMessages,
   );
   final ai = _buildGenkit(activeModel);
+  final stringifyToolResultForGemma4LiteRt =
+      _shouldStringifyToolResultForGemma4LiteRt(activeModel);
   final toolNames = _registerTools(
     ai: ai,
     toolDefinitions: toolDefinitions,
@@ -75,6 +78,8 @@ Future<void> generateAssistantResponseWithGenkit({
     deps: deps,
     workspace: activeWorkspace,
     isCancelled: isCancelled,
+    stringifyToolResultForGemma4LiteRt:
+        stringifyToolResultForGemma4LiteRt,
   );
 
   _updateContextWindowEstimate(
@@ -230,6 +235,7 @@ List<String> _registerTools({
   required ChatRuntimeDependencies deps,
   required WorkspaceEntity? workspace,
   required bool Function() isCancelled,
+  required bool stringifyToolResultForGemma4LiteRt,
 }) {
   final names = <String>[];
   for (final definition in toolDefinitions) {
@@ -294,6 +300,7 @@ List<String> _registerTools({
           return _compactToolResultForModel(
             toolName: definition.name,
             result: toolResult,
+            stringifyForGemma4LiteRt: stringifyToolResultForGemma4LiteRt,
           );
         } finally {
           deps.chatToolWaitingCubit.clear();
@@ -438,7 +445,21 @@ String _formatToolTraceMessage({
 Map<String, dynamic> _compactToolResultForModel({
   required String toolName,
   required Map<String, dynamic> result,
+  required bool stringifyForGemma4LiteRt,
 }) {
+  if (stringifyForGemma4LiteRt) {
+    final compact = _sanitizeMap(
+      result,
+      maxDepth: 4,
+      maxStringChars: 700,
+      maxMapEntries: 16,
+      maxListItems: 8,
+    );
+    return <String, dynamic>{
+      'result': jsonEncode(compact),
+    };
+  }
+
   if (toolName == webSearchToolName) {
     return _compactWebSearchResult(result);
   }
@@ -545,6 +566,12 @@ dynamic _sanitizeMap(
 String _truncate(String value, int maxLength) {
   if (value.length <= maxLength) return value;
   return '${value.substring(0, maxLength)}...';
+}
+
+bool _shouldStringifyToolResultForGemma4LiteRt(ModelInfo model) {
+  if (model.provider != ModelProviderType.local) return false;
+  if (parseModelType(model.modelType) != gemma.ModelType.gemma4) return false;
+  return inferFileTypeFromSource(model.source) == gemma.ModelFileType.litertlm;
 }
 
 void _updateContextWindowEstimate(

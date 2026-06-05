@@ -1,5 +1,5 @@
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
-import 'package:gena/features/chat/data/services/native_tool_actions_service.dart';
+import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 

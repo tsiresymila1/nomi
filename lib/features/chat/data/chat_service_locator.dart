@@ -10,10 +10,10 @@ import 'package:gena/features/chat/data/services/chat_history_actions_service.da
 import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
-import 'package:gena/features/chat/data/services/native_tool_actions_service.dart';
+import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/chat/data/repositories/chat_queries_repository.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
-import 'package:gena/features/chat/data/services/native_tool_bridge_service.dart';
+import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';

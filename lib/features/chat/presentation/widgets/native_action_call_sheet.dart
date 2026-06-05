@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
-import 'package:gena/features/chat/data/services/native_tool_actions_service.dart';
+import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 
 String _toolLabel(String toolName) {

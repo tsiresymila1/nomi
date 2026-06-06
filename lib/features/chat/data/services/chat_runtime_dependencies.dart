@@ -1,4 +1,5 @@
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
@@ -9,6 +10,7 @@ class ChatRuntimeDependencies {
     required this.chatDraftThinkingCubit,
     required this.chatToolWaitingCubit,
     required this.chatContextWindowCubit,
+    required this.chatSessionController,
     required this.nativeToolActions,
     required this.workspaceQueries,
     required this.workspaceRagActions,
@@ -18,6 +20,7 @@ class ChatRuntimeDependencies {
   final ChatDraftThinkingCubit chatDraftThinkingCubit;
   final ChatToolWaitingCubit chatToolWaitingCubit;
   final ChatContextWindowCubit chatContextWindowCubit;
+  final ChatSessionController chatSessionController;
   final NativeToolActions nativeToolActions;
   final WorkspaceQueries workspaceQueries;
   final WorkspaceRagActions workspaceRagActions;

@@ -1,6 +1,7 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
 
 void registerDownloadsDependencies() {
@@ -12,6 +13,12 @@ void registerDownloadsDependencies() {
 
   if (!sl.isRegistered<ModelInstallerService>()) {
     sl.registerLazySingleton<ModelInstallerService>(ModelInstallerService.new);
+  }
+
+  if (!sl.isRegistered<ModelCatalogInsightsService>()) {
+    sl.registerLazySingleton<ModelCatalogInsightsService>(
+      () => ModelCatalogInsightsService(sl()),
+    );
   }
 
   if (!sl.isRegistered<DefaultModelSeeder>()) {

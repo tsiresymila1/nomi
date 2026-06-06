@@ -119,6 +119,7 @@ void registerChatDependencies() {
         chatDraftThinkingCubit: sl<ChatDraftThinkingCubit>(),
         chatToolWaitingCubit: sl<ChatToolWaitingCubit>(),
         chatContextWindowCubit: sl<ChatContextWindowCubit>(),
+        chatSessionController: sl<ChatSessionController>(),
         nativeToolActions: sl<NativeToolActions>(),
         workspaceQueries: sl<WorkspaceQueries>(),
         workspaceRagActions: sl<WorkspaceRagActions>(),

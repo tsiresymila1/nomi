@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item_actions.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item_capability_chip.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item_status_badge.dart';
@@ -10,6 +11,7 @@ import 'package:hugeicons/hugeicons.dart';
 class DownloadItem extends StatefulWidget {
   const DownloadItem({
     required this.model,
+    required this.insight,
     required this.progress,
     required this.isInstalled,
     required this.canRemove,
@@ -23,6 +25,7 @@ class DownloadItem extends StatefulWidget {
   });
 
   final ModelInfo model;
+  final ModelCatalogInsight? insight;
   final double? progress;
   final bool isInstalled;
   final bool canRemove;
@@ -117,6 +120,16 @@ class _DownloadItemState extends State<DownloadItem> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
+                        if (widget.insight != null)
+                          DownloadItemCapabilityChip(
+                            label: widget.insight!.statusLabel,
+                            enabled: widget.insight!.compatible,
+                          ),
+                        if (widget.insight?.sizeLabel != null)
+                          DownloadItemCapabilityChip(
+                            label: 'Size: ${widget.insight!.sizeLabel}',
+                            enabled: true,
+                          ),
                         DownloadItemCapabilityChip(
                           label: 'Type: ${model.modelType}',
                           enabled: true,
@@ -139,6 +152,13 @@ class _DownloadItemState extends State<DownloadItem> {
                         ),
                       ],
                     ),
+                    if (widget.insight != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Role: ${widget.insight!.usage == ModelUsage.embedder ? "Embedder" : "Chat LLM"} · Recommended RAM: ${_formatBytes(widget.insight!.recommendedRamBytes)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                     if (isDownloading) ...[
                       const SizedBox(height: 10),
                       Row(
@@ -206,5 +226,15 @@ class _DownloadItemState extends State<DownloadItem> {
       confirmLabel: 'Delete',
     );
     if (shouldDelete) widget.onDeleteDownloadedFile();
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return 'Unknown';
+    const gb = 1024 * 1024 * 1024;
+    const mb = 1024 * 1024;
+    if (bytes >= gb) {
+      return '${(bytes / gb).toStringAsFixed(1)}GB';
+    }
+    return '${(bytes / mb).toStringAsFixed(0)}MB';
   }
 }

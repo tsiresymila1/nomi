@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
+import 'package:gena/features/downloads/data/default_embedder_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/home/presentation/widgets/embedder_model_selection_sheet.dart';
 
 class HomeModelCard extends StatelessWidget {
   const HomeModelCard({
@@ -34,6 +36,8 @@ class HomeModelCard extends StatelessWidget {
         break;
       }
     }
+
+    final selectedEmbedder = findDefaultEmbedderModel(selectedEmbedderModel);
 
     return Card(
       child: Padding(
@@ -90,9 +94,9 @@ class HomeModelCard extends StatelessWidget {
                 style: TextStyle(fontSize: 14),
               ),
               subtitle: Text(
-                selectedEmbedderModel == 'embeddinggemma_300m'
-                    ? 'EmbeddingGemma 300M'
-                    : selectedEmbedderModel,
+                selectedEmbedder == null
+                    ? selectedEmbedderModel
+                    : '${selectedEmbedder.displayName} (${selectedEmbedder.sizeLabel})',
                 style: const TextStyle(fontSize: 12),
               ),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
@@ -145,31 +149,10 @@ class HomeModelCard extends StatelessWidget {
         duration: Duration(milliseconds: 400),
         reverseDuration: Duration(milliseconds: 200),
       ),
-      builder: (context) {
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Text(
-              'Select Embedder Model',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              title: const Text(
-                'EmbeddingGemma 300M',
-                style: TextStyle(fontSize: 14),
-              ),
-              trailing: selectedEmbedderModel == 'embeddinggemma_300m'
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () {
-                onSelectEmbedder('embeddinggemma_300m');
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+      builder: (context) => EmbedderModelSelectionSheet(
+        selectedModelKey: selectedEmbedderModel,
+        onSelect: onSelectEmbedder,
+      ),
     );
   }
 }

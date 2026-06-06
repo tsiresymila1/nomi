@@ -21,10 +21,31 @@ class ContextWindowPlan {
 }
 
 class _ReplayEntry {
+  final db.Message row;
   final gemma.Message message;
   final int tokens;
 
-  const _ReplayEntry({required this.message, required this.tokens});
+  const _ReplayEntry({
+    required this.row,
+    required this.message,
+    required this.tokens,
+  });
+}
+
+class StoredContextWindowPlan {
+  final List<db.Message> keptMessages;
+  final int promptTokens;
+  final int reservedOutputTokens;
+  final int remainingTokens;
+  final int compactedMessages;
+
+  const StoredContextWindowPlan({
+    required this.keptMessages,
+    required this.promptTokens,
+    required this.reservedOutputTokens,
+    required this.remainingTokens,
+    required this.compactedMessages,
+  });
 }
 
 Future<ContextWindowPlan> planContextWindow({
@@ -33,6 +54,44 @@ Future<ContextWindowPlan> planContextWindow({
   required int settingsMaxTokens,
   required int requestedOutputReserve,
   String? overrideLastUserText,
+  int minMessagesToKeep = 1,
+  int extraPromptTokens = 0,
+}) async {
+  final plan = await planStoredMessagesWindow(
+    chat: chat,
+    storedMessages: storedMessages,
+    settingsMaxTokens: settingsMaxTokens,
+    requestedOutputReserve: requestedOutputReserve,
+    overrideLastUserText: overrideLastUserText,
+    minMessagesToKeep: minMessagesToKeep,
+    extraPromptTokens: extraPromptTokens,
+  );
+  final replayEntries = await _buildReplayEntries(
+    chat: chat,
+    storedMessages: plan.keptMessages,
+    overrideLastUserText: overrideLastUserText,
+  );
+  final replayHistory = replayEntries
+      .map((entry) => entry.message)
+      .toList(growable: false);
+
+  return ContextWindowPlan(
+    replayHistory: replayHistory,
+    promptTokens: plan.promptTokens,
+    reservedOutputTokens: plan.reservedOutputTokens,
+    remainingTokens: plan.remainingTokens,
+    compactedMessages: plan.compactedMessages,
+  );
+}
+
+Future<StoredContextWindowPlan> planStoredMessagesWindow({
+  required gemma.InferenceChat chat,
+  required List<db.Message> storedMessages,
+  required int settingsMaxTokens,
+  required int requestedOutputReserve,
+  String? overrideLastUserText,
+  int minMessagesToKeep = 1,
+  int extraPromptTokens = 0,
 }) async {
   final reservedOutputTokens = resolveOutputReserve(
     maxTokens: settingsMaxTokens,
@@ -40,6 +99,41 @@ Future<ContextWindowPlan> planContextWindow({
   );
   final promptBudget = math.max(1, settingsMaxTokens - reservedOutputTokens);
 
+  final entries = await _buildReplayEntries(
+    chat: chat,
+    storedMessages: storedMessages,
+    overrideLastUserText: overrideLastUserText,
+  );
+
+  final normalizedMinMessagesToKeep = minMessagesToKeep.clamp(0, entries.length);
+  var totalPromptTokens =
+      extraPromptTokens + entries.fold<int>(0, (sum, e) => sum + e.tokens);
+  var compactedMessages = 0;
+
+  while (totalPromptTokens > promptBudget &&
+      entries.length > normalizedMinMessagesToKeep) {
+    final removed = entries.removeAt(0);
+    totalPromptTokens -= removed.tokens;
+    compactedMessages += 1;
+  }
+
+  final remainingTokens = math.max(0, settingsMaxTokens - totalPromptTokens);
+  final keptMessages = entries.map((entry) => entry.row).toList(growable: false);
+
+  return StoredContextWindowPlan(
+    keptMessages: keptMessages,
+    promptTokens: totalPromptTokens,
+    reservedOutputTokens: reservedOutputTokens,
+    remainingTokens: remainingTokens,
+    compactedMessages: compactedMessages,
+  );
+}
+
+Future<List<_ReplayEntry>> _buildReplayEntries({
+  required gemma.InferenceChat chat,
+  required List<db.Message> storedMessages,
+  String? overrideLastUserText,
+}) async {
   final entries = <_ReplayEntry>[];
   for (var i = 0; i < storedMessages.length; i++) {
     final row = storedMessages[i];
@@ -50,30 +144,9 @@ Future<ContextWindowPlan> planContextWindow({
     );
     if (message == null) continue;
     final tokens = await estimateTokens(chat: chat, message: message);
-    entries.add(_ReplayEntry(message: message, tokens: tokens));
+    entries.add(_ReplayEntry(row: row, message: message, tokens: tokens));
   }
-
-  var totalPromptTokens = entries.fold<int>(0, (sum, e) => sum + e.tokens);
-  var compactedMessages = 0;
-  const minMessagesToKeep = 2;
-
-  while (totalPromptTokens > promptBudget &&
-      entries.length > minMessagesToKeep) {
-    final removed = entries.removeAt(0);
-    totalPromptTokens -= removed.tokens;
-    compactedMessages += 1;
-  }
-
-  final replayHistory = entries.map((e) => e.message).toList(growable: false);
-  final remainingTokens = math.max(0, settingsMaxTokens - totalPromptTokens);
-
-  return ContextWindowPlan(
-    replayHistory: replayHistory,
-    promptTokens: totalPromptTokens,
-    reservedOutputTokens: reservedOutputTokens,
-    remainingTokens: remainingTokens,
-    compactedMessages: compactedMessages,
-  );
+  return entries;
 }
 
 int resolveOutputReserve({required int maxTokens, required int requested}) {

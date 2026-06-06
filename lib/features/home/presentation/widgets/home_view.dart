@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gena/core/di/service_locator.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/core/widgets/confirm_action_sheet.dart';
 import 'package:gena/features/home/presentation/cubit/home_cubit.dart';
@@ -134,9 +136,9 @@ class _HomeViewState extends State<HomeView> {
                           : HomeWorkspaceList(
                               groups: state.groups,
                               onOpenWorkspaceChat: (workspaceId) async {
-                                await context
-                                    .read<HomeCubit>()
-                                    .prepareChatEntry(workspaceId: workspaceId);
+                                await sl<ChatPageActions>().selectWorkspace(
+                                  workspaceId,
+                                );
                                 if (context.mounted) context.goNamed('chat');
                               },
                             ),
@@ -220,7 +222,7 @@ class _HomeViewState extends State<HomeView> {
     try {
       final selection = await homeCubit.createWorkspace(controller.text);
       final workspaceId = selection.split(':').first;
-      await homeCubit.prepareChatEntry(workspaceId: workspaceId);
+      await sl<ChatPageActions>().selectWorkspace(workspaceId);
       if (!context.mounted) return;
       if (context.mounted) context.goNamed('chat');
     } catch (error) {

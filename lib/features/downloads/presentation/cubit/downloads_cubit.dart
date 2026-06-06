@@ -11,6 +11,7 @@ import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_state.dart';
+import 'package:smart_background_tasks/smart_background_tasks.dart';
 
 class DownloadsCubit extends Cubit<DownloadsState> {
   DownloadsCubit({
@@ -31,6 +32,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   final ModelRepositoryActions _modelRepositoryActions;
   final DefaultModelSeeder _defaultModelSeeder;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
+  StreamSubscription<List<SmartTaskSnapshot>>? _downloadTasksSubscription;
   bool _installInProgress = false;
 
   Future<void> _init() async {
@@ -49,7 +51,46 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         );
       },
     );
+    _downloadTasksSubscription = ModelBackgroundDownloadService.instance
+        .watchTasks()
+        .listen(_syncBackgroundDownloadTasks);
     await refreshInstalledModels();
+  }
+
+  void _syncBackgroundDownloadTasks(List<SmartTaskSnapshot> tasks) {
+    final activeInstall = state.activeInstall;
+    if (activeInstall == null) return;
+
+    SmartTaskSnapshot? matchingTask;
+    for (final task in tasks) {
+      final taskModelKey = task.payload['modelKey']?.toString();
+      if (taskModelKey == activeInstall.key) {
+        matchingTask = task;
+        break;
+      }
+    }
+    if (matchingTask == null) return;
+
+    if (!matchingTask.isTerminal) {
+      final nextProgress = {
+        ...state.progressByKey,
+        activeInstall.key: matchingTask.progress.clamp(0.0, 1.0).toDouble(),
+      };
+      emit(state.copyWith(progressByKey: nextProgress));
+      return;
+    }
+
+    if (matchingTask.status == SmartTaskStatus.cancelled) {
+      _installInProgress = false;
+      final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
+      emit(
+        state.copyWith(
+          progressByKey: nextProgress,
+          clearActiveInstall: true,
+          clearError: true,
+        ),
+      );
+    }
   }
 
   Future<void> refreshInstalledModels() async {
@@ -377,6 +418,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   @override
   Future<void> close() async {
     await _modelsSubscription?.cancel();
+    await _downloadTasksSubscription?.cancel();
     return super.close();
   }
 }

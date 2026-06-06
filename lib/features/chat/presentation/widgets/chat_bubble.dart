@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fullscreen_image_viewer/fullscreen_image_viewer.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/utils.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:shimmer/shimmer.dart';
@@ -57,20 +58,32 @@ class ChatBubble extends StatelessWidget {
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.85,
-        ),
-        decoration: BoxDecoration(
-          color: bubbleColor,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(16).copyWith(
             bottomRight: isUser ? const Radius.circular(4) : null,
             bottomLeft: !isUser ? const Radius.circular(4) : null,
           ),
+          onTap: isUser && message.trim().isNotEmpty && kind != 'image'
+              ? () => copyToClipboard(message.trim())
+              : null,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.circular(16).copyWith(
+                bottomRight: isUser ? const Radius.circular(4) : null,
+                bottomLeft: !isUser ? const Radius.circular(4) : null,
+              ),
+            ),
+            child: _buildContent(context),
+          ),
         ),
-        child: _buildContent(context),
       ),
     );
   }
@@ -113,10 +126,10 @@ class ChatBubble extends StatelessWidget {
 
     if (!isUser && isStreaming && message.trim().isEmpty) {
       return SizedBox(
-        width: 28,
-        height: 14,
+        width: 32,
+        height: 32,
         child: SpinKitThreeBounce(
-          size: 6,
+          size: 16,
           color: Theme.of(context).colorScheme.primary,
         ),
       );
@@ -137,7 +150,7 @@ class ChatBubble extends StatelessWidget {
     final titleText = Text(
       title,
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w700,
         color: colorScheme.onSurface,
       ),
@@ -155,12 +168,12 @@ class ChatBubble extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: () => _showInsightSheet(context),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.auto_awesome_rounded, size: 16),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -170,7 +183,7 @@ class ChatBubble extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
@@ -209,12 +222,18 @@ class ChatBubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Expanded(child: _buildInsightDetails(context)),

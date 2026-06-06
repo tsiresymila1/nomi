@@ -18,6 +18,7 @@ class ChatView extends StatefulWidget {
 
 class _ChatViewState extends State<ChatView> {
   final ScrollController _scrollController = ScrollController();
+  String? _lastScrollSignature;
 
   @override
   void dispose() {
@@ -36,6 +37,21 @@ class _ChatViewState extends State<ChatView> {
           end: const Offset(1, 1),
           curve: Curves.easeOutCubic,
         );
+  }
+
+  void _scheduleScrollToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+      final target = position.maxScrollExtent;
+      if ((position.pixels - target).abs() < 1) return;
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -75,6 +91,19 @@ class _ChatViewState extends State<ChatView> {
                             (hasThinkingDraft ? 1 : 0) +
                             (hasDraft ? 1 : 0) +
                             (hasStreamingPlaceholder ? 1 : 0);
+                        final scrollSignature = [
+                          widget.chatId,
+                          messages.length,
+                          messages.isNotEmpty ? messages.last.id : 'none',
+                          draft ?? '',
+                          thinkingDraft ?? '',
+                          waitingToolName ?? '',
+                          isGenerating,
+                        ].join('|');
+                        if (_lastScrollSignature != scrollSignature) {
+                          _lastScrollSignature = scrollSignature;
+                          _scheduleScrollToEnd();
+                        }
 
                         if (totalCount == 0) {
                           const quickPrompts = <String>[

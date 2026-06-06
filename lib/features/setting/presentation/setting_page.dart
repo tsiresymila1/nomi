@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
+import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
 import 'package:gena/features/setting/data/services/theme_settings_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +28,26 @@ class SettingsPage extends StatelessWidget {
             body: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
+                FutureBuilder(
+                  future: Future.wait([
+                    sl<ModelCatalogInsightsService>().getDeviceInfo(),
+                    sl<ModelCatalogInsightsService>().getStorageInsights(),
+                  ]),
+                  builder: (context, snapshot) {
+                    final data = snapshot.data;
+                    if (data == null || data.length < 2) {
+                      return const SizedBox.shrink();
+                    }
+                    return ModelDeviceSummaryCard(
+                          deviceInfo: data[0] as dynamic,
+                          storageInsights: data[1] as dynamic,
+                        )
+                        .animate()
+                        .fadeIn(duration: 220.ms, delay: 30.ms)
+                        .slideY(begin: 0.08, end: 0);
+                  },
+                ),
+                const SizedBox(height: 8),
                 SwitchListTile(
                       title: const Text(
                         'Dark mode',

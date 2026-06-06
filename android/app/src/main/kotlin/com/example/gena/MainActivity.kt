@@ -1,9 +1,14 @@
 package com.example.gena
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL_NAME = "gena/native_phone_tools"
+        private const val DEVICE_INFO_CHANNEL_NAME = "gena/device_system_info"
         private const val CALL_PERMISSION_REQUEST_CODE = 9107
         private const val CONTACTS_PERMISSION_REQUEST_CODE = 9108
     }
@@ -48,6 +54,50 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DEVICE_INFO_CHANNEL_NAME
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInfo" -> result.success(buildDeviceInfo())
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun buildDeviceInfo(): Map<String, Any?> {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val dataDirectory = Environment.getDataDirectory()
+        val statFs = StatFs(dataDirectory.path)
+        val deviceConfig = activityManager.deviceConfigurationInfo
+        val glEsVersion = deviceConfig?.glEsVersion ?: "OpenGL ES"
+
+        val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Build.SOC_MODEL?.takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+        val cpuModel = listOfNotNull(
+            socModel,
+            Build.HARDWARE?.takeIf { it.isNotBlank() },
+            Build.BOARD?.takeIf { it.isNotBlank() }
+        ).firstOrNull() ?: "Unknown CPU"
+
+        return mapOf(
+            "platform" to "android",
+            "cpuCores" to Runtime.getRuntime().availableProcessors(),
+            "cpuModel" to cpuModel,
+            "gpuModel" to glEsVersion,
+            "totalRamBytes" to memoryInfo.totalMem,
+            "availableRamBytes" to memoryInfo.availMem,
+            "totalStorageBytes" to statFs.totalBytes,
+            "freeStorageBytes" to statFs.availableBytes,
+            "abis" to Build.SUPPORTED_ABIS.toList()
+        )
     }
 
     private fun requestOrStartDirectCall(

@@ -103,6 +103,42 @@ class _AddModelPageState extends State<AddModelPage> {
     _outputTokensController.text = _tokenBuffer.toString();
   }
 
+  ModelInfo _previewModelInfo() {
+    return ModelInfo(
+      id: widget.initialModel?.id ?? -1,
+      name: _nameController.text.trim().isEmpty
+          ? 'Draft model'
+          : _nameController.text.trim(),
+      description: _descriptionController.text.trim().isEmpty
+          ? 'Preview'
+          : _descriptionController.text.trim(),
+      modelId: widget.initialModel?.modelId,
+      provider: _providerType,
+      apiUrl: _apiUrlController.text.trim().isEmpty
+          ? null
+          : _apiUrlController.text.trim(),
+      apiToken: _apiTokenController.text.trim().isEmpty
+          ? null
+          : _apiTokenController.text.trim(),
+      modelType: _modelType,
+      supportImage: _supportImage,
+      supportAudio: _supportAudio,
+      supportsFunctionCalls: _supportsFunctionCalls,
+      isThinking: _isThinking,
+      temperature: _temperature,
+      topK: _topK,
+      topP: _topP,
+      maxTokens: _maxTokens,
+      tokenBuffer: _tokenBuffer,
+      randomSeed: _randomSeed,
+      preferredBackend: _preferredBackend,
+      sourceType: _providerType == ModelProviderType.remote
+          ? 'remote'
+          : _sourceType,
+      source: _sourceController.text.trim(),
+    );
+  }
+
   Future<void> _pickFile() async {
     if (_picking) return;
     setState(() => _picking = true);
@@ -344,6 +380,37 @@ class _AddModelPageState extends State<AddModelPage> {
           children: [
             reveal(
               0,
+              FutureBuilder(
+                future: sl<ModelCatalogInsightsService>().getDeviceInfo(),
+                builder: (context, snapshot) {
+                  final deviceInfo = snapshot.data;
+                  if (deviceInfo == null) {
+                    return const SizedBox.shrink();
+                  }
+                  final insight = sl<ModelCatalogInsightsService>()
+                      .describeLlmModel(
+                        _previewModelInfo(),
+                        deviceInfo: deviceInfo,
+                      );
+                  return Column(
+                    children: [
+                      ModelDeviceSummaryCard(
+                        deviceInfo: deviceInfo,
+                        compact: true,
+                      ),
+                      const SizedBox(height: 8),
+                      ModelRecommendationCard(
+                        deviceInfo: deviceInfo,
+                        insight: insight,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            reveal(
+              1,
               ModelBasicInfoSection(
                 nameController: _nameController,
                 descriptionController: _descriptionController,
@@ -354,7 +421,7 @@ class _AddModelPageState extends State<AddModelPage> {
             ),
             const SizedBox(height: 8),
             reveal(
-              1,
+              2,
               ModelCapabilitySwitches(
                 supportImage: _supportImage,
                 supportAudio: _supportAudio,
@@ -372,7 +439,7 @@ class _AddModelPageState extends State<AddModelPage> {
             ),
             const SizedBox(height: 8),
             reveal(
-              2,
+              3,
               ModelSettingsSection(
                 temperature: _temperature,
                 topP: _topP,
@@ -409,7 +476,7 @@ class _AddModelPageState extends State<AddModelPage> {
             ),
             const SizedBox(height: 12),
             reveal(
-              3,
+              4,
               SegmentedButton<String>(
                 segments: const [
                   ButtonSegment<String>(
@@ -440,7 +507,7 @@ class _AddModelPageState extends State<AddModelPage> {
             ),
             const SizedBox(height: 8),
             reveal(
-              4,
+              5,
               ModelSourceSection(
                 sourceType: _sourceType,
                 providerType: _providerType,
@@ -453,7 +520,7 @@ class _AddModelPageState extends State<AddModelPage> {
             ),
             if (_providerType == ModelProviderType.local)
               reveal(
-                5,
+                6,
                 ModelBackendSection(
                   preferredBackend: _preferredBackend,
                   onBackendChanged: (value) =>
@@ -462,7 +529,7 @@ class _AddModelPageState extends State<AddModelPage> {
               ),
             if (_providerType == ModelProviderType.remote)
               reveal(
-                6,
+                7,
                 ModelRemoteApiSection(
                   apiUrlController: _apiUrlController,
                   apiTokenController: _apiTokenController,
@@ -472,7 +539,7 @@ class _AddModelPageState extends State<AddModelPage> {
               ),
             const SizedBox(height: 16),
             reveal(
-              7,
+              8,
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

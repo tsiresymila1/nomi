@@ -64,27 +64,79 @@ class _AppIntroductionGateState extends State<AppIntroductionGate> {
     return IntroductionScreen(
       pages: <PageViewModel>[
         PageViewModel(
-          title: 'Welcome to Gena',
-          body:
-              'Your private AI workspace for local and remote chat models, all in one app.',
+          titleWidget: Text(
+            'Welcome to Nomi',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bodyWidget: Text(
+            'Your private AI workspace for local and remote chat models, all in one app.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
           image: const IntroIcon(icon: Icons.smart_toy_rounded),
         ),
         PageViewModel(
-          title: 'Manage Models',
-          body:
-              'Add model files or URLs, install them, and switch active models anytime.',
+          titleWidget: Text(
+            'Manage Models',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bodyWidget: Text(
+            'Add model files or URLs, install them, and switch active models anytime.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
           image: const IntroIcon(icon: Icons.download_for_offline_rounded),
         ),
         PageViewModel(
-          title: 'Chat with Tools',
-          body:
-              'Use chat threads with optional tools, vision, and workspace context for better answers.',
+          titleWidget: Text(
+            'Chat with Tools',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bodyWidget: Text(
+            'Use chat threads with optional tools, vision, and workspace context for better answers.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
           image: const IntroIcon(icon: Icons.chat_bubble_outline_rounded),
         ),
         PageViewModel(
-          title: 'You are ready',
-          body:
-              'Open Downloads to install a model, then start chatting from Home.',
+          titleWidget: Text(
+            'You are ready',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bodyWidget: Text(
+            'Open Downloads to install a model, then start chatting from Home.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+          ),
           image: const IntroIcon(icon: Icons.rocket_launch_rounded),
         ),
       ],

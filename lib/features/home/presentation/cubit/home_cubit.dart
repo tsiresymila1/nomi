@@ -166,6 +166,7 @@ class HomeCubit extends Cubit<HomeState> {
     );
     try {
       await _workspaceEmbedderInstaller.ensureInstalled(
+        modelKey: state.selectedEmbedderModel,
         onStatus: ({required message, modelProgress, tokenizerProgress}) {
           emit(state.copyWith(embedderStatus: message));
         },

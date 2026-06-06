@@ -1,6 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemma/core/api/flutter_gemma.dart';
-import 'package:gena/core/logger.dart';
+import 'package:gena/features/downloads/data/default_embedder_models.dart';
 
 typedef InstallStatusCallback =
     void Function({
@@ -10,15 +10,16 @@ typedef InstallStatusCallback =
     });
 
 class WorkspaceEmbedderInstaller {
-  static const _modelUrl =
-      'https://huggingface.co/yyiimmiiyy/embeddinggemma-300m-mirror/resolve/main/embeddinggemma-300M_seq256_mixed-precision.tflite';
-  static const _tokenizerUrl =
-      'https://huggingface.co/yyiimmiiyy/embeddinggemma-300m-mirror/resolve/main/sentencepiece.model';
-
   Future<void> ensureInstalled({
     required InstallStatusCallback onStatus,
+    String modelKey = 'embeddinggemma_300m',
   }) async {
     onStatus(message: 'Checking embedding model...');
+
+    final selectedModel = findDefaultEmbedderModel(modelKey);
+    if (selectedModel == null) {
+      throw FormatException('Unknown embedder model: $modelKey');
+    }
 
     if (FlutterGemma.hasActiveEmbedder()) {
       await FlutterGemma.getActiveEmbedder();
@@ -31,7 +32,6 @@ class WorkspaceEmbedderInstaller {
     }
 
     final token = dotenv.env['HUGGING_FACE_TOKEN']?.trim() ?? '';
-    logger.i(token);
     if (token.isEmpty) {
       throw const FormatException(
         'Missing HUGGING_FACE_TOKEN in .env. Add it and restart the app.',
@@ -40,8 +40,8 @@ class WorkspaceEmbedderInstaller {
 
     onStatus(message: 'Installing embedding model...');
     await FlutterGemma.installEmbedder()
-        .modelFromNetwork(_modelUrl, token: token)
-        .tokenizerFromNetwork(_tokenizerUrl, token: token)
+        .modelFromNetwork(selectedModel.modelUrl, token: token)
+        .tokenizerFromNetwork(selectedModel.tokenizerUrl, token: token)
         .withModelProgress(
           (progress) => onStatus(
             message: 'Downloading embedder model...',

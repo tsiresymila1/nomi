@@ -4,9 +4,11 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
+import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
@@ -63,11 +65,18 @@ Future<void> generateAssistantResponseWithGenkit({
 
   if (isCancelled()) return;
 
+  final messageWindow = await _resolveMessageWindow(
+    deps: deps,
+    activeModel: activeModel,
+    storedMessages: storedMessages,
+    systemInstruction: systemInstruction,
+  );
   final messages = _buildGenkitMessages(
     systemInstruction: systemInstruction,
-    storedMessages: storedMessages,
+    storedMessages: messageWindow.keptMessages,
   );
   final ai = _buildGenkit(activeModel);
+  final toolResultCollector = _ToolResultCollector();
   final stringifyToolResultForGemma4LiteRt =
       _shouldStringifyToolResultForGemma4LiteRt(activeModel);
   final toolNames = _registerTools(
@@ -78,14 +87,19 @@ Future<void> generateAssistantResponseWithGenkit({
     deps: deps,
     workspace: activeWorkspace,
     isCancelled: isCancelled,
+    toolResultCollector: toolResultCollector,
     stringifyToolResultForGemma4LiteRt:
         stringifyToolResultForGemma4LiteRt,
   );
 
-  _updateContextWindowEstimate(
-    deps.chatContextWindowCubit,
-    maxTokens: activeModel.maxTokens,
-    tokenBuffer: activeModel.tokenBuffer,
+  deps.chatContextWindowCubit.update(
+    ChatContextWindowState(
+      maxTokens: activeModel.maxTokens,
+      reservedOutputTokens: messageWindow.reservedOutputTokens,
+      estimatedPromptTokens: messageWindow.promptTokens,
+      remainingTokens: messageWindow.remainingTokens,
+      compactedMessages: messageWindow.compactedMessages,
+    ),
   );
 
   final responseBuffer = StringBuffer();
@@ -120,7 +134,10 @@ Future<void> generateAssistantResponseWithGenkit({
   if (isCancelled()) return;
 
   final result = await stream.onResult;
-  final finalText = result.text.trim();
+  var finalText = result.text.trim();
+  if (finalText.isEmpty && toolResultCollector.hasEntries) {
+    finalText = toolResultCollector.buildAssistantFallback();
+  }
   if (finalText.isEmpty) {
     throw StateError('Model returned no final assistant text.');
   }
@@ -190,6 +207,75 @@ Genkit _buildGenkit(ModelInfo model) {
   );
 }
 
+Future<StoredContextWindowPlan> _resolveMessageWindow({
+  required ChatRuntimeDependencies deps,
+  required ModelInfo activeModel,
+  required List<db.Message> storedMessages,
+  required String systemInstruction,
+}) async {
+  if (activeModel.provider != ModelProviderType.local) {
+    return _defaultMessageWindowPlan(
+      storedMessages: storedMessages,
+      maxTokens: activeModel.maxTokens,
+      tokenBuffer: activeModel.tokenBuffer,
+    );
+  }
+
+  final chatSession = await deps.chatSessionController.getActiveChatSession();
+  if (chatSession == null) {
+    return _defaultMessageWindowPlan(
+      storedMessages: storedMessages,
+      maxTokens: activeModel.maxTokens,
+      tokenBuffer: activeModel.tokenBuffer,
+    );
+  }
+
+  final systemTokens = await _estimateSystemInstructionTokens(
+    chatSession.chat,
+    systemInstruction,
+  );
+
+  return planStoredMessagesWindow(
+    chat: chatSession.chat,
+    storedMessages: storedMessages,
+    settingsMaxTokens: activeModel.maxTokens,
+    requestedOutputReserve: activeModel.tokenBuffer,
+    minMessagesToKeep: 1,
+    extraPromptTokens: systemTokens,
+  );
+}
+
+Future<int> _estimateSystemInstructionTokens(
+  gemma.InferenceChat chat,
+  String systemInstruction,
+) async {
+  final trimmed = systemInstruction.trim();
+  if (trimmed.isEmpty) return 0;
+  try {
+    return await chat.session.sizeInTokens(trimmed);
+  } catch (_) {
+    return fallbackTokenEstimate(trimmed);
+  }
+}
+
+StoredContextWindowPlan _defaultMessageWindowPlan({
+  required List<db.Message> storedMessages,
+  required int maxTokens,
+  required int tokenBuffer,
+}) {
+  final reserved = resolveOutputReserve(
+    maxTokens: maxTokens,
+    requested: tokenBuffer,
+  );
+  return StoredContextWindowPlan(
+    keptMessages: storedMessages,
+    promptTokens: 0,
+    reservedOutputTokens: reserved,
+    remainingTokens: maxTokens - reserved,
+    compactedMessages: 0,
+  );
+}
+
 ModelRef<dynamic> _resolveModelRef(ModelInfo model) {
   if (model.provider == ModelProviderType.local) {
     return flutterGemma.model(_localModelName);
@@ -235,6 +321,7 @@ List<String> _registerTools({
   required ChatRuntimeDependencies deps,
   required WorkspaceEntity? workspace,
   required bool Function() isCancelled,
+  required _ToolResultCollector toolResultCollector,
   required bool stringifyToolResultForGemma4LiteRt,
 }) {
   final names = <String>[];
@@ -281,6 +368,11 @@ List<String> _registerTools({
                     args: args,
                   ),
           );
+          logger.i('tool result: ${_formatToolTraceMessage(
+                    toolName: definition.name,
+                    args: input,
+                    result: toolResult,
+                  )}');
 
           await database
               .into(database.messages)
@@ -297,11 +389,21 @@ List<String> _registerTools({
                 ),
               );
 
+          toolResultCollector.add(
+            _renderToolResultText(definition.name, toolResult),
+          );
+
           return _compactToolResultForModel(
             toolName: definition.name,
             result: toolResult,
             stringifyForGemma4LiteRt: stringifyToolResultForGemma4LiteRt,
           );
+        } catch (e) {
+          logger.e('tool error: $e');
+          return <String, dynamic>{
+            'status': 'error',
+            'message': 'Tool error: $e',
+          };
         } finally {
           deps.chatToolWaitingCubit.clear();
         }
@@ -330,6 +432,8 @@ List<Message> _buildGenkitMessages({
   }
 
   for (final message in storedMessages) {
+    if (!_isGenkitConversationMessage(message)) continue;
+
     if (message.role == 'user') {
       final content = <Part>[];
       final text = message.content.trim();
@@ -367,6 +471,13 @@ List<Message> _buildGenkitMessages({
   }
 
   return messages;
+}
+
+bool _isGenkitConversationMessage(db.Message message) {
+  final isConversationRole =
+      message.role == 'user' || message.role == 'assistant';
+  final isConversationKind = message.kind == 'text' || message.kind == 'image';
+  return isConversationRole && isConversationKind;
 }
 
 Map<String, dynamic> _parseToolInput(dynamic value) {
@@ -456,7 +567,7 @@ Map<String, dynamic> _compactToolResultForModel({
       maxListItems: 8,
     );
     return <String, dynamic>{
-      'result': jsonEncode(compact),
+      'result': _renderToolResultText(toolName, compact),
     };
   }
 
@@ -574,19 +685,78 @@ bool _shouldStringifyToolResultForGemma4LiteRt(ModelInfo model) {
   return inferFileTypeFromSource(model.source) == gemma.ModelFileType.litertlm;
 }
 
-void _updateContextWindowEstimate(
-  ChatContextWindowCubit contextWindowCubit, {
-  required int maxTokens,
-  required int tokenBuffer,
-}) {
-  final reserved = tokenBuffer.clamp(0, maxTokens);
-  contextWindowCubit.update(
-    ChatContextWindowState(
-      maxTokens: maxTokens,
-      reservedOutputTokens: reserved,
-      estimatedPromptTokens: 0,
-      remainingTokens: maxTokens - reserved,
-      compactedMessages: 0,
-    ),
-  );
+class _ToolResultCollector {
+  final List<String> _entries = [];
+
+  bool get hasEntries => _entries.isNotEmpty;
+
+  void add(String resultText) {
+    final normalized = resultText.trim();
+    if (normalized.isEmpty) return;
+    _entries.add(normalized);
+  }
+
+  String buildAssistantFallback() {
+    return _entries.join('\n\n').trim();
+  }
+}
+
+String _renderToolResultText(String toolName, dynamic result) {
+  final buffer = StringBuffer('Tool result: $toolName');
+  final rendered = _renderToolValueText(result);
+  if (rendered.isNotEmpty) {
+    buffer
+      ..write('\n')
+      ..write(rendered);
+  }
+  return buffer.toString().trim();
+}
+
+String _renderToolValueText(dynamic value, {int indent = 0}) {
+  final prefix = '  ' * indent;
+
+  if (value == null) return '${prefix}null';
+  if (value is String || value is num || value is bool) {
+    return '$prefix$value';
+  }
+
+  if (value is List) {
+    if (value.isEmpty) return '$prefix[]';
+    final lines = <String>[];
+    for (final item in value) {
+      if (item is Map || item is List) {
+        lines.add('$prefix-');
+        lines.add(_renderToolValueText(item, indent: indent + 1));
+      } else {
+        lines.add('$prefix- ${_renderInlineToolValue(item)}');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  if (value is Map) {
+    if (value.isEmpty) return '$prefix{}';
+    final lines = <String>[];
+    for (final entry in value.entries) {
+      final key = entry.key.toString();
+      final entryValue = entry.value;
+      if (entryValue is Map || entryValue is List) {
+        lines.add('$prefix$key:');
+        lines.add(_renderToolValueText(entryValue, indent: indent + 1));
+      } else {
+        lines.add('$prefix$key: ${_renderInlineToolValue(entryValue)}');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  return '$prefix$value';
+}
+
+String _renderInlineToolValue(dynamic value) {
+  if (value == null) return 'null';
+  if (value is String || value is num || value is bool) {
+    return value.toString();
+  }
+  return jsonEncode(value);
 }

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_attachment_button.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview.dart';
@@ -24,6 +28,13 @@ class _ChatInputState extends State<ChatInput> {
   bool _wasKeyboardVisible = false;
   bool _hasTypedContent = false;
   bool _hasFocus = false;
+  Timer? _draftBudgetDebounce;
+  LocalMessageBudgetPlan? _draftBudget;
+  bool _isEstimatingDraftBudget = false;
+  int _draftBudgetRequestId = 0;
+  String? _lastSelectedImagePath;
+  String? _lastSelectedChatId;
+  int? _lastBudgetModelId;
 
   @override
   void initState() {
@@ -38,13 +49,16 @@ class _ChatInputState extends State<ChatInput> {
 
   void _onInputChanged() {
     final hasTyped = _controller.text.trim().isNotEmpty;
-    if (hasTyped == _hasTypedContent) return;
-    setState(() => _hasTypedContent = hasTyped);
+    if (hasTyped != _hasTypedContent) {
+      setState(() => _hasTypedContent = hasTyped);
+    }
+    _scheduleDraftBudgetRefresh();
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onInputChanged);
+    _draftBudgetDebounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -58,6 +72,51 @@ class _ChatInputState extends State<ChatInput> {
 
   Future<void> _stopGeneration() async {
     await sl<ChatInputCubit>().stopGeneration();
+  }
+
+  void _scheduleDraftBudgetRefresh({
+    Duration delay = const Duration(milliseconds: 180),
+  }) {
+    _draftBudgetDebounce?.cancel();
+    _draftBudgetDebounce = Timer(delay, _refreshDraftBudget);
+  }
+
+  Future<void> _refreshDraftBudget() async {
+    final requestId = ++_draftBudgetRequestId;
+    final text = _controller.text.trim();
+    final imagePath = sl<ChatInputCubit>().state.selectedImagePath;
+    final activeModel = await sl<ActiveModelInfoResolver>()
+        .getActiveModelInfo();
+
+    if (!mounted) return;
+
+    final hasImage = imagePath != null && imagePath.isNotEmpty;
+    final shouldHideBudget =
+        activeModel == null ||
+        activeModel.provider != 'local' ||
+        (text.isEmpty && !hasImage);
+    if (shouldHideBudget) {
+      if (_draftBudget != null || _isEstimatingDraftBudget) {
+        setState(() {
+          _draftBudget = null;
+          _isEstimatingDraftBudget = false;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isEstimatingDraftBudget = true);
+
+    final budget = await sl<ChatThreadActions>().estimateLocalMessageBudget(
+      text: text,
+      imagePath: imagePath,
+    );
+
+    if (!mounted || requestId != _draftBudgetRequestId) return;
+    setState(() {
+      _draftBudget = budget;
+      _isEstimatingDraftBudget = false;
+    });
   }
 
   Future<void> _openAttachmentMenu({
@@ -134,35 +193,55 @@ class _ChatInputState extends State<ChatInput> {
       builder: (context, isGenerating) {
         return BlocBuilder<ChatInputCubit, ChatInputState>(
           builder: (context, inputState) {
-            return StreamBuilder<ModelInfo?>(
-              stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
-              builder: (context, activeModelSnapshot) {
-                final activeModel = activeModelSnapshot.data;
-                final canAttachImage = activeModel?.supportImage ?? false;
-                final canRecordAudio = activeModel?.supportAudio ?? false;
-                final hasSelectedImage = inputState.selectedImagePath != null;
-                final hasSendableContent = _hasTypedContent || hasSelectedImage;
-                final keyboardVisible =
-                    MediaQuery.viewInsetsOf(context).bottom > 0;
-                if (_wasKeyboardVisible &&
-                    !keyboardVisible &&
-                    _focusNode.hasFocus) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    _focusNode.unfocus();
-                  });
-                }
-                _wasKeyboardVisible = keyboardVisible;
+            return BlocBuilder<SelectedChatCubit, String?>(
+              builder: (context, selectedChatId) {
+                return StreamBuilder<ModelInfo?>(
+                  stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
+                  builder: (context, activeModelSnapshot) {
+                    final activeModel = activeModelSnapshot.data;
+                    final canAttachImage = activeModel?.supportImage ?? false;
+                    final canRecordAudio = activeModel?.supportAudio ?? false;
+                    final hasSelectedImage =
+                        inputState.selectedImagePath != null;
+                    final hasSendableContent =
+                        _hasTypedContent || hasSelectedImage;
+                    final keyboardVisible =
+                        MediaQuery.viewInsetsOf(context).bottom > 0;
+                    if (_wasKeyboardVisible &&
+                        !keyboardVisible &&
+                        _focusNode.hasFocus) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _focusNode.unfocus();
+                      });
+                    }
+                    _wasKeyboardVisible = keyboardVisible;
 
-                return _buildInputField(
-                  context: context,
-                  colorScheme: colorScheme,
-                  isGenerating: isGenerating,
-                  inputState: inputState,
-                  canAttachImage: canAttachImage,
-                  canRecordAudio: canRecordAudio,
-                  hasSelectedImage: hasSelectedImage,
-                  hasSendableContent: hasSendableContent,
+                    if (_lastSelectedImagePath !=
+                            inputState.selectedImagePath ||
+                        _lastSelectedChatId != selectedChatId ||
+                        _lastBudgetModelId != activeModel?.id) {
+                      _lastSelectedImagePath = inputState.selectedImagePath;
+                      _lastSelectedChatId = selectedChatId;
+                      _lastBudgetModelId = activeModel?.id;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _scheduleDraftBudgetRefresh(delay: Duration.zero);
+                      });
+                    }
+
+                    return _buildInputField(
+                      context: context,
+                      colorScheme: colorScheme,
+                      activeModel: activeModel,
+                      isGenerating: isGenerating,
+                      inputState: inputState,
+                      canAttachImage: canAttachImage,
+                      canRecordAudio: canRecordAudio,
+                      hasSelectedImage: hasSelectedImage,
+                      hasSendableContent: hasSendableContent,
+                    );
+                  },
                 );
               },
             );
@@ -175,6 +254,7 @@ class _ChatInputState extends State<ChatInput> {
   Widget _buildInputField({
     required BuildContext context,
     required ColorScheme colorScheme,
+    required ModelInfo? activeModel,
     required bool isGenerating,
     required ChatInputState inputState,
     required bool canAttachImage,
@@ -206,6 +286,12 @@ class _ChatInputState extends State<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
         children: [
+          _buildTokenBudgetIndicator(
+            context: context,
+            colorScheme: colorScheme,
+            activeModel: activeModel,
+            hasDraftContent: hasSendableContent,
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
@@ -332,6 +418,119 @@ class _ChatInputState extends State<ChatInput> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTokenBudgetIndicator({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required ModelInfo? activeModel,
+    required bool hasDraftContent,
+  }) {
+    if (activeModel?.provider != 'local') {
+      return const SizedBox.shrink();
+    }
+    if (!hasDraftContent && _draftBudget == null && !_isEstimatingDraftBudget) {
+      return const SizedBox.shrink();
+    }
+
+    final budget = _draftBudget;
+    final isOverflow = budget != null && !budget.fits;
+    final isTight =
+        budget != null &&
+        budget.fits &&
+        budget.remainingTokensAfterMessage <= budget.reservedOutputTokens;
+    final accent = isOverflow
+        ? colorScheme.error
+        : isTight
+        ? colorScheme.tertiary
+        : colorScheme.primary;
+    final background = isOverflow
+        ? colorScheme.errorContainer
+        : colorScheme.surfaceContainerHigh;
+
+    final title = switch ((budget, _isEstimatingDraftBudget)) {
+      (null, true) => 'Estimating token budget...',
+      (null, false) => 'Token budget unavailable right now.',
+      (final LocalMessageBudgetPlan value?, _) when !value.fits =>
+        'Draft is too large by about ${value.overflowTokens} token(s).',
+      (final LocalMessageBudgetPlan value?, _) =>
+        '${value.remainingTokensAfterMessage} token(s) left after this message.',
+    };
+
+    final chips = <Widget>[];
+    if (budget != null) {
+      chips.add(_buildBudgetChip(label: 'Draft', value: budget.messageTokens));
+      chips.add(_buildBudgetChip(label: 'Prompt', value: budget.promptTokens));
+      chips.add(
+        _buildBudgetChip(label: 'Reserve', value: budget.reservedOutputTokens),
+      );
+      if (budget.compactedMessages > 0) {
+        chips.add(
+          _buildBudgetChip(label: 'Compacted', value: budget.compactedMessages),
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withAlpha(70)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isOverflow ? Icons.warning_amber_rounded : Icons.tune_rounded,
+                  size: 16,
+                  color: accent,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (chips.isNotEmpty)
+              Wrap(spacing: 8, runSpacing: 8, children: chips),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBudgetChip({required String label, required int value}) {
+    return Builder(
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$label $value',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        );
+      },
     );
   }
 }

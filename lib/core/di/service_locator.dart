@@ -1,6 +1,7 @@
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:get_it/get_it.dart';
 import 'package:gena/core/database/gena_database.dart';
+import 'package:gena/core/services/device_system_info_service.dart';
 import 'package:gena/core/theme/theme_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
@@ -27,6 +28,11 @@ Future<void> setupServiceLocator() async {
   }
   if (!sl.isRegistered<ThemeCubit>()) {
     sl.registerLazySingleton<ThemeCubit>(ThemeCubit.new);
+  }
+  if (!sl.isRegistered<DeviceSystemInfoService>()) {
+    sl.registerLazySingleton<DeviceSystemInfoService>(
+      DeviceSystemInfoService.new,
+    );
   }
   if (!sl.isRegistered<WorkspaceDocumentParser>()) {
     sl.registerLazySingleton<WorkspaceDocumentParser>(

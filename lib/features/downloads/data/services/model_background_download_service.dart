@@ -41,6 +41,12 @@ class ModelBackgroundDownloadService {
   final Map<String, _PendingDownload> _pending = <String, _PendingDownload>{};
   final Map<String, String> _taskIdByModelKey = <String, String>{};
 
+  Stream<List<SmartTaskSnapshot>> watchTasks() async* {
+    await _ensureInitialized();
+    yield _controller.tasks;
+    yield* _controller.tasksStream;
+  }
+
   Future<void> _ensureInitialized() async {
     if (_initialized) {
       return;
@@ -127,6 +133,7 @@ class ModelBackgroundDownloadService {
           createModelDownloadTask,
         ),
         payload: <String, dynamic>{
+          'modelKey': modelKey,
           'modelName': modelName,
           'downloadUrl': sourceUrl,
           'outputPath': destination.path,
@@ -350,6 +357,7 @@ class _ModelDownloadTask extends SmartBackgroundTask {
     _cancelled = true;
     _paused = false;
     _cancelToken?.cancel('Cancelled by user');
+    _dio.close(force: true);
 
     try {
       final file = File(_outputPath);

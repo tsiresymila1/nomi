@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:gena/core/logger.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:smart_background_tasks/smart_background_tasks.dart';
+import 'package:gena/features/downloads/data/services/model_download_task.dart';
 
-@pragma('vm:entry-point')
-SmartBackgroundTask createModelDownloadTask() => _ModelDownloadTask();
+export 'package:gena/features/downloads/data/services/model_download_task.dart'
+    show ModelDownloadSnapshot, ModelDownloadStatus;
 
 class DownloadedModelFile {
   const DownloadedModelFile({
@@ -29,76 +26,80 @@ class ModelBackgroundDownloadService {
   static final ModelBackgroundDownloadService instance =
       ModelBackgroundDownloadService._();
 
-  final SmartBackgroundTasksController _controller =
-      SmartBackgroundTasksController(
-        foregroundServiceTitle: 'Model download in progress',
-        foregroundServiceText: 'Preparing model download',
-        foregroundEventIntervalMs: 1000,
-      );
-
-  bool _initialized = false;
-  StreamSubscription<List<SmartTaskSnapshot>>? _tasksSubscription;
+  final FileDownloader _downloader = FileDownloader();
+  final StreamController<List<ModelDownloadSnapshot>> _tasksController =
+      StreamController<List<ModelDownloadSnapshot>>.broadcast();
+  final Map<String, ModelDownloadSnapshot> _snapshots =
+      <String, ModelDownloadSnapshot>{};
   final Map<String, _PendingDownload> _pending = <String, _PendingDownload>{};
   final Map<String, String> _taskIdByModelKey = <String, String>{};
 
-  Stream<List<SmartTaskSnapshot>> watchTasks() async* {
+  StreamSubscription<TaskUpdate>? _updatesSubscription;
+  StreamSubscription<TaskRecord>? _recordsSubscription;
+  Future<void>? _initialization;
+
+  Stream<List<ModelDownloadSnapshot>> watchTasks() async* {
     await _ensureInitialized();
-    yield _controller.tasks;
-    yield* _controller.tasksStream;
+    yield _currentSnapshots;
+    yield* _tasksController.stream;
   }
 
-  Future<void> _ensureInitialized() async {
-    if (_initialized) {
-      return;
-    }
+  Future<void> _ensureInitialized() {
+    return _initialization ??= _initialize();
+  }
 
-    await _controller.initialize(
-      notificationMode: SmartNotificationMode.perTask,
+  Future<void> _initialize() async {
+    _updatesSubscription = _downloader.updates.listen(_onTaskUpdate);
+    _recordsSubscription = _downloader.database.updates.listen(_onTaskRecord);
+
+    _downloader.configureNotificationForGroup(
+      modelDownloadsGroup,
+      running: const TaskNotification(
+        'Downloading model',
+        '{displayName} · {progress}',
+      ),
+      complete: const TaskNotification(
+        'Model downloaded',
+        '{displayName} is ready to install',
+      ),
+      error: const TaskNotification(
+        'Model download failed',
+        '{displayName} could not be downloaded',
+      ),
+      paused: const TaskNotification(
+        'Model download paused',
+        '{displayName} is paused',
+      ),
+      canceled: const TaskNotification(
+        'Model download cancelled',
+        '{displayName} was cancelled',
+      ),
+      progressBar: true,
     );
-    await _controller.requestEssentialPermissions();
 
-    _tasksSubscription = _controller.tasksStream.listen((tasks) {
-      for (final task in tasks) {
-        final pending = _pending[task.id];
-        if (pending == null) {
-          continue;
-        }
+    await _downloader.configure(
+      androidConfig: [
+        (Config.runInForeground, true),
+        (Config.useCacheDir, Config.never),
+      ],
+      iOSConfig: (Config.resourceTimeout, const Duration(hours: 4)),
+    );
+    await _downloader.start(autoCleanDatabase: true);
 
-        pending.onProgress(task.progress, task.message);
+    final records = await _downloader.database.allRecords(
+      group: modelDownloadsGroup,
+    );
+    for (final record in records) {
+      _storeSnapshot(modelDownloadSnapshotFromRecord(record));
+    }
+    _emitSnapshots();
 
-        switch (task.status) {
-          case SmartTaskStatus.completed:
-            _pending.remove(task.id);
-            _taskIdByModelKey.remove(pending.modelKey);
-            pending.complete(
-              DownloadedModelFile(
-                path: pending.outputPath,
-                fileName: pending.fileName,
-                sizeBytes: File(pending.outputPath).existsSync()
-                    ? File(pending.outputPath).lengthSync()
-                    : 0,
-              ),
-            );
-            break;
-          case SmartTaskStatus.failed:
-            _pending.remove(task.id);
-            _taskIdByModelKey.remove(pending.modelKey);
-            pending.fail(StateError(task.error ?? task.message));
-            break;
-          case SmartTaskStatus.cancelled:
-            _pending.remove(task.id);
-            _taskIdByModelKey.remove(pending.modelKey);
-            pending.fail(StateError('Download cancelled'));
-            break;
-          case SmartTaskStatus.queued:
-          case SmartTaskStatus.running:
-          case SmartTaskStatus.paused:
-            break;
-        }
-      }
-    });
-
-    _initialized = true;
+    final notificationPermission = await _downloader.permissions.status(
+      PermissionType.notifications,
+    );
+    if (notificationPermission == PermissionStatus.undetermined) {
+      await _downloader.permissions.request(PermissionType.notifications);
+    }
   }
 
   Future<DownloadedModelFile> downloadModelToFile({
@@ -109,125 +110,198 @@ class ModelBackgroundDownloadService {
   }) async {
     await _ensureInitialized();
 
-    final existingTaskId = _taskIdByModelKey[modelKey];
-    if (existingTaskId != null) {
-      await _controller.cancelTask(existingTaskId);
-    }
-
-    final destination = await _resolveDestination(modelName, sourceUrl);
-    if (await File(destination.path).exists()) {
+    final fileName = _fileNameFor(modelName, sourceUrl);
+    final task = buildModelDownloadTask(
+      modelKey: modelKey,
+      modelName: modelName,
+      sourceUrl: sourceUrl,
+      fileName: fileName,
+      huggingFaceToken: dotenv.env['HUGGING_FACE_TOKEN'],
+    );
+    final outputPath = await task.filePath();
+    final output = File(outputPath);
+    if (await output.exists()) {
       return DownloadedModelFile(
-        path: destination.path,
-        fileName: destination.fileName,
-        sizeBytes: await File(destination.path).length(),
+        path: outputPath,
+        fileName: fileName,
+        sizeBytes: await output.length(),
       );
     }
 
-    final completer = Completer<DownloadedModelFile>();
+    final existingPending = _pending[task.taskId];
+    if (existingPending != null) {
+      return existingPending.completer.future;
+    }
 
-    final hfToken = dotenv.env['HUGGING_FACE_TOKEN']?.trim();
-    final taskId = await _controller.startTask(
-      SmartTaskRequest(
-        name: 'Download $modelName',
-        factoryHandle: SmartTaskFactoryHandle.fromFactory(
-          createModelDownloadTask,
-        ),
-        payload: <String, dynamic>{
-          'modelKey': modelKey,
-          'modelName': modelName,
-          'downloadUrl': sourceUrl,
-          'outputPath': destination.path,
-          if (hfToken != null && hfToken.isNotEmpty) 'hfToken': hfToken,
-        },
-      ),
-    );
+    final existingRecord = await _downloader.database.recordForId(task.taskId);
+    if (existingRecord != null && !existingRecord.status.isFinalState) {
+      final pending = _createPending(
+        taskId: task.taskId,
+        modelKey: modelKey,
+        outputPath: outputPath,
+        fileName: fileName,
+        onProgress: onProgress,
+      );
+      if (existingRecord.status == TaskStatus.paused &&
+          existingRecord.task is DownloadTask) {
+        await _downloader.resume(existingRecord.task as DownloadTask);
+      }
+      return pending.completer.future;
+    }
+    await _downloader.database.deleteRecordWithId(task.taskId);
 
-    _pending[taskId] = _PendingDownload(
-      completer: completer,
-      taskId: taskId,
+    final pending = _createPending(
+      taskId: task.taskId,
       modelKey: modelKey,
-      outputPath: destination.path,
-      fileName: destination.fileName,
-      onProgress: onProgress ?? (progress, message) {},
+      outputPath: outputPath,
+      fileName: fileName,
+      onProgress: onProgress,
     );
-    _taskIdByModelKey[modelKey] = taskId;
 
-    return completer.future;
+    final enqueued = await _downloader.enqueue(task);
+    if (!enqueued) {
+      _pending.remove(task.taskId);
+      _taskIdByModelKey.remove(modelKey);
+      throw StateError('Could not enqueue model download');
+    }
+
+    return pending.completer.future;
   }
 
   bool hasRunningDownload(String modelKey) {
-    return _taskIdByModelKey.containsKey(modelKey);
+    final taskId = _taskIdByModelKey[modelKey];
+    if (taskId == null) return false;
+    return !(_snapshots[taskId]?.isTerminal ?? false);
   }
 
   Future<bool> cancelDownload(String modelKey) async {
     await _ensureInitialized();
     final taskId = _taskIdByModelKey[modelKey];
     if (taskId == null) return false;
-    await _controller.cancelTask(taskId);
-    return true;
+    return _downloader.cancelTaskWithId(taskId);
   }
 
-  Future<_DownloadDestination> _resolveDestination(
-    String modelName,
-    String sourceUrl,
-  ) async {
-    final appSupport = await getApplicationSupportDirectory();
-    final modelsDir = Directory('${appSupport.path}/models');
-    if (!await modelsDir.exists()) {
-      await modelsDir.create(recursive: true);
-    }
+  void _onTaskRecord(TaskRecord record) {
+    if (record.group != modelDownloadsGroup) return;
+    _handleSnapshot(modelDownloadSnapshotFromRecord(record));
+  }
 
+  void _onTaskUpdate(TaskUpdate update) {
+    if (update.task.group != modelDownloadsGroup) return;
+
+    final previous = _snapshots[update.task.taskId];
+    final record = switch (update) {
+      TaskStatusUpdate statusUpdate => TaskRecord(
+        update.task,
+        statusUpdate.status,
+        _progressForStatus(statusUpdate.status, previous?.progress ?? 0),
+        -1,
+        statusUpdate.exception,
+      ),
+      TaskProgressUpdate progressUpdate => TaskRecord(
+        update.task,
+        _taskStatusForProgress(previous?.status),
+        progressUpdate.progress,
+        progressUpdate.expectedFileSize,
+      ),
+    };
+    _handleSnapshot(modelDownloadSnapshotFromRecord(record));
+  }
+
+  void _handleSnapshot(ModelDownloadSnapshot snapshot) {
+    _storeSnapshot(snapshot);
+    _emitSnapshots();
+
+    final pending = _pending[snapshot.id];
+    if (pending == null) return;
+
+    pending.onProgress(snapshot.progress, snapshot.message);
+    switch (snapshot.status) {
+      case ModelDownloadStatus.complete:
+        _pending.remove(snapshot.id);
+        _taskIdByModelKey.remove(pending.modelKey);
+        pending.complete();
+        break;
+      case ModelDownloadStatus.failed:
+        _pending.remove(snapshot.id);
+        _taskIdByModelKey.remove(pending.modelKey);
+        pending.fail(StateError(snapshot.error ?? snapshot.message));
+        break;
+      case ModelDownloadStatus.cancelled:
+        _pending.remove(snapshot.id);
+        _taskIdByModelKey.remove(pending.modelKey);
+        pending.fail(StateError('Download cancelled'));
+        break;
+      case ModelDownloadStatus.queued:
+      case ModelDownloadStatus.running:
+      case ModelDownloadStatus.paused:
+        break;
+    }
+  }
+
+  void _storeSnapshot(ModelDownloadSnapshot snapshot) {
+    _snapshots[snapshot.id] = snapshot;
+    if (!snapshot.isTerminal) {
+      _taskIdByModelKey[snapshot.modelKey] = snapshot.id;
+    } else if (_taskIdByModelKey[snapshot.modelKey] == snapshot.id) {
+      _taskIdByModelKey.remove(snapshot.modelKey);
+    }
+  }
+
+  _PendingDownload _createPending({
+    required String taskId,
+    required String modelKey,
+    required String outputPath,
+    required String fileName,
+    void Function(double progress, String message)? onProgress,
+  }) {
+    final pending = _PendingDownload(
+      completer: Completer<DownloadedModelFile>(),
+      modelKey: modelKey,
+      outputPath: outputPath,
+      fileName: fileName,
+      onProgress: onProgress ?? (_, _) {},
+    );
+    _pending[taskId] = pending;
+    _taskIdByModelKey[modelKey] = taskId;
+    return pending;
+  }
+
+  List<ModelDownloadSnapshot> get _currentSnapshots =>
+      List<ModelDownloadSnapshot>.unmodifiable(_snapshots.values);
+
+  void _emitSnapshots() {
+    if (!_tasksController.isClosed) {
+      _tasksController.add(_currentSnapshots);
+    }
+  }
+
+  String _fileNameFor(String modelName, String sourceUrl) {
     final uri = Uri.tryParse(sourceUrl);
-    String fileName = uri?.pathSegments.isNotEmpty == true
+    final sourceFileName = uri?.pathSegments.isNotEmpty == true
         ? uri!.pathSegments.last
         : '';
-    if (fileName.trim().isEmpty) {
-      fileName = _safeModelName(modelName);
-    }
-
-    final sanitized = _safeFilename(fileName);
-    final fullPath = '${modelsDir.path}/$sanitized';
-
-    return _DownloadDestination(path: fullPath, fileName: sanitized);
-  }
-
-  String _safeFilename(String input) {
-    final cleaned = input
+    final fallback = modelName.contains('.') ? modelName : '$modelName.task';
+    final cleaned = (sourceFileName.trim().isEmpty ? fallback : sourceFileName)
         .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
         .replaceAll(RegExp(r'_+'), '_');
-    if (cleaned.isEmpty) {
-      return 'model.task';
-    }
-    return cleaned;
-  }
-
-  String _safeModelName(String input) {
-    final cleaned = input
-        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
-        .replaceAll(RegExp(r'_+'), '_');
-    if (cleaned.isEmpty) {
-      return 'model.task';
-    }
-    if (cleaned.contains('.')) {
-      return cleaned;
-    }
-    return '$cleaned.task';
+    return cleaned.isEmpty ? 'model.task' : cleaned;
   }
 
   Future<void> dispose() async {
-    await _tasksSubscription?.cancel();
-    _tasksSubscription = null;
+    await _updatesSubscription?.cancel();
+    await _recordsSubscription?.cancel();
+    await _tasksController.close();
     _pending.clear();
     _taskIdByModelKey.clear();
-    _initialized = false;
-    await _controller.dispose();
+    _snapshots.clear();
+    _initialization = null;
   }
 }
 
 class _PendingDownload {
   const _PendingDownload({
     required this.completer,
-    required this.taskId,
     required this.modelKey,
     required this.outputPath,
     required this.fileName,
@@ -235,16 +309,21 @@ class _PendingDownload {
   });
 
   final Completer<DownloadedModelFile> completer;
-  final String taskId;
   final String modelKey;
   final String outputPath;
   final String fileName;
   final void Function(double progress, String message) onProgress;
 
-  void complete(DownloadedModelFile result) {
-    if (!completer.isCompleted) {
-      completer.complete(result);
-    }
+  void complete() {
+    if (completer.isCompleted) return;
+    final output = File(outputPath);
+    completer.complete(
+      DownloadedModelFile(
+        path: outputPath,
+        fileName: fileName,
+        sizeBytes: output.existsSync() ? output.lengthSync() : 0,
+      ),
+    );
   }
 
   void fail(Object error) {
@@ -254,185 +333,24 @@ class _PendingDownload {
   }
 }
 
-class _DownloadDestination {
-  const _DownloadDestination({required this.path, required this.fileName});
-
-  final String path;
-  final String fileName;
+double _progressForStatus(TaskStatus status, double previousProgress) {
+  return switch (status) {
+    TaskStatus.complete => 1,
+    TaskStatus.enqueued ||
+    TaskStatus.running ||
+    TaskStatus.waitingToRetry ||
+    TaskStatus.paused => previousProgress,
+    TaskStatus.notFound || TaskStatus.failed || TaskStatus.canceled => 0,
+  };
 }
 
-class _ModelDownloadTask extends SmartBackgroundTask {
-  final Dio _dio = Dio();
-  CancelToken? _cancelToken;
-
-  bool _paused = false;
-  bool _cancelled = false;
-  bool _completed = false;
-  bool _isDownloading = false;
-  String? _error;
-
-  int _downloadedBytes = 0;
-  int _totalBytes = 0;
-  String _modelName = 'Model';
-  String _downloadUrl = '';
-  String _outputPath = '';
-  String? _hfToken;
-
-  @override
-  Future<void> onStart(SmartTaskContext context) async {
-    logger.i("SART DOWNLOADING");
-    logger.i(context.payload);
-    _modelName = context.payload['modelName'] as String? ?? 'Model';
-    _downloadUrl = context.payload['downloadUrl'] as String? ?? '';
-    _outputPath = context.payload['outputPath'] as String? ?? '';
-    _hfToken = context.payload['hfToken'] as String?;
-
-    _paused = false;
-    _cancelled = false;
-    _completed = false;
-    _isDownloading = false;
-    _error = null;
-    _downloadedBytes = 0;
-    _totalBytes = 0;
-
-    if (_downloadUrl.trim().isEmpty || _outputPath.trim().isEmpty) {
-      _error = 'Missing download URL or output path';
-      return;
-    }
-
-    final output = File(_outputPath);
-    if (await output.exists()) {
-      await output.delete();
-    }
-
-    unawaited(_downloadFile(resume: false));
-  }
-
-  @override
-  Future<SmartTaskStep> onTick(SmartTaskContext context) async {
-    if (_error != null) {
-      return SmartTaskStep.failed(
-        error: _error!,
-        message: '$_modelName failed',
-      );
-    }
-
-    if (_completed) {
-      return SmartTaskStep.completed(message: '$_modelName downloaded');
-    }
-
-    if (_totalBytes <= 0) {
-      return SmartTaskStep.progress(
-        progress: 0,
-        message: '$_modelName connecting...',
-      );
-    }
-
-    final progress = _downloadedBytes / _totalBytes;
-    return SmartTaskStep.progress(
-      progress: progress,
-      message:
-          '$_modelName ${(progress * 100).toStringAsFixed(0)}% (${_downloadedBytes ~/ 1024}KB/${_totalBytes ~/ 1024}KB)',
-    );
-  }
-
-  @override
-  Future<void> onPause(SmartTaskContext context) async {
-    _paused = true;
-    _cancelToken?.cancel('Paused by user');
-  }
-
-  @override
-  Future<void> onResume(SmartTaskContext context) async {
-    if (!_paused || _completed || _cancelled) {
-      return;
-    }
-    _paused = false;
-    _error = null;
-    unawaited(_downloadFile(resume: true));
-  }
-
-  @override
-  Future<void> onCancel(SmartTaskContext context) async {
-    _cancelled = true;
-    _paused = false;
-    _cancelToken?.cancel('Cancelled by user');
-    _dio.close(force: true);
-
-    try {
-      final file = File(_outputPath);
-      if (await file.exists()) {
-        await file.delete();
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _downloadFile({required bool resume}) async {
-    if (_isDownloading || _completed || _cancelled) {
-      return;
-    }
-
-    _isDownloading = true;
-    _cancelToken = CancelToken();
-
-    try {
-      final file = File(_outputPath);
-      if (!await file.parent.exists()) {
-        await file.parent.create(recursive: true);
-      }
-
-      final resumeFrom = (resume && await file.exists())
-          ? await file.length()
-          : 0;
-      if (resumeFrom > 0) {
-        _downloadedBytes = resumeFrom;
-      }
-
-      final headers = <String, dynamic>{HttpHeaders.acceptEncodingHeader: '*'};
-      if (_hfToken != null && _hfToken!.isNotEmpty) {
-        headers[HttpHeaders.authorizationHeader] = 'Bearer ${_hfToken!}';
-      }
-
-      var accessMode = FileAccessMode.write;
-      if (resumeFrom > 0) {
-        headers[HttpHeaders.rangeHeader] = 'bytes=$resumeFrom-';
-        accessMode = FileAccessMode.append;
-      }
-
-      await _dio.download(
-        _downloadUrl,
-        _outputPath,
-        fileAccessMode: accessMode,
-        deleteOnError: !resume,
-        options: Options(headers: headers),
-        cancelToken: _cancelToken,
-        onReceiveProgress: (received, total) {
-          debugPrint("${resumeFrom + received}/$total");
-          if (_cancelled) {
-            return;
-          }
-
-          _downloadedBytes = resumeFrom + received;
-          if (total > 0) {
-            _totalBytes = total >= _downloadedBytes
-                ? total
-                : resumeFrom + total;
-          }
-        },
-      );
-
-      if (!_paused && !_cancelled) {
-        _completed = true;
-      }
-    } on DioException catch (error) {
-      if (CancelToken.isCancel(error) && (_paused || _cancelled)) {
-        return;
-      }
-      _error = error.message ?? 'Download failed';
-    } catch (error) {
-      _error = error.toString();
-    } finally {
-      _isDownloading = false;
-    }
-  }
+TaskStatus _taskStatusForProgress(ModelDownloadStatus? status) {
+  return switch (status) {
+    ModelDownloadStatus.queued => TaskStatus.enqueued,
+    ModelDownloadStatus.complete => TaskStatus.complete,
+    ModelDownloadStatus.failed => TaskStatus.failed,
+    ModelDownloadStatus.cancelled => TaskStatus.canceled,
+    ModelDownloadStatus.paused => TaskStatus.paused,
+    ModelDownloadStatus.running || null => TaskStatus.running,
+  };
 }

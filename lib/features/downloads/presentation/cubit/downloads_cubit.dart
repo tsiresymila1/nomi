@@ -11,7 +11,6 @@ import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_state.dart';
-import 'package:smart_background_tasks/smart_background_tasks.dart';
 
 class DownloadsCubit extends Cubit<DownloadsState> {
   DownloadsCubit({
@@ -32,7 +31,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   final ModelRepositoryActions _modelRepositoryActions;
   final DefaultModelSeeder _defaultModelSeeder;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
-  StreamSubscription<List<SmartTaskSnapshot>>? _downloadTasksSubscription;
+  StreamSubscription<List<ModelDownloadSnapshot>>? _downloadTasksSubscription;
   bool _installInProgress = false;
 
   Future<void> _init() async {
@@ -57,14 +56,13 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     await refreshInstalledModels();
   }
 
-  void _syncBackgroundDownloadTasks(List<SmartTaskSnapshot> tasks) {
+  void _syncBackgroundDownloadTasks(List<ModelDownloadSnapshot> tasks) {
     final activeInstall = state.activeInstall;
     if (activeInstall == null) return;
 
-    SmartTaskSnapshot? matchingTask;
+    ModelDownloadSnapshot? matchingTask;
     for (final task in tasks) {
-      final taskModelKey = task.payload['modelKey']?.toString();
-      if (taskModelKey == activeInstall.key) {
+      if (task.modelKey == activeInstall.key) {
         matchingTask = task;
         break;
       }
@@ -80,7 +78,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
       return;
     }
 
-    if (matchingTask.status == SmartTaskStatus.cancelled) {
+    if (matchingTask.status == ModelDownloadStatus.cancelled) {
       _installInProgress = false;
       final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
       emit(

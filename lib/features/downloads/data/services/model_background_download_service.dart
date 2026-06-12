@@ -130,28 +130,67 @@ class ModelBackgroundDownloadService {
 
     final existingPending = _pending[task.taskId];
     if (existingPending != null) {
-      return existingPending.completer.future;
+      final requestMatches = modelDownloadTasksMatchRequest(
+        persistedTask: existingPending.task,
+        requestedTask: task,
+        persistedOutputPath: existingPending.outputPath,
+        requestedOutputPath: outputPath,
+      );
+      if (requestMatches) return existingPending.completer.future;
+      await _discardTaskState(
+        task.taskId,
+        StateError('Download request changed'),
+      );
     }
 
     final existingRecord = await _downloader.database.recordForId(task.taskId);
     if (existingRecord != null && !existingRecord.status.isFinalState) {
-      final pending = _createPending(
-        taskId: task.taskId,
-        modelKey: modelKey,
-        outputPath: outputPath,
-        fileName: fileName,
-        onProgress: onProgress,
+      final persistedOutputPath = await existingRecord.task.filePath();
+      final requestMatches = modelDownloadTasksMatchRequest(
+        persistedTask: existingRecord.task,
+        requestedTask: task,
+        persistedOutputPath: persistedOutputPath,
+        requestedOutputPath: outputPath,
       );
-      if (existingRecord.status == TaskStatus.paused &&
+
+      var taskCanResume = false;
+      var resumeSucceeded = false;
+      if (requestMatches &&
+          existingRecord.status == TaskStatus.paused &&
           existingRecord.task is DownloadTask) {
-        await _downloader.resume(existingRecord.task as DownloadTask);
+        final persistedTask = existingRecord.task as DownloadTask;
+        taskCanResume = await _downloader.taskCanResume(persistedTask);
+        if (taskCanResume) {
+          resumeSucceeded = await _downloader.resume(persistedTask);
+        }
       }
-      return pending.completer.future;
+
+      final action = persistedModelDownloadAction(
+        status: existingRecord.status,
+        requestMatches: requestMatches,
+        taskCanResume: taskCanResume,
+        resumeSucceeded: resumeSucceeded,
+      );
+      if (action == PersistedModelDownloadAction.reuse) {
+        final pending = _createPending(
+          task: task,
+          modelKey: modelKey,
+          outputPath: outputPath,
+          fileName: fileName,
+          onProgress: onProgress,
+        );
+        return pending.completer.future;
+      }
+      await _discardTaskState(
+        task.taskId,
+        StateError('Persisted download could not be resumed'),
+      );
+    } else if (existingRecord != null) {
+      await _downloader.database.deleteRecordWithId(task.taskId);
     }
-    await _downloader.database.deleteRecordWithId(task.taskId);
 
     final pending = _createPending(
-      taskId: task.taskId,
+      task: task,
       modelKey: modelKey,
       outputPath: outputPath,
       fileName: fileName,
@@ -249,7 +288,7 @@ class ModelBackgroundDownloadService {
   }
 
   _PendingDownload _createPending({
-    required String taskId,
+    required DownloadTask task,
     required String modelKey,
     required String outputPath,
     required String fileName,
@@ -257,14 +296,32 @@ class ModelBackgroundDownloadService {
   }) {
     final pending = _PendingDownload(
       completer: Completer<DownloadedModelFile>(),
+      task: task,
       modelKey: modelKey,
       outputPath: outputPath,
       fileName: fileName,
       onProgress: onProgress ?? (_, _) {},
     );
-    _pending[taskId] = pending;
-    _taskIdByModelKey[modelKey] = taskId;
+    _pending[task.taskId] = pending;
+    _taskIdByModelKey[modelKey] = task.taskId;
     return pending;
+  }
+
+  Future<void> _discardTaskState(String taskId, Object error) async {
+    await _downloader.cancelTaskWithId(taskId);
+    await _downloader.database.deleteRecordWithId(taskId);
+
+    final pending = _pending.remove(taskId);
+    if (pending != null) {
+      _taskIdByModelKey.remove(pending.modelKey);
+      pending.fail(error);
+    }
+
+    final snapshot = _snapshots.remove(taskId);
+    if (snapshot != null && _taskIdByModelKey[snapshot.modelKey] == taskId) {
+      _taskIdByModelKey.remove(snapshot.modelKey);
+    }
+    _emitSnapshots();
   }
 
   List<ModelDownloadSnapshot> get _currentSnapshots =>
@@ -302,6 +359,7 @@ class ModelBackgroundDownloadService {
 class _PendingDownload {
   const _PendingDownload({
     required this.completer,
+    required this.task,
     required this.modelKey,
     required this.outputPath,
     required this.fileName,
@@ -309,6 +367,7 @@ class _PendingDownload {
   });
 
   final Completer<DownloadedModelFile> completer;
+  final DownloadTask task;
   final String modelKey;
   final String outputPath;
   final String fileName;

@@ -10,6 +10,7 @@ import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
+import 'package:gena/features/downloads/presentation/cubit/download_reconciliation.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_state.dart';
 
 class DownloadsCubit extends Cubit<DownloadsState> {
@@ -32,6 +33,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   final DefaultModelSeeder _defaultModelSeeder;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
   StreamSubscription<List<ModelDownloadSnapshot>>? _downloadTasksSubscription;
+  List<ModelDownloadSnapshot> _backgroundDownloadTasks = const [];
   bool _installInProgress = false;
 
   Future<void> _init() async {
@@ -39,6 +41,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     _modelsSubscription = _modelRepository.watchModels().listen(
       (models) {
         emit(state.copyWith(models: models, loading: false, clearError: true));
+        _syncBackgroundDownloadTasks(_backgroundDownloadTasks);
       },
       onError: (Object error, StackTrace stackTrace) {
         logger.e(error, error: error, stackTrace: stackTrace);
@@ -52,43 +55,17 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     );
     _downloadTasksSubscription = ModelBackgroundDownloadService.instance
         .watchTasks()
-        .listen(_syncBackgroundDownloadTasks);
+        .listen((tasks) {
+          _backgroundDownloadTasks = tasks;
+          _syncBackgroundDownloadTasks(tasks);
+        });
     await refreshInstalledModels();
   }
 
   void _syncBackgroundDownloadTasks(List<ModelDownloadSnapshot> tasks) {
-    final activeInstall = state.activeInstall;
-    if (activeInstall == null) return;
-
-    ModelDownloadSnapshot? matchingTask;
-    for (final task in tasks) {
-      if (task.modelKey == activeInstall.key) {
-        matchingTask = task;
-        break;
-      }
-    }
-    if (matchingTask == null) return;
-
-    if (!matchingTask.isTerminal) {
-      final nextProgress = {
-        ...state.progressByKey,
-        activeInstall.key: matchingTask.progress.clamp(0.0, 1.0).toDouble(),
-      };
-      emit(state.copyWith(progressByKey: nextProgress));
-      return;
-    }
-
-    if (matchingTask.status == ModelDownloadStatus.cancelled) {
-      _installInProgress = false;
-      final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
-      emit(
-        state.copyWith(
-          progressByKey: nextProgress,
-          clearActiveInstall: true,
-          clearError: true,
-        ),
-      );
-    }
+    final nextState = reconcileBackgroundDownloads(state, tasks);
+    _installInProgress = nextState.activeInstall != null;
+    if (!identical(nextState, state)) emit(nextState);
   }
 
   Future<void> refreshInstalledModels() async {

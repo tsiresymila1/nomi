@@ -48,6 +48,153 @@ void main() {
       expect(first, startsWith('model_download_'));
       expect(first, matches(RegExp(r'^[a-zA-Z0-9_-]+$')));
     });
+
+    test('rejects a persisted task when the requested source changed', () {
+      final persisted = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/old.task',
+        fileName: 'gemma.task',
+      );
+      final requested = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/new.task',
+        fileName: 'gemma.task',
+      );
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: persisted,
+          requestedTask: requested,
+          persistedOutputPath: '/models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects a persisted task when its directory changed', () {
+      final requested = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+      final persisted = requested.copyWith(directory: 'old-models');
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: persisted,
+          requestedTask: requested,
+          persistedOutputPath: '/models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects a persisted task when its filename changed', () {
+      final requested = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+      final persisted = requested.copyWith(filename: 'old-gemma.task');
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: persisted,
+          requestedTask: requested,
+          persistedOutputPath: '/models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects a persisted task when its expected output path changed', () {
+      final task = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: task,
+          requestedTask: task,
+          persistedOutputPath: '/old-models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isFalse,
+      );
+    });
+
+    test('accepts a persisted task only when request and output match', () {
+      final persisted = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+      final requested = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Updated label',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: persisted,
+          requestedTask: requested,
+          persistedOutputPath: '/models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('persisted model download recovery', () {
+    test('restarts a paused task that cannot resume', () {
+      expect(
+        persistedModelDownloadAction(
+          status: TaskStatus.paused,
+          requestMatches: true,
+          taskCanResume: false,
+          resumeSucceeded: false,
+        ),
+        PersistedModelDownloadAction.restart,
+      );
+    });
+
+    test('restarts a paused task when resume returns false', () {
+      expect(
+        persistedModelDownloadAction(
+          status: TaskStatus.paused,
+          requestMatches: true,
+          taskCanResume: true,
+          resumeSucceeded: false,
+        ),
+        PersistedModelDownloadAction.restart,
+      );
+    });
+
+    test('reuses a paused task only after resume succeeds', () {
+      expect(
+        persistedModelDownloadAction(
+          status: TaskStatus.paused,
+          requestMatches: true,
+          taskCanResume: true,
+          resumeSucceeded: true,
+        ),
+        PersistedModelDownloadAction.reuse,
+      );
+    });
   });
 
   group('model download snapshots', () {
@@ -65,6 +212,7 @@ void main() {
 
       expect(snapshot.id, task.taskId);
       expect(snapshot.modelKey, 'model_42');
+      expect(snapshot.modelLabel, 'Gemma 4');
       expect(snapshot.progress, 0.45);
       expect(snapshot.status, ModelDownloadStatus.running);
       expect(snapshot.isTerminal, isFalse);

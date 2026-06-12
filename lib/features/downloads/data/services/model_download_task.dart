@@ -14,10 +14,13 @@ enum ModelDownloadStatus {
   paused,
 }
 
+enum PersistedModelDownloadAction { reuse, restart }
+
 class ModelDownloadSnapshot {
   const ModelDownloadSnapshot({
     required this.id,
     required this.modelKey,
+    required this.modelLabel,
     required this.progress,
     required this.status,
     required this.message,
@@ -26,6 +29,7 @@ class ModelDownloadSnapshot {
 
   final String id;
   final String modelKey;
+  final String modelLabel;
   final double progress;
   final ModelDownloadStatus status;
   final String message;
@@ -65,6 +69,31 @@ DownloadTask buildModelDownloadTask({
   );
 }
 
+bool modelDownloadTasksMatchRequest({
+  required Task persistedTask,
+  required Task requestedTask,
+  required String persistedOutputPath,
+  required String requestedOutputPath,
+}) {
+  return persistedTask.url == requestedTask.url &&
+      persistedTask.filename == requestedTask.filename &&
+      persistedTask.directory == requestedTask.directory &&
+      persistedOutputPath == requestedOutputPath;
+}
+
+PersistedModelDownloadAction persistedModelDownloadAction({
+  required TaskStatus status,
+  required bool requestMatches,
+  bool taskCanResume = false,
+  bool resumeSucceeded = false,
+}) {
+  if (!requestMatches) return PersistedModelDownloadAction.restart;
+  if (status != TaskStatus.paused) return PersistedModelDownloadAction.reuse;
+  return taskCanResume && resumeSucceeded
+      ? PersistedModelDownloadAction.reuse
+      : PersistedModelDownloadAction.restart;
+}
+
 String modelDownloadTaskId(String modelKey) {
   final normalized = modelKey
       .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
@@ -76,6 +105,7 @@ ModelDownloadSnapshot modelDownloadSnapshotFromRecord(TaskRecord record) {
   return ModelDownloadSnapshot(
     id: record.taskId,
     modelKey: record.task.metaData,
+    modelLabel: record.task.displayName,
     progress: _normalizedProgress(record.progress),
     status: modelDownloadStatusFromTaskStatus(record.status),
     message: _messageFor(record.task, record.status, record.progress),

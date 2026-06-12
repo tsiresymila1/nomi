@@ -63,6 +63,108 @@ void main() {
       expect(afterCatalog.activeInstall?.key, 'model_42');
       expect(afterCatalog.progressByKey['model_42'], 0.45);
     });
+
+    test('settles a carried active download when it completes', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.9},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+        ),
+        errorMessage: 'old error',
+      );
+      final snapshot = ModelDownloadSnapshot(
+        id: 'download_42',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 1,
+        status: ModelDownloadStatus.complete,
+        message: 'Gemma 4 downloaded',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [snapshot]);
+
+      expect(reconciled.activeInstall, isNull);
+      expect(reconciled.progressByKey, isEmpty);
+      expect(reconciled.errorMessage, isNull);
+    });
+
+    test('settles a carried active download when it fails', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.45},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+        ),
+      );
+      final snapshot = ModelDownloadSnapshot(
+        id: 'download_42',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0,
+        status: ModelDownloadStatus.failed,
+        message: 'Gemma 4 failed',
+        error: 'Network unavailable',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [snapshot]);
+
+      expect(reconciled.activeInstall, isNull);
+      expect(reconciled.progressByKey, isEmpty);
+      expect(reconciled.errorMessage, 'Network unavailable');
+    });
+
+    test('settles a cancelled carried active download without an error', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.45},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+        ),
+        errorMessage: 'old error',
+      );
+      final snapshot = ModelDownloadSnapshot(
+        id: 'download_42',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0,
+        status: ModelDownloadStatus.cancelled,
+        message: 'Gemma 4 cancelled',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [snapshot]);
+
+      expect(reconciled.activeInstall, isNull);
+      expect(reconciled.progressByKey, isEmpty);
+      expect(reconciled.errorMessage, isNull);
+    });
+
+    test('does not repeatedly emit a stale carried failure', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.45},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+        ),
+      );
+      final snapshot = ModelDownloadSnapshot(
+        id: 'download_42',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0,
+        status: ModelDownloadStatus.failed,
+        message: 'Gemma 4 failed',
+      );
+      final settled = reconcileBackgroundDownloads(state, [snapshot]);
+
+      final reconciledAgain = reconcileBackgroundDownloads(settled, [snapshot]);
+
+      expect(reconciledAgain, same(settled));
+    });
   });
 }
 

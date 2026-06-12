@@ -20,15 +20,23 @@ DownloadsState reconcileBackgroundDownloads(
       );
     }
 
-    if (matchingSnapshot.status == ModelDownloadStatus.cancelled) {
-      final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
-      return state.copyWith(
+    final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
+    return switch (matchingSnapshot.status) {
+      ModelDownloadStatus.failed => state.copyWith(
         progressByKey: nextProgress,
         clearActiveInstall: true,
-        clearError: true,
-      );
-    }
-    return state;
+        errorMessage: _failureMessage(matchingSnapshot),
+      ),
+      ModelDownloadStatus.complete || ModelDownloadStatus.cancelled =>
+        state.copyWith(
+          progressByKey: nextProgress,
+          clearActiveInstall: true,
+          clearError: true,
+        ),
+      ModelDownloadStatus.queued ||
+      ModelDownloadStatus.running ||
+      ModelDownloadStatus.paused => state,
+    };
   }
 
   for (final snapshot in snapshots) {
@@ -60,6 +68,11 @@ ModelDownloadSnapshot? _snapshotForKey(
     if (snapshot.modelKey == key) return snapshot;
   }
   return null;
+}
+
+String _failureMessage(ModelDownloadSnapshot snapshot) {
+  final error = snapshot.error?.trim();
+  return error == null || error.isEmpty ? snapshot.message : error;
 }
 
 ModelInfo? _modelForKey(List<ModelInfo> models, String key) {

@@ -12,7 +12,9 @@ void registerDownloadsDependencies() {
   }
 
   if (!sl.isRegistered<ModelInstallerService>()) {
-    sl.registerLazySingleton<ModelInstallerService>(ModelInstallerService.new);
+    sl.registerLazySingleton<ModelInstallerService>(
+      () => ModelInstallerService(sl<ModelRepository>()),
+    );
   }
 
   if (!sl.isRegistered<ModelCatalogInsightsService>()) {

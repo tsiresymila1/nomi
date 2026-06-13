@@ -58,7 +58,7 @@ class ModelSourceSection extends StatelessWidget {
             decoration: InputDecoration(
               hintText: sourceType == 'network'
                   ? 'https://...'
-                  : '/absolute/path/model.task',
+                  : '/absolute/path/model.gguf',
             ),
           ),
         ),

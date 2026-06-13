@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gena/presentation/widgets/field_wrapper.dart';
+
+const _modelTypes = <String>[
+  'general',
+  'gemmaIt',
+  'gemma4',
+  'deepSeek',
+  'qwen',
+  'qwen3',
+  'llama',
+  'hammer',
+  'functionGemma',
+  'phi',
+];
 
 class ModelBasicInfoSection extends StatelessWidget {
   final TextEditingController nameController;
@@ -41,12 +53,10 @@ class ModelBasicInfoSection extends StatelessWidget {
           field: DropdownButtonFormField<String>(
             initialValue: modelType,
             style: TextStyle(fontSize: 14),
-            items: ModelType.values
+            items: _modelTypes
                 .map(
-                  (type) => DropdownMenuItem<String>(
-                    value: type.name,
-                    child: Text(type.name),
-                  ),
+                  (type) =>
+                      DropdownMenuItem<String>(value: type, child: Text(type)),
                 )
                 .toList(),
             onChanged: (value) {

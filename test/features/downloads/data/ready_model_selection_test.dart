@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
+import 'package:gena/features/downloads/data/local_model_files.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/ready_model_selection.dart';
@@ -9,7 +10,7 @@ void main() {
   final local = _model(
     id: 1,
     provider: ModelProviderType.local,
-    source: '/models/local.bin',
+    source: '/models/local.gguf',
   );
 
   test('remote-only installed-model load never calls local registry', () async {
@@ -30,7 +31,7 @@ void main() {
   test('remote-only ready models contain only remote catalog entries', () {
     final ready = readyModelsForCapabilities(
       models: [local, remote],
-      installedModels: const ['local.bin'],
+      installedModels: [localModelIdForPath(local.source)],
       capabilities: AppCapabilities.forPlatform(AppPlatform.windows),
     );
 
@@ -40,7 +41,7 @@ void main() {
   test('native ready models preserve installed local and remote entries', () {
     final ready = readyModelsForCapabilities(
       models: [local, remote],
-      installedModels: const ['local.bin'],
+      installedModels: [localModelIdForPath(local.source)],
       capabilities: AppCapabilities.forPlatform(AppPlatform.android),
     );
 
@@ -70,7 +71,7 @@ ModelInfo _model({
     tokenBuffer: 256,
     randomSeed: 1,
     preferredBackend: 'cpu',
-    sourceType: provider,
+    sourceType: provider == ModelProviderType.local ? 'file' : 'remote',
     source: source,
   );
 }

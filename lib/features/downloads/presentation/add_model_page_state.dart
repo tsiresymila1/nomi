@@ -11,7 +11,7 @@ class _AddModelPageState extends State<AddModelPage> {
 
   String _providerType = ModelProviderType.local;
   String _sourceType = 'network';
-  String _modelType = ModelType.gemma4.name;
+  String _modelType = 'gemma4';
   String _preferredBackend = 'gpu';
   double _temperature = 0.8;
   double _topP = 0.95;
@@ -149,7 +149,7 @@ class _AddModelPageState extends State<AddModelPage> {
       final picked = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.custom,
-        allowedExtensions: const ['task', 'bin', 'litertlm'],
+        allowedExtensions: const ['gguf', 'litertlm'],
         dialogTitle: 'Select model file',
       );
       final pickedFile = picked?.files.single;
@@ -270,6 +270,11 @@ class _AddModelPageState extends State<AddModelPage> {
         );
         return;
       }
+      final sourceValidationError = localModelSourceValidationError(source);
+      if (sourceValidationError != null) {
+        AppToast.show(sourceValidationError, type: AppToastType.error);
+        return;
+      }
     } else {
       if (apiUrl.isEmpty || apiToken.isEmpty) {
         AppToast.show(
@@ -289,13 +294,23 @@ class _AddModelPageState extends State<AddModelPage> {
 
     final normalizedSource =
         _providerType == ModelProviderType.local && _sourceType == 'file'
-        ? _normalizeFileUriToPath(source)
+        ? canonicalLocalModelPath(source)
         : (_providerType == ModelProviderType.local
               ? source
               : (source.isEmpty ? 'remote://chat' : source));
     final sourceType = _providerType == ModelProviderType.local
         ? _sourceType
         : 'remote';
+
+    if (_providerType == ModelProviderType.local &&
+        sourceType == 'file' &&
+        !await File(normalizedSource).exists()) {
+      AppToast.show(
+        'Local model file does not exist. Choose an existing .gguf or .litertlm file.',
+        type: AppToastType.error,
+      );
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -609,15 +624,5 @@ class _AddModelPageState extends State<AddModelPage> {
         '${modelsDir.path}/${DateTime.now().millisecondsSinceEpoch}_$safeFilename';
     final copied = await sourceFile.copy(targetPath);
     return copied.path;
-  }
-
-  String _normalizeFileUriToPath(String source) {
-    if (source.startsWith('file://')) {
-      final uri = Uri.tryParse(source);
-      if (uri != null && uri.scheme == 'file') {
-        return uri.toFilePath();
-      }
-    }
-    return source;
   }
 }

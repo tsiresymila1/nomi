@@ -2,17 +2,19 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/default_static_models.dart';
+import 'package:gena/features/downloads/data/local_model_files.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/downloads/presentation/cubit/download_reconciliation.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_state.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DownloadsCubit extends Cubit<DownloadsState> {
   DownloadsCubit({
@@ -90,8 +92,10 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   String installKeyForModel(ModelInfo model) => 'model_${model.id}';
 
   String installedIdForModel(ModelInfo model) {
-    final parts = model.source.split(RegExp(r'[/\\]'));
-    return parts.isEmpty ? model.source : parts.last;
+    if (model.sourceType == 'file') {
+      return installedModelIdFromSource(model.source);
+    }
+    return model.modelId ?? model.source;
   }
 
   Future<void> installModel(ModelInfo model) async {
@@ -111,7 +115,6 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     }
 
     final installKey = installKeyForModel(model);
-    var installedId = installedIdForModel(model);
     var effectiveSource = model.source;
     var effectiveSourceType = model.sourceType;
 
@@ -129,7 +132,10 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     );
 
     try {
+      _throwIfUnsupportedLocalSource(effectiveSource);
+
       if (effectiveSourceType == 'file') {
+        effectiveSource = canonicalLocalModelPath(effectiveSource);
         final file = File(effectiveSource);
         final exists = await file.exists();
         if (!exists) {
@@ -141,6 +147,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
           }
           effectiveSourceType = 'network';
           effectiveSource = defaultUrl;
+          _throwIfUnsupportedLocalSource(effectiveSource);
           await _updateModelSource(
             model,
             sourceType: effectiveSourceType,
@@ -172,7 +179,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
             );
         effectiveSource = downloaded.path;
         effectiveSourceType = 'file';
-        installedId = _installedIdFromSource(effectiveSource);
+        _throwIfUnsupportedLocalSource(effectiveSource);
         await _updateModelSource(
           model,
           sourceType: effectiveSourceType,
@@ -180,27 +187,15 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         );
       }
 
-      final installer = FlutterGemma.installModel(
-        modelType: _parseModelType(model.modelType),
-        fileType: _inferFileType(effectiveSource),
-      );
-      final installation = await installer
-          .fromFile(effectiveSource)
-          .withProgress((progress) {
-            emit(
-              state.copyWith(
-                progressByKey: {
-                  ...state.progressByKey,
-                  installKey: progress / 100,
-                },
-              ),
-            );
-          })
-          .install();
+      if (effectiveSourceType != 'file' ||
+          !await File(effectiveSource).exists()) {
+        throw StateError('Compatible model file is missing.');
+      }
 
+      final installedId = localModelIdForPath(effectiveSource);
       await _modelRepositoryActions.updateModelId(
         id: model.id,
-        modelId: installation.spec.name,
+        modelId: installedId,
       );
       emit(
         state.copyWith(
@@ -249,8 +244,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     final installKey = installKeyForModel(model);
     final installedId = installedIdForModel(model);
     try {
-      await FlutterGemma.uninstallModel(installedId);
-      await _deleteCopiedSourceIfExists(model);
+      await _deleteAppOwnedSourceIfExists(model);
       await _modelRepositoryActions.deleteModel(model.id);
       final nextState = {...state.progressByKey}
         ..remove(installKey)
@@ -307,13 +301,20 @@ class DownloadsCubit extends Cubit<DownloadsState> {
       return;
     }
 
-    final file = File(model.source);
+    final file = File(canonicalLocalModelPath(model.source));
+    if (!await _isAppOwnedModelPath(model.source)) {
+      await AppToast.show(
+        'This file is outside app-managed model storage and was not deleted.',
+        type: AppToastType.info,
+      );
+      return;
+    }
     if (await file.exists()) {
       await file.delete();
     }
 
-    await _tryUninstall(model);
     await _updateModelSource(model, sourceType: 'network', source: defaultUrl);
+    await _modelRepositoryActions.updateModelId(id: model.id, modelId: null);
 
     final nextState = {...state.progressByKey}
       ..remove(installKeyForModel(model))
@@ -361,52 +362,31 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     );
   }
 
-  Future<void> _tryUninstall(ModelInfo model) async {
-    try {
-      if (model.modelId != null && model.modelId!.isNotEmpty) {
-        await FlutterGemma.uninstallModel(model.modelId!);
-        return;
-      }
-      await FlutterGemma.uninstallModel(installedIdForModel(model));
-    } catch (_) {
-      // Best effort.
-    }
+  void _throwIfUnsupportedLocalSource(String source) {
+    final validationError = localModelSourceValidationError(source);
+    if (validationError != null) throw StateError(validationError);
   }
 
-  Future<void> _deleteCopiedSourceIfExists(ModelInfo model) async {
+  Future<void> _deleteAppOwnedSourceIfExists(ModelInfo model) async {
     if (model.sourceType != 'file') return;
-    final file = File(model.source);
-    if (await file.exists()) {
-      await file.delete();
-    }
+    final file = File(canonicalLocalModelPath(model.source));
+    if (!await file.exists()) return;
+    if (!await _isAppOwnedModelPath(model.source)) return;
+    await file.delete();
   }
 
-  String _installedIdFromSource(String source) {
-    final parts = source.split(RegExp(r'[/\\]'));
-    return parts.isEmpty ? source : parts.last;
-  }
-
-  ModelFileType _inferFileType(String source) {
-    final lower = source.toLowerCase();
-    if (lower.endsWith('.litertlm')) return ModelFileType.litertlm;
-    if (lower.endsWith('.task')) return ModelFileType.task;
-    return ModelFileType.binary;
-  }
-
-  ModelType _parseModelType(String value) {
-    return switch (value) {
-      'general' => ModelType.general,
-      'gemmaIt' => ModelType.gemmaIt,
-      'gemma4' => ModelType.gemma4,
-      'deepSeek' => ModelType.deepSeek,
-      'qwen' => ModelType.qwen,
-      'qwen3' => ModelType.qwen3,
-      'llama' => ModelType.llama,
-      'hammer' => ModelType.hammer,
-      'functionGemma' => ModelType.functionGemma,
-      'phi' => ModelType.phi,
-      _ => ModelType.gemmaIt,
-    };
+  Future<bool> _isAppOwnedModelPath(String path) async {
+    final appSupportDirectory = await getApplicationSupportDirectory();
+    final modelsDirectory = Directory('${appSupportDirectory.path}/models');
+    final file = File(canonicalLocalModelPath(path));
+    if (!await modelsDirectory.exists() || !await file.exists()) return false;
+    final resolvedModelsDirectory = await modelsDirectory
+        .resolveSymbolicLinks();
+    final resolvedPath = await file.resolveSymbolicLinks();
+    return isPathWithinDirectory(
+      path: resolvedPath,
+      directory: resolvedModelsDirectory,
+    );
   }
 
   @override

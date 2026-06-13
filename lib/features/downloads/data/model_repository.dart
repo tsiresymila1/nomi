@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/downloads/data/default_seed_models.dart';
+import 'package:gena/features/downloads/data/local_model_files.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 
@@ -49,10 +50,23 @@ class ModelRepository {
 }
 
 class ModelInstallerService {
-  const ModelInstallerService();
+  const ModelInstallerService(this._modelRepository);
 
-  Future<List<String>> listInstalledModels() {
-    return gemma.FlutterGemma.listInstalledModels();
+  final ModelRepository _modelRepository;
+
+  Future<List<String>> listInstalledModels() async {
+    final models = await _modelRepository.watchModels().first;
+    final installed = <String>[];
+    for (final model in models) {
+      if (model.provider != ModelProviderType.local ||
+          model.sourceType != 'file' ||
+          !isCompatibleLocalModelSource(model.source) ||
+          !await File(canonicalLocalModelPath(model.source)).exists()) {
+        continue;
+      }
+      installed.add(localModelIdForPath(model.source));
+    }
+    return installed;
   }
 }
 
@@ -284,7 +298,10 @@ class ModelRepositoryActions {
     )..where((t) => t.id.equals(id))).go();
   }
 
-  Future<void> updateModelId({required int id, required String modelId}) async {
+  Future<void> updateModelId({
+    required int id,
+    required String? modelId,
+  }) async {
     await (_database.update(_database.models)..where((t) => t.id.equals(id)))
         .write(db.ModelsCompanion(modelId: Value(modelId)));
   }

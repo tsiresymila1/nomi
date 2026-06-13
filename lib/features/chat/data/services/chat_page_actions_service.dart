@@ -10,6 +10,7 @@ import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/ready_model_selection.dart';
@@ -129,13 +130,7 @@ class ChatPageActions {
     if (model.provider == ModelProviderType.local) {
       final installedModels = await _modelInstallerService
           .listInstalledModels();
-      final isReady =
-          installedModels.contains(model.modelId) ||
-          installedModels.any(
-            (entry) =>
-                entry.toLowerCase() ==
-                model.source.split(RegExp(r'[/\\]')).last.toLowerCase(),
-          );
+      final isReady = isModelReady(model, installedModels);
       if (!isReady) {
         await AppToast.show(
           'Model is not installed yet. Install it from Manage.',

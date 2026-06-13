@@ -49,6 +49,61 @@ void main() {
       expect(first, matches(RegExp(r'^[a-zA-Z0-9_-]+$')));
     });
 
+    test('creates safe unique replacement attempt ids', () {
+      final base = modelDownloadTaskId('runtime_Gemma 4/remote:model');
+      final first = modelDownloadReplacementTaskId(
+        'runtime_Gemma 4/remote:model',
+        'attempt one',
+      );
+      final second = modelDownloadReplacementTaskId(
+        'runtime_Gemma 4/remote:model',
+        'attempt two',
+      );
+
+      expect(first, isNot(base));
+      expect(second, isNot(base));
+      expect(first, isNot(second));
+      expect(first, matches(RegExp(r'^[a-zA-Z0-9_-]+$')));
+      expect(second, matches(RegExp(r'^[a-zA-Z0-9_-]+$')));
+    });
+
+    test('builds replacement tasks with stable model metadata', () {
+      final replacementId = modelDownloadReplacementTaskId(
+        'model_42',
+        'attempt_1',
+      );
+
+      final task = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+        taskId: replacementId,
+      );
+
+      expect(task.taskId, replacementId);
+      expect(task.metaData, 'model_42');
+    });
+
+    test('selects the current replacement attempt for model lookup', () {
+      final replacementId = modelDownloadReplacementTaskId(
+        'model_42',
+        'attempt_1',
+      );
+
+      expect(
+        activeModelDownloadTaskId(
+          modelKey: 'model_42',
+          currentTaskId: replacementId,
+        ),
+        replacementId,
+      );
+      expect(
+        activeModelDownloadTaskId(modelKey: 'model_42'),
+        modelDownloadTaskId('model_42'),
+      );
+    });
+
     test('rejects a persisted task when the requested source changed', () {
       final persisted = buildModelDownloadTask(
         modelKey: 'model_42',
@@ -157,6 +212,28 @@ void main() {
         isTrue,
       );
     });
+
+    test('accepts a matching persisted replacement attempt', () {
+      final requested = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/gemma.task',
+        fileName: 'gemma.task',
+      );
+      final persisted = requested.copyWith(
+        taskId: modelDownloadReplacementTaskId('model_42', 'attempt_1'),
+      );
+
+      expect(
+        modelDownloadTasksMatchRequest(
+          persistedTask: persisted,
+          requestedTask: requested,
+          persistedOutputPath: '/models/gemma.task',
+          requestedOutputPath: '/models/gemma.task',
+        ),
+        isTrue,
+      );
+    });
   });
 
   group('persisted model download recovery', () {
@@ -219,20 +296,25 @@ void main() {
     });
 
     test('maps canceled records to terminal canceled snapshots', () {
-      final task = buildModelDownloadTask(
+      final oldTask = buildModelDownloadTask(
         modelKey: 'model_42',
         modelName: 'Gemma 4',
         sourceUrl: 'https://example.com/gemma.task',
         fileName: 'gemma.task',
       );
-
-      final snapshot = modelDownloadSnapshotFromRecord(
-        TaskRecord(task, TaskStatus.canceled, progressCanceled, 1000),
+      final replacementTask = oldTask.copyWith(
+        taskId: modelDownloadReplacementTaskId('model_42', 'attempt_1'),
       );
 
-      expect(snapshot.progress, 0);
-      expect(snapshot.status, ModelDownloadStatus.cancelled);
-      expect(snapshot.isTerminal, isTrue);
+      final oldSnapshot = modelDownloadSnapshotFromRecord(
+        TaskRecord(oldTask, TaskStatus.canceled, progressCanceled, 1000),
+      );
+
+      expect(oldSnapshot.id, isNot(replacementTask.taskId));
+      expect(oldSnapshot.modelKey, replacementTask.metaData);
+      expect(oldSnapshot.progress, 0);
+      expect(oldSnapshot.status, ModelDownloadStatus.cancelled);
+      expect(oldSnapshot.isTerminal, isTrue);
     });
   });
 }

@@ -46,11 +46,12 @@ DownloadTask buildModelDownloadTask({
   required String modelName,
   required String sourceUrl,
   required String fileName,
+  String? taskId,
   String? huggingFaceToken,
 }) {
   final token = huggingFaceToken?.trim();
   return DownloadTask(
-    taskId: modelDownloadTaskId(modelKey),
+    taskId: taskId ?? modelDownloadTaskId(modelKey),
     url: sourceUrl,
     filename: fileName,
     directory: modelDownloadsDirectory,
@@ -99,6 +100,24 @@ String modelDownloadTaskId(String modelKey) {
       .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
       .replaceAll(RegExp(r'_+'), '_');
   return 'model_download_${normalized.substring(0, normalized.length.clamp(0, 48))}_${_fnv1a(modelKey)}';
+}
+
+String modelDownloadReplacementTaskId(String modelKey, String attemptId) {
+  final normalizedAttempt = attemptId
+      .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
+      .replaceAll(RegExp(r'_+'), '_');
+  final attemptPrefix = normalizedAttempt.substring(
+    0,
+    normalizedAttempt.length.clamp(0, 32),
+  );
+  return '${modelDownloadTaskId(modelKey)}_r_${attemptPrefix}_${_fnv1a(attemptId)}';
+}
+
+String activeModelDownloadTaskId({
+  required String modelKey,
+  String? currentTaskId,
+}) {
+  return currentTaskId ?? modelDownloadTaskId(modelKey);
 }
 
 ModelDownloadSnapshot modelDownloadSnapshotFromRecord(TaskRecord record) {

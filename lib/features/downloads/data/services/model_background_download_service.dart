@@ -33,10 +33,12 @@ class ModelBackgroundDownloadService {
       <String, ModelDownloadSnapshot>{};
   final Map<String, _PendingDownload> _pending = <String, _PendingDownload>{};
   final Map<String, String> _taskIdByModelKey = <String, String>{};
+  final Set<String> _retiredTaskIds = <String>{};
 
   StreamSubscription<TaskUpdate>? _updatesSubscription;
   StreamSubscription<TaskRecord>? _recordsSubscription;
   Future<void>? _initialization;
+  int _replacementGeneration = 0;
 
   Stream<List<ModelDownloadSnapshot>> watchTasks() async* {
     await _ensureInitialized();
@@ -111,14 +113,14 @@ class ModelBackgroundDownloadService {
     await _ensureInitialized();
 
     final fileName = _fileNameFor(modelName, sourceUrl);
-    final task = buildModelDownloadTask(
+    final requestedTask = buildModelDownloadTask(
       modelKey: modelKey,
       modelName: modelName,
       sourceUrl: sourceUrl,
       fileName: fileName,
       huggingFaceToken: dotenv.env['HUGGING_FACE_TOKEN'],
     );
-    final outputPath = await task.filePath();
+    final outputPath = await requestedTask.filePath();
     final output = File(outputPath);
     if (await output.exists()) {
       return DownloadedModelFile(
@@ -128,27 +130,33 @@ class ModelBackgroundDownloadService {
       );
     }
 
-    final existingPending = _pending[task.taskId];
+    var replacementRequired = false;
+    final activeTaskId = activeModelDownloadTaskId(
+      modelKey: modelKey,
+      currentTaskId: _taskIdByModelKey[modelKey],
+    );
+    final existingPending = _pending[activeTaskId];
     if (existingPending != null) {
       final requestMatches = modelDownloadTasksMatchRequest(
         persistedTask: existingPending.task,
-        requestedTask: task,
+        requestedTask: requestedTask,
         persistedOutputPath: existingPending.outputPath,
         requestedOutputPath: outputPath,
       );
       if (requestMatches) return existingPending.completer.future;
       await _discardTaskState(
-        task.taskId,
+        activeTaskId,
         StateError('Download request changed'),
       );
+      replacementRequired = true;
     }
 
-    final existingRecord = await _downloader.database.recordForId(task.taskId);
+    final existingRecord = await _downloader.database.recordForId(activeTaskId);
     if (existingRecord != null && !existingRecord.status.isFinalState) {
       final persistedOutputPath = await existingRecord.task.filePath();
       final requestMatches = modelDownloadTasksMatchRequest(
         persistedTask: existingRecord.task,
-        requestedTask: task,
+        requestedTask: requestedTask,
         persistedOutputPath: persistedOutputPath,
         requestedOutputPath: outputPath,
       );
@@ -172,23 +180,38 @@ class ModelBackgroundDownloadService {
         resumeSucceeded: resumeSucceeded,
       );
       if (action == PersistedModelDownloadAction.reuse) {
-        final pending = _createPending(
-          task: task,
-          modelKey: modelKey,
-          outputPath: outputPath,
-          fileName: fileName,
-          onProgress: onProgress,
+        final persistedTask = existingRecord.task;
+        if (persistedTask is! DownloadTask) {
+          await _discardTaskState(
+            activeTaskId,
+            StateError('Persisted download task type changed'),
+          );
+          replacementRequired = true;
+        } else {
+          final pending = _createPending(
+            task: persistedTask,
+            modelKey: modelKey,
+            outputPath: outputPath,
+            fileName: fileName,
+            onProgress: onProgress,
+          );
+          return pending.completer.future;
+        }
+      } else {
+        await _discardTaskState(
+          activeTaskId,
+          StateError('Persisted download could not be resumed'),
         );
-        return pending.completer.future;
+        replacementRequired = true;
       }
-      await _discardTaskState(
-        task.taskId,
-        StateError('Persisted download could not be resumed'),
-      );
     } else if (existingRecord != null) {
-      await _downloader.database.deleteRecordWithId(task.taskId);
+      await _downloader.database.deleteRecordWithId(activeTaskId);
+      replacementRequired = true;
     }
 
+    final task = replacementRequired
+        ? requestedTask.copyWith(taskId: _nextReplacementTaskId(modelKey))
+        : requestedTask;
     final pending = _createPending(
       task: task,
       modelKey: modelKey,
@@ -208,15 +231,23 @@ class ModelBackgroundDownloadService {
   }
 
   bool hasRunningDownload(String modelKey) {
-    final taskId = _taskIdByModelKey[modelKey];
-    if (taskId == null) return false;
+    final currentTaskId = _taskIdByModelKey[modelKey];
+    if (currentTaskId == null) return false;
+    final taskId = activeModelDownloadTaskId(
+      modelKey: modelKey,
+      currentTaskId: currentTaskId,
+    );
     return !(_snapshots[taskId]?.isTerminal ?? false);
   }
 
   Future<bool> cancelDownload(String modelKey) async {
     await _ensureInitialized();
-    final taskId = _taskIdByModelKey[modelKey];
-    if (taskId == null) return false;
+    final currentTaskId = _taskIdByModelKey[modelKey];
+    if (currentTaskId == null) return false;
+    final taskId = activeModelDownloadTaskId(
+      modelKey: modelKey,
+      currentTaskId: currentTaskId,
+    );
     return _downloader.cancelTaskWithId(taskId);
   }
 
@@ -248,6 +279,8 @@ class ModelBackgroundDownloadService {
   }
 
   void _handleSnapshot(ModelDownloadSnapshot snapshot) {
+    if (_retiredTaskIds.contains(snapshot.id)) return;
+
     _storeSnapshot(snapshot);
     _emitSnapshots();
 
@@ -308,6 +341,7 @@ class ModelBackgroundDownloadService {
   }
 
   Future<void> _discardTaskState(String taskId, Object error) async {
+    _retiredTaskIds.add(taskId);
     await _downloader.cancelTaskWithId(taskId);
     await _downloader.database.deleteRecordWithId(taskId);
 
@@ -322,6 +356,13 @@ class ModelBackgroundDownloadService {
       _taskIdByModelKey.remove(snapshot.modelKey);
     }
     _emitSnapshots();
+  }
+
+  String _nextReplacementTaskId(String modelKey) {
+    _replacementGeneration++;
+    final attemptId =
+        '${DateTime.now().microsecondsSinceEpoch}_$_replacementGeneration';
+    return modelDownloadReplacementTaskId(modelKey, attemptId);
   }
 
   List<ModelDownloadSnapshot> get _currentSnapshots =>
@@ -352,6 +393,8 @@ class ModelBackgroundDownloadService {
     _pending.clear();
     _taskIdByModelKey.clear();
     _snapshots.clear();
+    _retiredTaskIds.clear();
+    _replacementGeneration = 0;
     _initialization = null;
   }
 }

@@ -4,22 +4,22 @@ enum AppPlatform { web, android, iOS, macOS, windows, linux, fuchsia }
 
 class AppCapabilities {
   const AppCapabilities({
+    required this.platform,
     required this.supportsRemoteModels,
     required this.supportsLocalModels,
     required this.supportsWorkspaceRag,
   });
 
-  static const localAiUnavailableMessage =
-      'Local models and workspace RAG are unavailable on web. '
-      'Remote models remain available.';
-
+  final AppPlatform platform;
   final bool supportsRemoteModels;
   final bool supportsLocalModels;
   final bool supportsWorkspaceRag;
 
-  String get localModelsUnavailableMessage => localAiUnavailableMessage;
+  String get localModelsUnavailableMessage =>
+      'Local models and workspace RAG are unavailable $_platformLabel. '
+      'Remote models remain available.';
 
-  String get workspaceRagUnavailableMessage => localAiUnavailableMessage;
+  String get workspaceRagUnavailableMessage => localModelsUnavailableMessage;
 
   static AppCapabilities get current => forPlatform(_currentPlatform);
 
@@ -33,11 +33,22 @@ class AppCapabilities {
     };
 
     return AppCapabilities(
+      platform: platform,
       supportsRemoteModels: true,
       supportsLocalModels: supportsLocalAi,
       supportsWorkspaceRag: supportsLocalAi,
     );
   }
+
+  String get _platformLabel => switch (platform) {
+    AppPlatform.web => 'on web',
+    AppPlatform.windows => 'on Windows',
+    AppPlatform.linux => 'on Linux',
+    AppPlatform.fuchsia => 'on this platform',
+    AppPlatform.android ||
+    AppPlatform.iOS ||
+    AppPlatform.macOS => 'on this platform',
+  };
 
   static AppPlatform get _currentPlatform {
     if (kIsWeb) return AppPlatform.web;

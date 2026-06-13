@@ -53,5 +53,21 @@ void main() {
         web.localModelsUnavailableMessage,
       );
     });
+
+    for (final entry in {
+      AppPlatform.windows: 'Windows',
+      AppPlatform.linux: 'Linux',
+    }.entries) {
+      test('${entry.key} message names the current platform', () {
+        final platform = entry.key;
+        final capabilities = AppCapabilities.forPlatform(platform);
+
+        expect(
+          capabilities.localModelsUnavailableMessage,
+          'Local models and workspace RAG are unavailable on ${entry.value}. '
+          'Remote models remain available.',
+        );
+      });
+    }
   });
 }

@@ -358,6 +358,7 @@ class _AddModelPageState extends State<AddModelPage> {
 
   @override
   Widget build(BuildContext context) {
+    final capabilities = AppCapabilities.current;
     final tokenBufferMax = _resolveTokenBufferMax(_maxTokens);
     final tokenBufferMin = _resolveTokenBufferMin();
     if (_tokenBuffer > tokenBufferMax) {
@@ -489,33 +490,45 @@ class _AddModelPageState extends State<AddModelPage> {
             const SizedBox(height: 12),
             reveal(
               4,
-              SegmentedButton<String>(
-                segments: [
-                  ButtonSegment<String>(
-                    value: ModelProviderType.local,
-                    label: Text('Local'),
-                    enabled: AppCapabilities.current.supportsLocalModels,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment<String>(
+                        value: ModelProviderType.local,
+                        label: Text('Local'),
+                        enabled: capabilities.supportsLocalModels,
+                      ),
+                      ButtonSegment<String>(
+                        value: ModelProviderType.remote,
+                        label: Text('Remote API'),
+                      ),
+                    ],
+                    selected: {_providerType},
+                    onSelectionChanged: (value) {
+                      setState(() {
+                        _providerType = value.first;
+                        final minTokens = _resolveMaxTokensMin();
+                        final maxTokens = _resolveMaxTokensMax();
+                        if (_maxTokens < minTokens) _maxTokens = minTokens;
+                        if (_maxTokens > maxTokens) _maxTokens = maxTokens;
+                        final maxOutput = _resolveTokenBufferMax(_maxTokens);
+                        final minOutput = _resolveTokenBufferMin();
+                        if (_tokenBuffer < minOutput) _tokenBuffer = minOutput;
+                        if (_tokenBuffer > maxOutput) _tokenBuffer = maxOutput;
+                        _syncTokenControllers();
+                      });
+                    },
                   ),
-                  ButtonSegment<String>(
-                    value: ModelProviderType.remote,
-                    label: Text('Remote API'),
-                  ),
+                  if (!capabilities.supportsLocalModels) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      capabilities.localModelsUnavailableMessage,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ],
-                selected: {_providerType},
-                onSelectionChanged: (value) {
-                  setState(() {
-                    _providerType = value.first;
-                    final minTokens = _resolveMaxTokensMin();
-                    final maxTokens = _resolveMaxTokensMax();
-                    if (_maxTokens < minTokens) _maxTokens = minTokens;
-                    if (_maxTokens > maxTokens) _maxTokens = maxTokens;
-                    final maxOutput = _resolveTokenBufferMax(_maxTokens);
-                    final minOutput = _resolveTokenBufferMin();
-                    if (_tokenBuffer < minOutput) _tokenBuffer = minOutput;
-                    if (_tokenBuffer > maxOutput) _tokenBuffer = maxOutput;
-                    _syncTokenControllers();
-                  });
-                },
               ),
             ),
             const SizedBox(height: 8),

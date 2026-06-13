@@ -21,6 +21,10 @@ void main() {
 
       expect(reconciled.activeInstall?.key, 'model_42');
       expect(reconciled.activeInstall?.label, 'Gemma 4');
+      expect(
+        reconciled.activeInstall?.ownership,
+        ActiveModelInstallOwnership.restored,
+      );
       expect(reconciled.progressByKey['model_42'], 0.45);
     });
 
@@ -71,6 +75,7 @@ void main() {
         activeInstall: const ActiveModelInstall(
           key: 'model_42',
           label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
         ),
         errorMessage: 'old error',
       );
@@ -97,6 +102,7 @@ void main() {
         activeInstall: const ActiveModelInstall(
           key: 'model_42',
           label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
         ),
       );
       final snapshot = ModelDownloadSnapshot(
@@ -123,6 +129,7 @@ void main() {
         activeInstall: const ActiveModelInstall(
           key: 'model_42',
           label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
         ),
         errorMessage: 'old error',
       );
@@ -149,6 +156,7 @@ void main() {
         activeInstall: const ActiveModelInstall(
           key: 'model_42',
           label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
         ),
       );
       final snapshot = ModelDownloadSnapshot(
@@ -165,6 +173,41 @@ void main() {
 
       expect(reconciledAgain, same(settled));
     });
+
+    for (final status in [
+      ModelDownloadStatus.complete,
+      ModelDownloadStatus.failed,
+      ModelDownloadStatus.cancelled,
+    ]) {
+      test('does not settle a terminal live download with status $status', () {
+        final state = DownloadsState(
+          models: [_model(id: 42, name: 'Gemma 4')],
+          progressByKey: const {'model_42': 0.9},
+          activeInstall: const ActiveModelInstall(
+            key: 'model_42',
+            label: 'Gemma 4',
+            ownership: ActiveModelInstallOwnership.live,
+          ),
+        );
+        final snapshot = ModelDownloadSnapshot(
+          id: 'download_42',
+          modelKey: 'model_42',
+          modelLabel: 'Gemma 4',
+          progress: status == ModelDownloadStatus.complete ? 1 : 0,
+          status: status,
+          message: 'terminal snapshot',
+          error: status == ModelDownloadStatus.failed ? 'failed' : null,
+        );
+
+        final reconciled = reconcileBackgroundDownloads(state, [snapshot]);
+
+        expect(reconciled, same(state));
+        expect(
+          reconciled.activeInstall?.ownership,
+          ActiveModelInstallOwnership.live,
+        );
+      });
+    }
   });
 }
 

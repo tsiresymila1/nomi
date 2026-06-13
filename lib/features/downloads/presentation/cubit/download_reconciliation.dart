@@ -20,6 +20,10 @@ DownloadsState reconcileBackgroundDownloads(
       );
     }
 
+    if (activeInstall.ownership == ActiveModelInstallOwnership.live) {
+      return state;
+    }
+
     final nextProgress = {...state.progressByKey}..remove(activeInstall.key);
     return switch (matchingSnapshot.status) {
       ModelDownloadStatus.failed => state.copyWith(
@@ -27,12 +31,12 @@ DownloadsState reconcileBackgroundDownloads(
         clearActiveInstall: true,
         errorMessage: _failureMessage(matchingSnapshot),
       ),
-      ModelDownloadStatus.complete || ModelDownloadStatus.cancelled =>
-        state.copyWith(
-          progressByKey: nextProgress,
-          clearActiveInstall: true,
-          clearError: true,
-        ),
+      ModelDownloadStatus.complete ||
+      ModelDownloadStatus.cancelled => state.copyWith(
+        progressByKey: nextProgress,
+        clearActiveInstall: true,
+        clearError: true,
+      ),
       ModelDownloadStatus.queued ||
       ModelDownloadStatus.running ||
       ModelDownloadStatus.paused => state,
@@ -52,6 +56,7 @@ DownloadsState reconcileBackgroundDownloads(
       activeInstall: ActiveModelInstall(
         key: snapshot.modelKey,
         label: model.name.isEmpty ? snapshot.modelLabel : model.name,
+        ownership: ActiveModelInstallOwnership.restored,
       ),
       clearError: true,
     );

@@ -1,10 +1,17 @@
 import 'package:gena/features/downloads/data/models/model_info.dart';
 
+enum ActiveModelInstallOwnership { live, restored }
+
 class ActiveModelInstall {
-  const ActiveModelInstall({required this.key, required this.label});
+  const ActiveModelInstall({
+    required this.key,
+    required this.label,
+    required this.ownership,
+  });
 
   final String key;
   final String label;
+  final ActiveModelInstallOwnership ownership;
 }
 
 class DownloadsState {

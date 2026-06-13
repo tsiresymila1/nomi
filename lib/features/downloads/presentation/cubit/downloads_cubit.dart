@@ -104,7 +104,11 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     emit(
       state.copyWith(
         progressByKey: {...state.progressByKey, installKey: 0.0},
-        activeInstall: ActiveModelInstall(key: installKey, label: model.name),
+        activeInstall: ActiveModelInstall(
+          key: installKey,
+          label: model.name,
+          ownership: ActiveModelInstallOwnership.live,
+        ),
         clearError: true,
       ),
     );

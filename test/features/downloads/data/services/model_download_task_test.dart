@@ -14,7 +14,7 @@ void main() {
         fileName: 'gemma.task',
       );
 
-      expect(task.taskId, modelDownloadTaskId('model_42'));
+      expect(task.taskId, isNot(modelDownloadTaskId('model_42')));
       expect(task.group, modelDownloadsGroup);
       expect(task.directory, modelDownloadsDirectory);
       expect(task.baseDirectory, BaseDirectory.applicationSupport);
@@ -23,6 +23,26 @@ void main() {
       expect(task.retries, 3);
       expect(task.metaData, 'model_42');
       expect(task.displayName, 'Gemma 4');
+    });
+
+    test('retry after a retired attempt receives a unique task id', () {
+      final retiredAttempt = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/models/gemma.task',
+        fileName: 'gemma.task',
+      );
+      final retiredTaskIds = {retiredAttempt.taskId};
+
+      final retryAttempt = buildModelDownloadTask(
+        modelKey: 'model_42',
+        modelName: 'Gemma 4',
+        sourceUrl: 'https://example.com/models/gemma.task',
+        fileName: 'gemma.task',
+      );
+
+      expect(retiredTaskIds, isNot(contains(retryAttempt.taskId)));
+      expect(retryAttempt.metaData, retiredAttempt.metaData);
     });
 
     test('adds a Hugging Face bearer token when provided', () {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
@@ -33,12 +34,13 @@ class ModelBackgroundDownloadService {
       <String, ModelDownloadSnapshot>{};
   final Map<String, _PendingDownload> _pending = <String, _PendingDownload>{};
   final Map<String, String> _taskIdByModelKey = <String, String>{};
-  final Set<String> _retiredTaskIds = <String>{};
+  final LinkedHashSet<String> _retiredTaskIds = LinkedHashSet<String>();
 
   StreamSubscription<TaskUpdate>? _updatesSubscription;
   StreamSubscription<TaskRecord>? _recordsSubscription;
   Future<void>? _initialization;
-  int _replacementGeneration = 0;
+
+  static const _maxRetiredTaskIds = 256;
 
   Stream<List<ModelDownloadSnapshot>> watchTasks() async* {
     await _ensureInitialized();
@@ -130,7 +132,6 @@ class ModelBackgroundDownloadService {
       );
     }
 
-    var replacementRequired = false;
     final activeTaskId = activeModelDownloadTaskId(
       modelKey: modelKey,
       currentTaskId: _taskIdByModelKey[modelKey],
@@ -148,7 +149,6 @@ class ModelBackgroundDownloadService {
         activeTaskId,
         StateError('Download request changed'),
       );
-      replacementRequired = true;
     }
 
     final existingRecord = await _downloader.database.recordForId(activeTaskId);
@@ -186,7 +186,6 @@ class ModelBackgroundDownloadService {
             activeTaskId,
             StateError('Persisted download task type changed'),
           );
-          replacementRequired = true;
         } else {
           final pending = _createPending(
             task: persistedTask,
@@ -202,16 +201,12 @@ class ModelBackgroundDownloadService {
           activeTaskId,
           StateError('Persisted download could not be resumed'),
         );
-        replacementRequired = true;
       }
     } else if (existingRecord != null) {
       await _downloader.database.deleteRecordWithId(activeTaskId);
-      replacementRequired = true;
     }
 
-    final task = replacementRequired
-        ? requestedTask.copyWith(taskId: _nextReplacementTaskId(modelKey))
-        : requestedTask;
+    final task = requestedTask;
     final pending = _createPending(
       task: task,
       modelKey: modelKey,
@@ -279,7 +274,10 @@ class ModelBackgroundDownloadService {
   }
 
   void _handleSnapshot(ModelDownloadSnapshot snapshot) {
-    if (_retiredTaskIds.contains(snapshot.id)) return;
+    if (_retiredTaskIds.contains(snapshot.id)) {
+      if (snapshot.isTerminal) _retiredTaskIds.remove(snapshot.id);
+      return;
+    }
 
     _storeSnapshot(snapshot);
     _emitSnapshots();
@@ -341,7 +339,7 @@ class ModelBackgroundDownloadService {
   }
 
   Future<void> _discardTaskState(String taskId, Object error) async {
-    _retiredTaskIds.add(taskId);
+    _retireTaskId(taskId);
     await _downloader.cancelTaskWithId(taskId);
     await _downloader.database.deleteRecordWithId(taskId);
 
@@ -358,11 +356,11 @@ class ModelBackgroundDownloadService {
     _emitSnapshots();
   }
 
-  String _nextReplacementTaskId(String modelKey) {
-    _replacementGeneration++;
-    final attemptId =
-        '${DateTime.now().microsecondsSinceEpoch}_$_replacementGeneration';
-    return modelDownloadReplacementTaskId(modelKey, attemptId);
+  void _retireTaskId(String taskId) {
+    _retiredTaskIds.add(taskId);
+    while (_retiredTaskIds.length > _maxRetiredTaskIds) {
+      _retiredTaskIds.remove(_retiredTaskIds.first);
+    }
   }
 
   List<ModelDownloadSnapshot> get _currentSnapshots =>
@@ -394,7 +392,6 @@ class ModelBackgroundDownloadService {
     _taskIdByModelKey.clear();
     _snapshots.clear();
     _retiredTaskIds.clear();
-    _replacementGeneration = 0;
     _initialization = null;
   }
 }

@@ -95,6 +95,117 @@ void main() {
       expect(reconciled.errorMessage, isNull);
     });
 
+    test('old terminal snapshot does not settle a newer active attempt', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.2},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
+        ),
+      );
+      final oldTerminal = ModelDownloadSnapshot(
+        id: 'attempt_1',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0,
+        status: ModelDownloadStatus.failed,
+        message: 'Old attempt failed',
+        error: 'Old failure',
+      );
+      final newerActive = ModelDownloadSnapshot(
+        id: 'attempt_2',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0.65,
+        status: ModelDownloadStatus.running,
+        message: 'Gemma 4 65%',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [
+        oldTerminal,
+        newerActive,
+      ]);
+
+      expect(reconciled.activeInstall, isNotNull);
+      expect(reconciled.progressByKey['model_42'], 0.65);
+      expect(reconciled.errorMessage, isNull);
+    });
+
+    test('latest active snapshot supplies current attempt progress', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.2},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
+        ),
+      );
+      final oldActive = ModelDownloadSnapshot(
+        id: 'attempt_1',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0.2,
+        status: ModelDownloadStatus.running,
+        message: 'Gemma 4 20%',
+      );
+      final newerActive = ModelDownloadSnapshot(
+        id: 'attempt_2',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0.65,
+        status: ModelDownloadStatus.running,
+        message: 'Gemma 4 65%',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [
+        oldActive,
+        newerActive,
+      ]);
+
+      expect(reconciled.progressByKey['model_42'], 0.65);
+    });
+
+    test('terminal snapshot settles only after no active attempt remains', () {
+      final state = DownloadsState(
+        models: [_model(id: 42, name: 'Gemma 4')],
+        progressByKey: const {'model_42': 0.65},
+        activeInstall: const ActiveModelInstall(
+          key: 'model_42',
+          label: 'Gemma 4',
+          ownership: ActiveModelInstallOwnership.restored,
+        ),
+      );
+      final newerTerminal = ModelDownloadSnapshot(
+        id: 'attempt_2',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 1,
+        status: ModelDownloadStatus.complete,
+        message: 'Gemma 4 downloaded',
+      );
+      final oldTerminal = ModelDownloadSnapshot(
+        id: 'attempt_1',
+        modelKey: 'model_42',
+        modelLabel: 'Gemma 4',
+        progress: 0,
+        status: ModelDownloadStatus.failed,
+        message: 'Old attempt failed',
+        error: 'Old failure',
+      );
+
+      final reconciled = reconcileBackgroundDownloads(state, [
+        oldTerminal,
+        newerTerminal,
+      ]);
+
+      expect(reconciled.activeInstall, isNull);
+      expect(reconciled.progressByKey, isEmpty);
+      expect(reconciled.errorMessage, isNull);
+    });
+
     test('settles a carried active download when it fails', () {
       final state = DownloadsState(
         models: [_model(id: 42, name: 'Gemma 4')],

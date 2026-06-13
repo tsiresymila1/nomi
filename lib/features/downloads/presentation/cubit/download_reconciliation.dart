@@ -43,7 +43,8 @@ DownloadsState reconcileBackgroundDownloads(
     };
   }
 
-  for (final snapshot in snapshots) {
+  for (var index = snapshots.length - 1; index >= 0; index--) {
+    final snapshot = snapshots[index];
     if (snapshot.isTerminal) continue;
     final model = _modelForKey(state.models, snapshot.modelKey);
     if (model == null) continue;
@@ -69,10 +70,16 @@ ModelDownloadSnapshot? _snapshotForKey(
   List<ModelDownloadSnapshot> snapshots,
   String key,
 ) {
+  ModelDownloadSnapshot? selected;
   for (final snapshot in snapshots) {
-    if (snapshot.modelKey == key) return snapshot;
+    if (snapshot.modelKey != key) continue;
+    if (selected == null ||
+        selected.isTerminal && !snapshot.isTerminal ||
+        selected.isTerminal == snapshot.isTerminal) {
+      selected = snapshot;
+    }
   }
-  return null;
+  return selected;
 }
 
 String _failureMessage(ModelDownloadSnapshot snapshot) {

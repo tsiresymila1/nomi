@@ -4,6 +4,7 @@ import 'package:background_downloader/background_downloader.dart';
 
 const modelDownloadsGroup = 'model_downloads';
 const modelDownloadsDirectory = 'models';
+int _modelDownloadAttemptGeneration = 0;
 
 enum ModelDownloadStatus {
   queued,
@@ -51,7 +52,9 @@ DownloadTask buildModelDownloadTask({
 }) {
   final token = huggingFaceToken?.trim();
   return DownloadTask(
-    taskId: taskId ?? modelDownloadTaskId(modelKey),
+    taskId:
+        taskId ??
+        modelDownloadAttemptTaskId(modelKey, _nextModelDownloadAttemptId()),
     url: sourceUrl,
     filename: fileName,
     directory: modelDownloadsDirectory,
@@ -103,6 +106,10 @@ String modelDownloadTaskId(String modelKey) {
 }
 
 String modelDownloadReplacementTaskId(String modelKey, String attemptId) {
+  return modelDownloadAttemptTaskId(modelKey, attemptId);
+}
+
+String modelDownloadAttemptTaskId(String modelKey, String attemptId) {
   final normalizedAttempt = attemptId
       .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
       .replaceAll(RegExp(r'_+'), '_');
@@ -111,6 +118,11 @@ String modelDownloadReplacementTaskId(String modelKey, String attemptId) {
     normalizedAttempt.length.clamp(0, 32),
   );
   return '${modelDownloadTaskId(modelKey)}_r_${attemptPrefix}_${_fnv1a(attemptId)}';
+}
+
+String _nextModelDownloadAttemptId() {
+  _modelDownloadAttemptGeneration++;
+  return '${DateTime.now().microsecondsSinceEpoch}_$_modelDownloadAttemptGeneration';
 }
 
 String activeModelDownloadTaskId({

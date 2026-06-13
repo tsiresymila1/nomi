@@ -10,10 +10,10 @@ import 'package:gena/core/prompt.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/models/chat_entity.dart';
-import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/data/ready_model_selection.dart';
 import 'package:gena/features/home/presentation/cubit/home_state.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
@@ -87,9 +87,10 @@ class HomeCubit extends Cubit<HomeState> {
         emit(state.copyWith(selectedModelId: modelId));
       });
 
-      final installed = _capabilities.supportsLocalModels
-          ? await _modelInstallerService.listInstalledModels()
-          : const <String>[];
+      final installed = await loadInstalledModelsIfSupported(
+        capabilities: _capabilities,
+        loadInstalledModels: _modelInstallerService.listInstalledModels,
+      );
       emit(
         state.copyWith(
           installedModels: installed,
@@ -147,20 +148,18 @@ class HomeCubit extends Cubit<HomeState> {
       return;
     }
 
-    final installedModels = !_capabilities.supportsLocalModels
-        ? const <String>[]
-        : state.installedModels.isNotEmpty
+    final installedModels = state.installedModels.isNotEmpty
         ? state.installedModels
-        : await _modelInstallerService.listInstalledModels();
+        : await loadInstalledModelsIfSupported(
+            capabilities: _capabilities,
+            loadInstalledModels: _modelInstallerService.listInstalledModels,
+          );
 
-    final readyModels = state.models
-        .where(
-          (model) =>
-              model.provider == ModelProviderType.remote ||
-              (_capabilities.supportsLocalModels &&
-                  isModelReady(model, installedModels)),
-        )
-        .toList(growable: false);
+    final readyModels = readyModelsForCapabilities(
+      models: state.models,
+      installedModels: installedModels,
+      capabilities: _capabilities,
+    );
 
     if (readyModels.isEmpty) {
       return;
@@ -214,9 +213,10 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> resetSeededModels() async {
     await _modelRepositoryActions.clearAndReseedDefaultModels();
     await setSelectedModel(null);
-    final installed = _capabilities.supportsLocalModels
-        ? await _modelInstallerService.listInstalledModels()
-        : const <String>[];
+    final installed = await loadInstalledModelsIfSupported(
+      capabilities: _capabilities,
+      loadInstalledModels: _modelInstallerService.listInstalledModels,
+    );
     emit(state.copyWith(installedModels: installed, clearError: true));
   }
 

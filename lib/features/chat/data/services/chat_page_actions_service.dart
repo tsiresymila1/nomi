@@ -9,10 +9,10 @@ import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart'
 import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
-import 'package:gena/features/downloads/data/model_readiness.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/data/ready_model_selection.dart';
 import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 
@@ -172,15 +172,15 @@ class ChatPageActions {
     final models = await _modelRepository.watchModels().first;
     if (models.isEmpty) return;
 
-    final installedModels = await _modelInstallerService.listInstalledModels();
-    final readyModels = models
-        .where(
-          (model) =>
-              model.provider == ModelProviderType.remote ||
-              (_capabilities.supportsLocalModels &&
-                  isModelReady(model, installedModels)),
-        )
-        .toList(growable: false);
+    final installedModels = await loadInstalledModelsIfSupported(
+      capabilities: _capabilities,
+      loadInstalledModels: _modelInstallerService.listInstalledModels,
+    );
+    final readyModels = readyModelsForCapabilities(
+      models: models,
+      installedModels: installedModels,
+      capabilities: _capabilities,
+    );
     if (readyModels.isEmpty) return;
 
     final selectedId = _selectedModelCubit.state;

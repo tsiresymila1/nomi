@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
@@ -27,6 +28,7 @@ class ChatPageActions {
     required ModelRepository modelRepository,
     required ModelInstallerService modelInstallerService,
     required ChatSessionController chatSessionController,
+    AppCapabilities? capabilities,
   }) : _selectedChatCubit = selectedChatCubit,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
        _chatThreadActions = chatThreadActions,
@@ -36,7 +38,8 @@ class ChatPageActions {
        _activeModelInfoResolver = activeModelInfoResolver,
        _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
-       _chatSessionController = chatSessionController;
+       _chatSessionController = chatSessionController,
+       _capabilities = capabilities ?? AppCapabilities.current;
 
   final SelectedChatCubit _selectedChatCubit;
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
@@ -48,6 +51,7 @@ class ChatPageActions {
   final ModelRepository _modelRepository;
   final ModelInstallerService _modelInstallerService;
   final ChatSessionController _chatSessionController;
+  final AppCapabilities _capabilities;
 
   Future<void> createNewThread() async {
     _requestStopGenerationInBackground();
@@ -80,6 +84,8 @@ class ChatPageActions {
   }
 
   Future<void> installModel(ModelInfo model) async {
+    if (await _rejectUnsupportedLocalModel(model)) return;
+
     final hasActiveInstall = _downloadsCubit.state.activeInstall != null;
     final isSwitching = _chatModelSwitchingCubit.state;
     if (hasActiveInstall || isSwitching) {
@@ -109,6 +115,8 @@ class ChatPageActions {
   }
 
   Future<void> selectModel(ModelInfo model) async {
+    if (await _rejectUnsupportedLocalModel(model)) return;
+
     final isSwitching = _chatModelSwitchingCubit.state;
     if (isSwitching) {
       await AppToast.show(
@@ -169,7 +177,8 @@ class ChatPageActions {
         .where(
           (model) =>
               model.provider == ModelProviderType.remote ||
-              isModelReady(model, installedModels),
+              (_capabilities.supportsLocalModels &&
+                  isModelReady(model, installedModels)),
         )
         .toList(growable: false);
     if (readyModels.isEmpty) return;
@@ -191,6 +200,7 @@ class ChatPageActions {
   }
 
   Future<void> _warmupLocalSessionWithLoadingIndicator() async {
+    if (!_capabilities.supportsLocalModels) return;
     if (_downloadsCubit.state.activeInstall != null) return;
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
@@ -209,6 +219,7 @@ class ChatPageActions {
   }
 
   Future<void> _warmupLocalSession() async {
+    if (!_capabilities.supportsLocalModels) return;
     if (_downloadsCubit.state.activeInstall != null) return;
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
@@ -227,5 +238,17 @@ class ChatPageActions {
             logger.w('Background stopGeneration failed: $error');
           }),
     );
+  }
+
+  Future<bool> _rejectUnsupportedLocalModel(ModelInfo model) async {
+    if (model.provider != ModelProviderType.local ||
+        _capabilities.supportsLocalModels) {
+      return false;
+    }
+    await AppToast.show(
+      _capabilities.localModelsUnavailableMessage,
+      type: AppToastType.info,
+    );
+    return true;
   }
 }

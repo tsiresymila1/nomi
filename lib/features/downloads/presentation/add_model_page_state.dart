@@ -35,6 +35,9 @@ class _AddModelPageState extends State<AddModelPage> {
     _isEditMode = widget.initialModel != null;
     final model = widget.initialModel;
     if (model == null) {
+      if (!AppCapabilities.current.supportsLocalModels) {
+        _providerType = ModelProviderType.remote;
+      }
       _syncTokenControllers();
       return;
     }
@@ -201,6 +204,15 @@ class _AddModelPageState extends State<AddModelPage> {
 
     if (name.isEmpty || description.isEmpty) {
       AppToast.show('All fields are required', type: AppToastType.error);
+      return;
+    }
+
+    if (_providerType == ModelProviderType.local &&
+        !AppCapabilities.current.supportsLocalModels) {
+      AppToast.show(
+        AppCapabilities.current.localModelsUnavailableMessage,
+        type: AppToastType.info,
+      );
       return;
     }
 
@@ -478,10 +490,11 @@ class _AddModelPageState extends State<AddModelPage> {
             reveal(
               4,
               SegmentedButton<String>(
-                segments: const [
+                segments: [
                   ButtonSegment<String>(
                     value: ModelProviderType.local,
                     label: Text('Local'),
+                    enabled: AppCapabilities.current.supportsLocalModels,
                   ),
                   ButtonSegment<String>(
                     value: ModelProviderType.remote,

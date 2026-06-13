@@ -45,6 +45,7 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
         }
 
         final cubit = context.read<WorkspaceConfigCubit>();
+        final capabilities = cubit.capabilities;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -66,13 +67,17 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Enable RAG'),
                 subtitle: Text(
-                  state.ragEnabled
+                  !capabilities.supportsWorkspaceRag
+                      ? capabilities.workspaceRagUnavailableMessage
+                      : state.ragEnabled
                       ? 'RAG uses an embedding model. Status: ${state.embedderState.message}'
                       : 'Use workspace documents as retrieval context in chat.',
                 ),
-                onChanged: cubit.setRagEnabled,
+                onChanged: capabilities.supportsWorkspaceRag
+                    ? cubit.setRagEnabled
+                    : null,
               ),
-              if (state.ragEnabled) ...[
+              if (capabilities.supportsWorkspaceRag && state.ragEnabled) ...[
                 const SizedBox(height: 8),
                 WorkspaceEmbedderStatusCard(
                   state: state.embedderState,
@@ -144,7 +149,8 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: state.isImporting
+                    onPressed:
+                        !capabilities.supportsWorkspaceRag || state.isImporting
                         ? null
                         : () => unawaited(
                             WorkspaceConfigActions.importDocument(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
 import 'package:gena/features/downloads/data/default_embedder_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
@@ -29,6 +30,7 @@ class HomeModelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final capabilities = AppCapabilities.current;
     ModelInfo? selected;
     for (final model in models) {
       if (model.id == selectedModelId) {
@@ -94,13 +96,17 @@ class HomeModelCard extends StatelessWidget {
                 style: TextStyle(fontSize: 14),
               ),
               subtitle: Text(
-                selectedEmbedder == null
+                !capabilities.supportsWorkspaceRag
+                    ? capabilities.workspaceRagUnavailableMessage
+                    : selectedEmbedder == null
                     ? selectedEmbedderModel
                     : '${selectedEmbedder.displayName} (${selectedEmbedder.sizeLabel})',
                 style: const TextStyle(fontSize: 12),
               ),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-              onTap: () => _showEmbedderPicker(context),
+              onTap: capabilities.supportsWorkspaceRag
+                  ? () => _showEmbedderPicker(context)
+                  : null,
             ),
             const SizedBox(height: 6),
             Row(
@@ -115,7 +121,9 @@ class HomeModelCard extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: onInstallOrCheckEmbedder,
+                  onPressed: capabilities.supportsWorkspaceRag
+                      ? onInstallOrCheckEmbedder
+                      : null,
                   child: const Text(
                     'Install/Check',
                     style: TextStyle(fontSize: 12),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/services/device_system_info_service.dart';
 import 'package:gena/features/downloads/data/default_static_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
@@ -58,6 +59,7 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
 
         final cubit = context.read<DownloadsCubit>();
         final insightsService = sl<ModelCatalogInsightsService>();
+        final capabilities = AppCapabilities.current;
 
         return FutureBuilder(
           future: Future.wait([
@@ -76,7 +78,8 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
             final visibleModels = <_VisibleModel>[];
             var hiddenIncompatible = 0;
             for (final model in state.models) {
-              if (_hideLocal && model.provider == ModelProviderType.local) {
+              if ((!capabilities.supportsLocalModels || _hideLocal) &&
+                  model.provider == ModelProviderType.local) {
                 continue;
               }
               final query = _searchQuery.trim().toLowerCase();
@@ -125,6 +128,13 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
                             compact: true,
                           ),
                         if (deviceInfo != null) const SizedBox(height: 8),
+                        if (!capabilities.supportsLocalModels) ...[
+                          Text(
+                            capabilities.localModelsUnavailableMessage,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         TextField(
                           controller: _searchController,
                           onChanged: (value) =>
@@ -152,10 +162,14 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
                             children: [
                               FilterChip(
                                 label: const Text('Hide local models'),
-                                selected: _hideLocal,
-                                onSelected: (selected) {
-                                  setState(() => _hideLocal = selected);
-                                },
+                                selected:
+                                    !capabilities.supportsLocalModels ||
+                                    _hideLocal,
+                                onSelected: capabilities.supportsLocalModels
+                                    ? (selected) {
+                                        setState(() => _hideLocal = selected);
+                                      }
+                                    : null,
                               ),
                               if (hiddenIncompatible > 0)
                                 Chip(

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/prompt.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
@@ -30,6 +31,7 @@ class HomeCubit extends Cubit<HomeState> {
     required SelectedModelCubit selectedModelCubit,
     required SelectedWorkspaceCubit selectedWorkspaceCubit,
     required SelectedChatCubit selectedChatCubit,
+    AppCapabilities? capabilities,
   }) : _database = database,
        _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
@@ -39,6 +41,7 @@ class HomeCubit extends Cubit<HomeState> {
        _selectedModelCubit = selectedModelCubit,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
        _selectedChatCubit = selectedChatCubit,
+       _capabilities = capabilities ?? AppCapabilities.current,
        super(const HomeState()) {
     _init();
   }
@@ -52,6 +55,7 @@ class HomeCubit extends Cubit<HomeState> {
   final SelectedModelCubit _selectedModelCubit;
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
   final SelectedChatCubit _selectedChatCubit;
+  final AppCapabilities _capabilities;
 
   StreamSubscription<List<WorkspaceChatGroup>>? _workspaceGroupsSubscription;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
@@ -83,12 +87,16 @@ class HomeCubit extends Cubit<HomeState> {
         emit(state.copyWith(selectedModelId: modelId));
       });
 
-      final installed = await _modelInstallerService.listInstalledModels();
+      final installed = _capabilities.supportsLocalModels
+          ? await _modelInstallerService.listInstalledModels()
+          : const <String>[];
       emit(
         state.copyWith(
           installedModels: installed,
           loading: false,
-          embedderStatus: await _resolveEmbedderStatus(),
+          embedderStatus: _capabilities.supportsWorkspaceRag
+              ? await _resolveEmbedderStatus()
+              : _capabilities.workspaceRagUnavailableMessage,
         ),
       );
     } catch (error, stackTrace) {
@@ -108,6 +116,13 @@ class HomeCubit extends Cubit<HomeState> {
       emit(state.copyWith(clearSelectedModel: true));
       return;
     }
+    final model = state.models
+        .where((model) => model.id == modelId)
+        .firstOrNull;
+    if (model?.provider == ModelProviderType.local &&
+        !_capabilities.supportsLocalModels) {
+      throw StateError(_capabilities.localModelsUnavailableMessage);
+    }
     await _selectedModelCubit.selectModel(modelId);
     emit(state.copyWith(selectedModelId: modelId));
   }
@@ -123,11 +138,18 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> _ensureActiveModelSelected() async {
     final selectedId = _selectedModelCubit.state;
     if (selectedId != null &&
-        state.models.any((model) => model.id == selectedId)) {
+        state.models.any(
+          (model) =>
+              model.id == selectedId &&
+              (model.provider == ModelProviderType.remote ||
+                  _capabilities.supportsLocalModels),
+        )) {
       return;
     }
 
-    final installedModels = state.installedModels.isNotEmpty
+    final installedModels = !_capabilities.supportsLocalModels
+        ? const <String>[]
+        : state.installedModels.isNotEmpty
         ? state.installedModels
         : await _modelInstallerService.listInstalledModels();
 
@@ -135,7 +157,8 @@ class HomeCubit extends Cubit<HomeState> {
         .where(
           (model) =>
               model.provider == ModelProviderType.remote ||
-              isModelReady(model, installedModels),
+              (_capabilities.supportsLocalModels &&
+                  isModelReady(model, installedModels)),
         )
         .toList(growable: false);
 
@@ -154,10 +177,14 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   void setSelectedEmbedderModel(String model) {
+    if (!_capabilities.supportsWorkspaceRag) return;
     emit(state.copyWith(selectedEmbedderModel: model));
   }
 
   Future<void> installOrCheckEmbedder() async {
+    if (!_capabilities.supportsWorkspaceRag) {
+      throw StateError(_capabilities.workspaceRagUnavailableMessage);
+    }
     emit(
       state.copyWith(
         embedderStatus: 'Checking embedding model...',
@@ -187,7 +214,9 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> resetSeededModels() async {
     await _modelRepositoryActions.clearAndReseedDefaultModels();
     await setSelectedModel(null);
-    final installed = await _modelInstallerService.listInstalledModels();
+    final installed = _capabilities.supportsLocalModels
+        ? await _modelInstallerService.listInstalledModels()
+        : const <String>[];
     emit(state.copyWith(installedModels: installed, clearError: true));
   }
 

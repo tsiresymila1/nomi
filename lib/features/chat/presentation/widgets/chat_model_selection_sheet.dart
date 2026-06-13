@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
@@ -36,6 +37,7 @@ class ChatModelSelectionSheet extends StatelessWidget {
     final downloadsCubit = sl<DownloadsCubit>();
     final selectedModelCubit = sl<SelectedModelCubit>();
     final insightsService = sl<ModelCatalogInsightsService>();
+    final capabilities = AppCapabilities.current;
 
     return BlocBuilder<SelectedModelCubit, int?>(
       bloc: selectedModelCubit,
@@ -76,6 +78,10 @@ class ChatModelSelectionSheet extends StatelessWidget {
                       final state = snapshot.data ?? downloadsCubit.state;
                       final models = <_ChatSelectableModel>[];
                       for (final model in state.models) {
+                        if (model.provider == ModelProviderType.local &&
+                            !capabilities.supportsLocalModels) {
+                          continue;
+                        }
                         final insight = deviceInfo == null
                             ? null
                             : insightsService.describeLlmModel(

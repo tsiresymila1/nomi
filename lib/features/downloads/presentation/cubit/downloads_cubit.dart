@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/default_static_models.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
@@ -19,10 +20,12 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     required ModelInstallerService modelInstallerService,
     required ModelRepositoryActions modelRepositoryActions,
     required DefaultModelSeeder defaultModelSeeder,
+    AppCapabilities? capabilities,
   }) : _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
        _modelRepositoryActions = modelRepositoryActions,
        _defaultModelSeeder = defaultModelSeeder,
+       _capabilities = capabilities ?? AppCapabilities.current,
        super(const DownloadsState()) {
     _init();
   }
@@ -31,6 +34,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   final ModelInstallerService _modelInstallerService;
   final ModelRepositoryActions _modelRepositoryActions;
   final DefaultModelSeeder _defaultModelSeeder;
+  final AppCapabilities _capabilities;
   StreamSubscription<List<ModelInfo>>? _modelsSubscription;
   StreamSubscription<List<ModelDownloadSnapshot>>? _downloadTasksSubscription;
   List<ModelDownloadSnapshot> _backgroundDownloadTasks = const [];
@@ -53,13 +57,17 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         );
       },
     );
-    _downloadTasksSubscription = ModelBackgroundDownloadService.instance
-        .watchTasks()
-        .listen((tasks) {
-          _backgroundDownloadTasks = tasks;
-          _syncBackgroundDownloadTasks(tasks);
-        });
-    await refreshInstalledModels();
+    if (_capabilities.supportsLocalModels) {
+      _downloadTasksSubscription = ModelBackgroundDownloadService.instance
+          .watchTasks()
+          .listen((tasks) {
+            _backgroundDownloadTasks = tasks;
+            _syncBackgroundDownloadTasks(tasks);
+          });
+      await refreshInstalledModels();
+    } else {
+      emit(state.copyWith(installedModels: const [], clearError: true));
+    }
   }
 
   void _syncBackgroundDownloadTasks(List<ModelDownloadSnapshot> tasks) {
@@ -69,6 +77,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   }
 
   Future<void> refreshInstalledModels() async {
+    if (!_capabilities.supportsLocalModels) return;
     try {
       final installed = await _modelInstallerService.listInstalledModels();
       emit(state.copyWith(installedModels: installed, clearError: true));
@@ -87,6 +96,12 @@ class DownloadsCubit extends Cubit<DownloadsState> {
 
   Future<void> installModel(ModelInfo model) async {
     if (model.provider == ModelProviderType.remote) return;
+    if (!_capabilities.supportsLocalModels) {
+      final message = _capabilities.localModelsUnavailableMessage;
+      emit(state.copyWith(errorMessage: message));
+      await AppToast.show(message, type: AppToastType.info);
+      return;
+    }
     if (_installInProgress || state.activeInstall != null) {
       await AppToast.show(
         'A model install is already running. Please wait.',

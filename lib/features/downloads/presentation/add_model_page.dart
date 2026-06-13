@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';

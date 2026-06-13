@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/prompt.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
@@ -29,10 +30,12 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
     required WorkspaceDocumentParser parser,
     required WorkspaceRagIngestionController ingestionController,
     required WorkspaceEmbedderInstallCubit embedderCubit,
+    AppCapabilities? capabilities,
   }) : _database = database,
        _parser = parser,
        _ingestionController = ingestionController,
        _embedderCubit = embedderCubit,
+       _capabilities = capabilities ?? AppCapabilities.current,
        super(WorkspaceConfigState.initial());
 
   final String workspaceId;
@@ -40,6 +43,9 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   final WorkspaceDocumentParser _parser;
   final WorkspaceRagIngestionController _ingestionController;
   final WorkspaceEmbedderInstallCubit _embedderCubit;
+  final AppCapabilities _capabilities;
+
+  AppCapabilities get capabilities => _capabilities;
 
   StreamSubscription<db.Workspace?>? _workspaceSubscription;
   StreamSubscription<List<WorkspaceDocumentEntity>>? _documentsSubscription;
@@ -51,8 +57,10 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
     _initialized = true;
     _watchWorkspace();
     _bindEmbedder();
-    unawaited(_ingestionController.resumePending());
-    unawaited(_embedderCubit.refreshStatus());
+    if (_capabilities.supportsWorkspaceRag) {
+      unawaited(_ingestionController.resumePending());
+      unawaited(_embedderCubit.refreshStatus());
+    }
   }
 
   void setInstruction(String value) {
@@ -60,6 +68,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   }
 
   void setRagEnabled(bool value) {
+    if (value && !_capabilities.supportsWorkspaceRag) return;
     emit(state.copyWith(ragEnabled: value));
     if (value) {
       unawaited(_embedderCubit.refreshStatus());
@@ -94,7 +103,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
 
     emit(state.copyWith(isSaving: true));
     try {
-      if (state.ragEnabled) {
+      if (state.ragEnabled && _capabilities.supportsWorkspaceRag) {
         await _embedderCubit.ensureInstalled();
       }
 
@@ -110,7 +119,9 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
                 ? systemPrompt
                 : state.instruction.trim(),
           ),
-          ragEnabled: Value(state.ragEnabled),
+          ragEnabled: Value(
+            _capabilities.supportsWorkspaceRag && state.ragEnabled,
+          ),
           nativeToolsEnabled: Value(state.nativeToolsEnabled),
           nativeOpenUrlEnabled: Value(state.nativeOpenUrlEnabled),
           nativeOpenAppEnabled: Value(state.nativeOpenAppEnabled),
@@ -124,10 +135,20 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   }
 
   Future<void> ensureEmbedderInstalled() {
+    if (!_capabilities.supportsWorkspaceRag) {
+      throw WorkspaceConfigValidationException(
+        _capabilities.workspaceRagUnavailableMessage,
+      );
+    }
     return _embedderCubit.ensureInstalled();
   }
 
   Future<void> importDocument(String rawPath) async {
+    if (!_capabilities.supportsWorkspaceRag) {
+      throw WorkspaceConfigValidationException(
+        _capabilities.workspaceRagUnavailableMessage,
+      );
+    }
     if (state.isImporting) return;
     final targetWorkspaceId = state.workspace?.id ?? workspaceId;
     if (targetWorkspaceId.trim().isEmpty) return;
@@ -224,7 +245,9 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
         instruction: shouldHydrate
             ? workspace.generalInstruction
             : state.instruction,
-        ragEnabled: shouldHydrate ? workspace.ragEnabled : state.ragEnabled,
+        ragEnabled: _capabilities.supportsWorkspaceRag
+            ? (shouldHydrate ? workspace.ragEnabled : state.ragEnabled)
+            : false,
         nativeToolsEnabled: shouldHydrate
             ? workspace.nativeToolsEnabled
             : state.nativeToolsEnabled,

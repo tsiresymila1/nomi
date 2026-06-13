@@ -1,0 +1,183 @@
+import 'package:genkit/genkit.dart' hide ModelInfo;
+
+import 'package:gena/features/downloads/data/models/model_info.dart';
+
+/// Provider-neutral local model runtime contract.
+///
+/// Implementations own loading a local model file, exposing a Genkit instance
+/// plus model reference for generation, forwarding cancellation, and disposing
+/// the underlying runtime when the selected model changes.
+abstract interface class LocalModelRuntime {
+  /// Loads (or reuses) the runtime for [model] and returns a prepared handle.
+  Future<PreparedLocalModel> prepare(ModelInfo model);
+
+  /// Estimates the token count of [text].
+  Future<int> countTokens(String text);
+
+  /// Cancels any in-flight generation on the active runtime.
+  void cancelActiveGeneration();
+
+  /// Disposes the active runtime, if any.
+  Future<void> reset();
+}
+
+/// A loaded local model exposed to the generation path.
+class PreparedLocalModel {
+  const PreparedLocalModel({
+    required this.ai,
+    required this.modelRef,
+    required this.modelId,
+  });
+
+  /// Genkit instance with the local plugin registered.
+  final Genkit ai;
+
+  /// Typed Genkit reference for the prepared model.
+  final ModelRef<dynamic> modelRef;
+
+  /// Stable app-owned identity for the prepared model file.
+  final String modelId;
+}
+
+/// Raised when a local model cannot be prepared.
+class LocalModelRuntimeException implements Exception {
+  const LocalModelRuntimeException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'LocalModelRuntimeException: $message';
+}
+
+/// Conservative fallback token estimate (~4 characters per token), used when a
+/// runtime cannot tokenize text natively.
+int fallbackTokenEstimate(String text) {
+  if (text.isEmpty) return 0;
+  return (text.runes.length / 4).ceil();
+}
+
+const _supportedLocalModelExtensions = <String>{'.gguf', '.litertlm'};
+
+/// Returns the lowercase file extension of a local model [source], or null.
+String? localModelRuntimeExtension(String source) {
+  final trimmed = source.trim();
+  if (trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  final path = uri != null && uri.hasScheme ? uri.path : trimmed;
+  final fileName = path.split(RegExp(r'[/\\]')).last.toLowerCase();
+  final index = fileName.lastIndexOf('.');
+  if (index < 0) return null;
+  return fileName.substring(index);
+}
+
+/// Whether [source] points at a llamadart-compatible local model file.
+bool isLocalModelRuntimeSource(String source) {
+  final extension = localModelRuntimeExtension(source);
+  return extension != null &&
+      _supportedLocalModelExtensions.contains(extension);
+}
+
+/// Request describing a runtime load. Settings that affect native loading
+/// (model file and context window) live here; sampling settings are request
+/// time and stay on the generation config.
+class LocalRuntimeRequest {
+  const LocalRuntimeRequest({
+    required this.modelInfo,
+    required this.contextSize,
+    required this.constrainedOutput,
+  });
+
+  final ModelInfo modelInfo;
+  final int contextSize;
+  final bool constrainedOutput;
+}
+
+/// A loaded runtime returned by a [LocalRuntimeLoader].
+class LoadedLocalRuntime {
+  const LoadedLocalRuntime({
+    required this.ai,
+    required this.modelRef,
+    required this.modelId,
+    required this.cancel,
+    required this.dispose,
+  });
+
+  final Genkit ai;
+  final ModelRef<dynamic> modelRef;
+  final String modelId;
+  final void Function() cancel;
+  final Future<void> Function() dispose;
+}
+
+/// Loads the underlying native runtime. Injected so the caching state machine
+/// is testable without native libraries.
+abstract interface class LocalRuntimeLoader {
+  Future<LoadedLocalRuntime> load(LocalRuntimeRequest request);
+}
+
+/// Caches one prepared local runtime, disposing the previous one before
+/// switching to a different model file or context window.
+class CachingLocalModelRuntime implements LocalModelRuntime {
+  CachingLocalModelRuntime(this._loader);
+
+  final LocalRuntimeLoader _loader;
+
+  LoadedLocalRuntime? _current;
+  String? _cacheKey;
+
+  @override
+  Future<PreparedLocalModel> prepare(ModelInfo model) async {
+    if (!isLocalModelRuntimeSource(model.source)) {
+      throw LocalModelRuntimeException(
+        'Unsupported local model source: ${model.source}. '
+        'Choose a .gguf or .litertlm model file.',
+      );
+    }
+
+    final key = '${model.source.trim()}|${model.maxTokens}';
+    final current = _current;
+    if (current != null && _cacheKey == key) {
+      return PreparedLocalModel(
+        ai: current.ai,
+        modelRef: current.modelRef,
+        modelId: current.modelId,
+      );
+    }
+
+    // Switching models or context windows: dispose the previous runtime first.
+    await reset();
+
+    final loaded = await _loader.load(
+      LocalRuntimeRequest(
+        modelInfo: model,
+        contextSize: model.maxTokens,
+        constrainedOutput: localModelRuntimeExtension(model.source) == '.gguf',
+      ),
+    );
+    _current = loaded;
+    _cacheKey = key;
+    return PreparedLocalModel(
+      ai: loaded.ai,
+      modelRef: loaded.modelRef,
+      modelId: loaded.modelId,
+    );
+  }
+
+  @override
+  Future<int> countTokens(String text) async => fallbackTokenEstimate(text);
+
+  @override
+  void cancelActiveGeneration() {
+    _current?.cancel();
+  }
+
+  @override
+  Future<void> reset() async {
+    final current = _current;
+    _current = null;
+    _cacheKey = null;
+    if (current != null) {
+      await current.dispose();
+    }
+  }
+}

@@ -13,6 +13,8 @@ import 'package:gena/features/chat/data/services/chat_thread_actions_service.dar
 import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/chat/data/repositories/chat_queries_repository.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime_factory.dart';
 import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
@@ -55,6 +57,11 @@ void registerChatDependencies() {
   }
   if (!sl.isRegistered<SelectedModelCubit>()) {
     sl.registerLazySingleton<SelectedModelCubit>(SelectedModelCubit.new);
+  }
+
+  // Local model runtime (native llamadart, or unsupported on web)
+  if (!sl.isRegistered<LocalModelRuntime>()) {
+    sl.registerLazySingleton<LocalModelRuntime>(createLocalModelRuntime);
   }
 
   // Services (no deps or minimal deps)

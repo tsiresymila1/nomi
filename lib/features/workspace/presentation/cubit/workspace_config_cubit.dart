@@ -190,6 +190,11 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   }
 
   Future<void> retryDocumentIngestion(int documentId) {
+    if (!_capabilities.supportsWorkspaceRag) {
+      throw WorkspaceConfigValidationException(
+        _capabilities.workspaceRagUnavailableMessage,
+      );
+    }
     return _ingestionController.retryDocumentIngestion(documentId);
   }
 

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
@@ -13,19 +14,24 @@ class WorkspaceRagIngestionController {
     required db.GenaDatabase database,
     required WorkspaceDocumentParser parser,
     required WorkspaceRagVectorStore vectorStore,
+    AppCapabilities? capabilities,
   }) : _database = database,
        _parser = parser,
-       _vectorStore = vectorStore;
+       _vectorStore = vectorStore,
+       _capabilities = capabilities ?? AppCapabilities.current;
 
   final db.GenaDatabase _database;
   final WorkspaceDocumentParser _parser;
   final WorkspaceRagVectorStore _vectorStore;
+  final AppCapabilities _capabilities;
 
   final List<int> _queue = <int>[];
   final Set<int> _queuedSet = <int>{};
   bool _draining = false;
 
   Future<void> resumePending() async {
+    _capabilities.requireWorkspaceRag();
+
     final rows =
         await (_database.select(_database.workspaceDocuments)..where(
               (t) => t.ingestionStatus.isIn(const ['queued', 'processing']),
@@ -44,6 +50,8 @@ class WorkspaceRagIngestionController {
   }
 
   Future<void> enqueue(int documentId) async {
+    _capabilities.requireWorkspaceRag();
+
     if (_queuedSet.add(documentId)) {
       _queue.add(documentId);
     }
@@ -51,6 +59,8 @@ class WorkspaceRagIngestionController {
   }
 
   Future<void> retryDocumentIngestion(int documentId) async {
+    _capabilities.requireWorkspaceRag();
+
     await (_database.update(
       _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).write(
@@ -83,10 +93,14 @@ class WorkspaceRagIngestionController {
       // Keep DB source of truth even when file cleanup fails.
     }
 
-    await rebuildReadyIndex();
+    if (_capabilities.supportsWorkspaceRag) {
+      await rebuildReadyIndex();
+    }
   }
 
   Future<void> rebuildReadyIndex() async {
+    _capabilities.requireWorkspaceRag();
+
     final rows =
         await (_database.select(_database.workspaceDocuments)
               ..where(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
@@ -58,8 +59,14 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
   required bool enableNativeSmsTool,
   required bool enableNativeSendEmailTool,
   required bool enableNativeFlashlightTool,
+  AppCapabilities? capabilities,
 }) {
   if (!supportsFunctionCalls) return const <UnifiedChatToolDefinition>[];
+  final enableEffectiveRagTool =
+      capabilities?.isWorkspaceRagEnabled(workspaceRagEnabled: enableRagTool) ??
+      AppCapabilities.current.isWorkspaceRagEnabled(
+        workspaceRagEnabled: enableRagTool,
+      );
 
   final tools = <UnifiedChatToolDefinition>[
     UnifiedChatToolDefinition(
@@ -108,7 +115,7 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
     ),
   ];
 
-  if (enableRagTool) {
+  if (enableEffectiveRagTool) {
     tools.add(
       const UnifiedChatToolDefinition(
         name: ragSearchToolName,

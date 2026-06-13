@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
@@ -179,9 +180,12 @@ Future<void> generateRemoteAssistantResponse({
   final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
   final systemInstruction = buildSystemInstruction(basePrompt);
+  final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
+    workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
+  );
   final remoteTools = buildRemoteChatTools(
     supportsFunctionCalls: activeModel.supportsFunctionCalls,
-    enableRagTool: activeWorkspace?.ragEnabled ?? false,
+    enableRagTool: enableRag,
     enableNativeOpenUrlTool:
         (activeWorkspace?.nativeToolsEnabled ?? false) &&
         (activeWorkspace?.nativeOpenUrlEnabled ?? false),
@@ -260,7 +264,7 @@ Future<void> generateRemoteAssistantResponse({
         final toolResult = await executeChatToolByName(
           call.function.name,
           parsedArgs,
-          ragToolHandler: activeWorkspace == null
+          ragToolHandler: activeWorkspace == null || !enableRag
               ? null
               : (query, {topK = 4, threshold = 0.15}) =>
                     deps.workspaceRagActions.runRagTool(

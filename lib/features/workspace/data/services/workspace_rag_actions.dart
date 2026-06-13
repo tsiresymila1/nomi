@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_bootstrap.dart';
@@ -16,22 +17,27 @@ class WorkspaceRagActions {
     required WorkspaceRagVectorStore vectorStore,
     required WorkspaceRagIngestionQueue ingestionQueue,
     required WorkspaceRagIngestionBootstrap ingestionBootstrap,
+    AppCapabilities? capabilities,
   }) : _database = database,
        _parser = parser,
        _vectorStore = vectorStore,
        _ingestionQueue = ingestionQueue,
-       _ingestionBootstrap = ingestionBootstrap;
+       _ingestionBootstrap = ingestionBootstrap,
+       _capabilities = capabilities ?? AppCapabilities.current;
 
   final db.GenaDatabase _database;
   final WorkspaceDocumentParser _parser;
   final WorkspaceRagVectorStore _vectorStore;
   final WorkspaceRagIngestionQueue _ingestionQueue;
   final WorkspaceRagIngestionBootstrap _ingestionBootstrap;
+  final AppCapabilities _capabilities;
 
   Future<void> importDocument({
     required String workspaceId,
     required String rawPath,
   }) async {
+    _capabilities.requireWorkspaceRag();
+
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) {
       throw const FormatException('Invalid workspace id');
@@ -63,6 +69,8 @@ class WorkspaceRagActions {
   }
 
   Future<void> retryDocumentIngestion(int documentId) async {
+    _capabilities.requireWorkspaceRag();
+
     await (_database.update(
       _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).write(
@@ -96,10 +104,14 @@ class WorkspaceRagActions {
       // Ignore file cleanup errors and keep DB source of truth consistent.
     }
 
-    await rebuildAllDocumentsIndex();
+    if (_capabilities.supportsWorkspaceRag) {
+      await rebuildAllDocumentsIndex();
+    }
   }
 
   Future<void> rebuildAllDocumentsIndex() async {
+    _capabilities.requireWorkspaceRag();
+
     final rows =
         await (_database.select(_database.workspaceDocuments)
               ..where(
@@ -132,6 +144,14 @@ class WorkspaceRagActions {
     int topK = 4,
     double threshold = 0.15,
   }) async {
+    if (!_capabilities.supportsWorkspaceRag) {
+      return <String, dynamic>{
+        'status': 'error',
+        'error': 'unsupported_platform',
+        'message': _capabilities.workspaceRagUnavailableMessage,
+      };
+    }
+
     _ingestionBootstrap.ensureStarted();
 
     final trimmed = query.trim();
@@ -164,7 +184,9 @@ class WorkspaceRagActions {
         'message': 'Workspace not found.',
       };
     }
-    if (!workspace.ragEnabled) {
+    if (!_capabilities.isWorkspaceRagEnabled(
+      workspaceRagEnabled: workspace.ragEnabled,
+    )) {
       return <String, dynamic>{
         'status': 'error',
         'error': 'rag_disabled',
@@ -227,6 +249,8 @@ class WorkspaceRagActions {
     required String workspaceId,
     required String userPrompt,
   }) async {
+    if (!_capabilities.supportsWorkspaceRag) return userPrompt;
+
     _ingestionBootstrap.ensureStarted();
 
     final trimmedPrompt = userPrompt.trim();
@@ -240,7 +264,10 @@ class WorkspaceRagActions {
               ..where((t) => t.id.equals(parsedWorkspaceId))
               ..limit(1))
             .getSingleOrNull();
-    if (workspace == null || !workspace.ragEnabled) {
+    if (workspace == null ||
+        !_capabilities.isWorkspaceRagEnabled(
+          workspaceRagEnabled: workspace.ragEnabled,
+        )) {
       return userPrompt;
     }
 

@@ -8,11 +8,13 @@ class WorkspaceDocumentsList extends StatelessWidget {
     required this.documents,
     required this.onRetry,
     required this.onDelete,
+    this.retryEnabled = true,
   });
 
   final List<WorkspaceDocumentEntity>? documents;
   final ValueChanged<WorkspaceDocumentEntity> onRetry;
   final ValueChanged<WorkspaceDocumentEntity> onDelete;
+  final bool retryEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,7 @@ class WorkspaceDocumentsList extends StatelessWidget {
                   IconButton(
                     tooltip: 'Retry ingestion',
                     icon: const Icon(Icons.refresh_rounded),
-                    onPressed: () => onRetry(document),
+                    onPressed: retryEnabled ? () => onRetry(document) : null,
                   ),
                 IconButton(
                   tooltip: 'Delete document',

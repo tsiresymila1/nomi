@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
@@ -144,9 +145,12 @@ class ChatSessionController {
     final systemPrompt = activeWorkspace?.generalInstruction.trim() ?? '';
     final systemInstruction = buildSystemInstruction(systemPrompt);
     final effectiveThinking = modelRuntime.defaultIsThinking;
+    final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
+      workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
+    );
     final tools = buildChatTools(
       supportsFunctionCalls: modelRuntime.supportsFunctionCalls,
-      enableRagTool: activeWorkspace?.ragEnabled ?? false,
+      enableRagTool: enableRag,
       enableNativeOpenUrlTool:
           (activeWorkspace?.nativeToolsEnabled ?? false) &&
           (activeWorkspace?.nativeOpenUrlEnabled ?? false),

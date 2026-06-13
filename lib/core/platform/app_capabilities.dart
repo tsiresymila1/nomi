@@ -2,6 +2,16 @@ import 'package:flutter/foundation.dart';
 
 enum AppPlatform { web, android, iOS, macOS, windows, linux, fuchsia }
 
+class UnsupportedPlatformException implements Exception {
+  const UnsupportedPlatformException(this.message);
+
+  final String code = 'unsupported_platform';
+  final String message;
+
+  @override
+  String toString() => '$code: $message';
+}
+
 class AppCapabilities {
   const AppCapabilities({
     required this.platform,
@@ -20,6 +30,16 @@ class AppCapabilities {
       'Remote models remain available.';
 
   String get workspaceRagUnavailableMessage => localModelsUnavailableMessage;
+
+  bool isWorkspaceRagEnabled({required bool workspaceRagEnabled}) {
+    return supportsWorkspaceRag && workspaceRagEnabled;
+  }
+
+  void requireWorkspaceRag() {
+    if (!supportsWorkspaceRag) {
+      throw UnsupportedPlatformException(workspaceRagUnavailableMessage);
+    }
+  }
 
   static AppCapabilities get current => forPlatform(_currentPlatform);
 

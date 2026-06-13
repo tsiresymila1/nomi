@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
@@ -31,9 +32,12 @@ Future<void> generateAssistantResponseWithGenkit({
   final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
   final systemInstruction = buildSystemInstruction(basePrompt);
+  final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
+    workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
+  );
   final toolDefinitions = buildUnifiedChatToolDefinitions(
     supportsFunctionCalls: activeModel.supportsFunctionCalls,
-    enableRagTool: activeWorkspace?.ragEnabled ?? false,
+    enableRagTool: enableRag,
     enableNativeOpenUrlTool:
         (activeWorkspace?.nativeToolsEnabled ?? false) &&
         (activeWorkspace?.nativeOpenUrlEnabled ?? false),
@@ -86,10 +90,10 @@ Future<void> generateAssistantResponseWithGenkit({
     chatId: chatId,
     deps: deps,
     workspace: activeWorkspace,
+    enableRag: enableRag,
     isCancelled: isCancelled,
     toolResultCollector: toolResultCollector,
-    stringifyToolResultForGemma4LiteRt:
-        stringifyToolResultForGemma4LiteRt,
+    stringifyToolResultForGemma4LiteRt: stringifyToolResultForGemma4LiteRt,
   );
 
   deps.chatContextWindowCubit.update(
@@ -320,6 +324,7 @@ List<String> _registerTools({
   required int chatId,
   required ChatRuntimeDependencies deps,
   required WorkspaceEntity? workspace,
+  required bool enableRag,
   required bool Function() isCancelled,
   required _ToolResultCollector toolResultCollector,
   required bool stringifyToolResultForGemma4LiteRt,
@@ -348,7 +353,7 @@ List<String> _registerTools({
           final toolResult = await executeChatToolByName(
             definition.name,
             input,
-            ragToolHandler: workspace == null
+            ragToolHandler: workspace == null || !enableRag
                 ? null
                 : (query, {topK = 4, threshold = 0.15}) =>
                       deps.workspaceRagActions.runRagTool(
@@ -368,11 +373,9 @@ List<String> _registerTools({
                     args: args,
                   ),
           );
-          logger.i('tool result: ${_formatToolTraceMessage(
-                    toolName: definition.name,
-                    args: input,
-                    result: toolResult,
-                  )}');
+          logger.i(
+            'tool result: ${_formatToolTraceMessage(toolName: definition.name, args: input, result: toolResult)}',
+          );
 
           await database
               .into(database.messages)

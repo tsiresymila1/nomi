@@ -25,7 +25,11 @@ void main() {
       });
     }
 
-    for (final platform in [AppPlatform.windows, AppPlatform.linux]) {
+    for (final platform in [
+      AppPlatform.windows,
+      AppPlatform.linux,
+      AppPlatform.fuchsia,
+    ]) {
       test('$platform remains remote-only', () {
         final capabilities = AppCapabilities.forPlatform(platform);
 
@@ -51,6 +55,20 @@ void main() {
       expect(
         web.workspaceRagUnavailableMessage,
         web.localModelsUnavailableMessage,
+      );
+    });
+
+    test('persisted RAG is ineffective on unsupported platforms', () {
+      expect(web.isWorkspaceRagEnabled(workspaceRagEnabled: true), isFalse);
+    });
+
+    test('persisted RAG remains effective on supported platforms', () {
+      final android = AppCapabilities.forPlatform(AppPlatform.android);
+
+      expect(android.isWorkspaceRagEnabled(workspaceRagEnabled: true), isTrue);
+      expect(
+        android.isWorkspaceRagEnabled(workspaceRagEnabled: false),
+        isFalse,
       );
     });
 

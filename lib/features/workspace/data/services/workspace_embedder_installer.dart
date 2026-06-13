@@ -1,5 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemma/core/api/flutter_gemma.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/downloads/data/default_embedder_models.dart';
 
 typedef InstallStatusCallback =
@@ -10,10 +11,16 @@ typedef InstallStatusCallback =
     });
 
 class WorkspaceEmbedderInstaller {
+  WorkspaceEmbedderInstaller({AppCapabilities? capabilities})
+    : _capabilities = capabilities ?? AppCapabilities.current;
+
+  final AppCapabilities _capabilities;
+
   Future<void> ensureInstalled({
     required InstallStatusCallback onStatus,
     String modelKey = 'embeddinggemma_300m',
   }) async {
+    _capabilities.requireWorkspaceRag();
     onStatus(message: 'Checking embedding model...');
 
     final selectedModel = findDefaultEmbedderModel(modelKey);

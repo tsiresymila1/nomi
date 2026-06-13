@@ -172,6 +172,7 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
               const SizedBox(height: 8),
               WorkspaceDocumentsList(
                 documents: state.documents,
+                retryEnabled: capabilities.supportsWorkspaceRag,
                 onRetry: (document) => unawaited(
                   WorkspaceConfigActions.retryDocument(
                     context,

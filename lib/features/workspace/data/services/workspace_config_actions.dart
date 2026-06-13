@@ -1,3 +1,4 @@
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_actions.dart';
 
@@ -39,20 +40,26 @@ class WorkspaceConfigActions {
     required WorkspaceActions workspaceActions,
     required WorkspaceEmbedderInstallCubit embedderInstallCubit,
     OnWorkspaceConfigSaved? onSaved,
+    AppCapabilities? capabilities,
   }) : _workspaceActions = workspaceActions,
        _embedderInstallCubit = embedderInstallCubit,
-       _onSaved = onSaved;
+       _onSaved = onSaved,
+       _capabilities = capabilities ?? AppCapabilities.current;
 
   final WorkspaceActions _workspaceActions;
   final WorkspaceEmbedderInstallCubit _embedderInstallCubit;
   final OnWorkspaceConfigSaved? _onSaved;
+  final AppCapabilities _capabilities;
 
   Future<void> save(WorkspaceConfigSaveInput input) async {
     if (input.workspaceId.trim().isEmpty) {
       throw const WorkspaceConfigValidationException('No workspace selected');
     }
 
-    if (input.ragEnabled) {
+    final effectiveRagEnabled = _capabilities.isWorkspaceRagEnabled(
+      workspaceRagEnabled: input.ragEnabled,
+    );
+    if (effectiveRagEnabled) {
       await _embedderInstallCubit.ensureInstalled();
     }
 
@@ -62,7 +69,7 @@ class WorkspaceConfigActions {
     );
     await _workspaceActions.updateRagEnabled(
       workspaceId: input.workspaceId,
-      enabled: input.ragEnabled,
+      enabled: effectiveRagEnabled,
     );
     await _workspaceActions.updateNativeToolsEnabled(
       workspaceId: input.workspaceId,

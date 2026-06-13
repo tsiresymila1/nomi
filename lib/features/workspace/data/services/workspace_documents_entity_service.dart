@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
@@ -12,18 +13,23 @@ class WorkspaceDocumentsRepository {
     required db.GenaDatabase database,
     required SelectedWorkspaceCubit selectedWorkspaceCubit,
     required WorkspaceRagIngestionQueue ingestionQueue,
+    AppCapabilities? capabilities,
   }) : _database = database,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
-       _ingestionQueue = ingestionQueue;
+       _ingestionQueue = ingestionQueue,
+       _capabilities = capabilities ?? AppCapabilities.current;
 
   final db.GenaDatabase _database;
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
   final WorkspaceRagIngestionQueue _ingestionQueue;
+  final AppCapabilities _capabilities;
 
   Stream<List<WorkspaceDocumentEntity>> watchWorkspaceDocuments(
     String workspaceId,
   ) {
-    unawaited(_ingestionQueue.resumePending());
+    if (_capabilities.supportsWorkspaceRag) {
+      unawaited(_ingestionQueue.resumePending());
+    }
 
     final parsedWorkspaceId = int.tryParse(workspaceId);
     if (parsedWorkspaceId == null) {

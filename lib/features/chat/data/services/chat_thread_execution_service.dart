@@ -4,6 +4,7 @@ import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/chat/data/models/gemma_chat_session.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
@@ -147,7 +148,11 @@ Future<void> generateAssistantResponse({
         );
         final toolResult = await executeChatTool(
           call,
-          ragToolHandler: workspaceId == null
+          ragToolHandler:
+              workspaceId == null ||
+                  !AppCapabilities.current.isWorkspaceRagEnabled(
+                    workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
+                  )
               ? null
               : (query, {topK = 4, threshold = 0.15}) =>
                     deps.workspaceRagActions.runRagTool(

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:path_provider/path_provider.dart';
 
 class WorkspaceRagReindexDocument {
@@ -21,11 +22,16 @@ class WorkspaceRagReindexDocument {
 }
 
 class WorkspaceRagVectorStore {
+  WorkspaceRagVectorStore({AppCapabilities? capabilities})
+    : _capabilities = capabilities ?? AppCapabilities.current;
+
   static const _dbName = 'gena_workspace_rag.db';
 
+  final AppCapabilities _capabilities;
   bool _ready = false;
 
   Future<void> ensureReady() async {
+    _capabilities.requireWorkspaceRag();
     if (_ready) return;
 
     if (!FlutterGemma.hasActiveEmbedder()) {
@@ -47,6 +53,7 @@ class WorkspaceRagVectorStore {
     required String name,
     required List<String> chunks,
   }) async {
+    _capabilities.requireWorkspaceRag();
     if (chunks.isEmpty) return;
     await ensureReady();
 
@@ -69,6 +76,7 @@ class WorkspaceRagVectorStore {
   }
 
   Future<void> rebuildIndex(List<WorkspaceRagReindexDocument> documents) async {
+    _capabilities.requireWorkspaceRag();
     await ensureReady();
     await FlutterGemmaPlugin.instance.clearVectorStore();
 
@@ -89,6 +97,7 @@ class WorkspaceRagVectorStore {
     int topK = 4,
     double threshold = 0.15,
   }) async {
+    _capabilities.requireWorkspaceRag();
     final cleanedQuery = query.trim();
     if (cleanedQuery.isEmpty) return const [];
 

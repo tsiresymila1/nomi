@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/prompt.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
@@ -101,9 +102,17 @@ class WorkspaceActions {
     final parsedId = int.tryParse(workspaceId);
     if (parsedId == null) return;
 
-    await (_database.update(_database.workspaces)
-          ..where((t) => t.id.equals(parsedId)))
-        .write(db.WorkspacesCompanion(ragEnabled: Value(enabled)));
+    await (_database.update(
+      _database.workspaces,
+    )..where((t) => t.id.equals(parsedId))).write(
+      db.WorkspacesCompanion(
+        ragEnabled: Value(
+          AppCapabilities.current.isWorkspaceRagEnabled(
+            workspaceRagEnabled: enabled,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> updateNativeToolsEnabled({
@@ -176,7 +185,9 @@ class WorkspaceActions {
       )..where((t) => t.id.equals(parsedId))).go();
     });
 
-    await _workspaceRagActions.rebuildAllDocumentsIndex();
+    if (AppCapabilities.current.supportsWorkspaceRag) {
+      await _workspaceRagActions.rebuildAllDocumentsIndex();
+    }
     _workspaceDrawerCubit.remove(workspaceId);
 
     if (selectedWorkspaceId == workspaceId) {

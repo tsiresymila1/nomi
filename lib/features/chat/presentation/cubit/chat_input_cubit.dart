@@ -40,11 +40,11 @@ class ChatInputState {
 }
 
 class ChatInputCubit extends Cubit<ChatInputState> {
-  ChatInputCubit({required ChatThreadActions chatThreadActions})
+  ChatInputCubit({required ChatThreadActionsApi chatThreadActions})
     : _chatThreadActions = chatThreadActions,
       super(const ChatInputState());
 
-  final ChatThreadActions _chatThreadActions;
+  final ChatThreadActionsApi _chatThreadActions;
   final ImagePicker _imagePicker = ImagePicker();
 
   Future<void> pickImage({required ChatAttachmentSource source}) async {

@@ -52,7 +52,19 @@ class LocalMessageBudgetPlan {
       remainingTokensAfterMessage < 0 ? -remainingTokensAfterMessage : 0;
 }
 
-class ChatThreadActions {
+/// Narrow boundary used by presentation cubits that only need to trigger a
+/// send or stop on the active chat thread. Lets those cubits be unit-tested
+/// without constructing the full [ChatThreadActions] dependency graph.
+abstract interface class ChatThreadActionsApi {
+  Future<void> sendMessage(String rawText, {String? imagePath});
+
+  Future<void> stopGeneration({
+    bool triggerLocalModelCancel = true,
+    bool waitForLocalModelCancel = true,
+  });
+}
+
+class ChatThreadActions implements ChatThreadActionsApi {
   ChatThreadActions({
     required db.GenaDatabase database,
     required SelectedChatCubit selectedChatCubit,
@@ -86,6 +98,7 @@ class ChatThreadActions {
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
 
+  @override
   Future<void> sendMessage(String rawText, {String? imagePath}) async {
     final text = rawText.trim();
     final normalizedImagePath = imagePath?.trim();
@@ -208,6 +221,7 @@ class ChatThreadActions {
     }
   }
 
+  @override
   Future<void> stopGeneration({
     bool triggerLocalModelCancel = true,
     bool waitForLocalModelCancel = true,

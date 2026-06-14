@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
 
+/// Reports the workspace RAG engine readiness/indexing state.
+///
+/// The embedding model is bundled with the app and provisioned by
+/// `mobile_rag_engine`, so there is no download progress — this card surfaces
+/// engine initialization status and lets the user re-check readiness.
 class WorkspaceEmbedderStatusCard extends StatelessWidget {
   const WorkspaceEmbedderStatusCard({
     super.key,
@@ -17,8 +22,7 @@ class WorkspaceEmbedderStatusCard extends StatelessWidget {
         state.phase == WorkspaceEmbedderInstallPhase.downloading ||
         state.phase == WorkspaceEmbedderInstallPhase.checking;
     final isFailed = state.phase == WorkspaceEmbedderInstallPhase.failed;
-    final canInstall =
-        state.phase == WorkspaceEmbedderInstallPhase.idle || isFailed;
+    final canCheck = !isBusy;
 
     return Container(
       width: double.infinity,
@@ -43,29 +47,17 @@ class WorkspaceEmbedderStatusCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          if (isBusy ||
-              state.modelProgress > 0 ||
-              state.tokenizerProgress > 0) ...[
+          if (isBusy) ...[
             const SizedBox(height: 8),
-            Text(
-              'Model: ${state.modelProgress}%',
-              style: const TextStyle(fontSize: 11),
-            ),
-            LinearProgressIndicator(value: state.modelProgress / 100),
-            const SizedBox(height: 6),
-            Text(
-              'Tokenizer: ${state.tokenizerProgress}%',
-              style: const TextStyle(fontSize: 11),
-            ),
-            LinearProgressIndicator(value: state.tokenizerProgress / 100),
+            const LinearProgressIndicator(),
           ],
-          if (canInstall) ...[
+          if (canCheck) ...[
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: OutlinedButton(
                 onPressed: onInstallPressed,
-                child: const Text('Install embedder'),
+                child: const Text('Check RAG engine'),
               ),
             ),
           ],

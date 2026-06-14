@@ -5,7 +5,6 @@ import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cu
 import 'package:gena/features/workspace/presentation/cubit/workspace_drawer_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
-import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_local_chat_actions.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_rag_ingestion_controller.dart';
@@ -23,15 +22,9 @@ void registerWorkspacePresentationDependencies() {
     );
   }
 
-  if (!sl.isRegistered<WorkspaceEmbedderInstaller>()) {
-    sl.registerLazySingleton<WorkspaceEmbedderInstaller>(
-      WorkspaceEmbedderInstaller.new,
-    );
-  }
-
   if (!sl.isRegistered<WorkspaceEmbedderInstallCubit>()) {
     sl.registerLazySingleton<WorkspaceEmbedderInstallCubit>(
-      () => WorkspaceEmbedderInstallCubit(sl<WorkspaceEmbedderInstaller>()),
+      () => WorkspaceEmbedderInstallCubit(sl<WorkspaceRagVectorStore>()),
     );
   }
 

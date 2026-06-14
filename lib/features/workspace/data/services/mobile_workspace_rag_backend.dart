@@ -1,0 +1,100 @@
+import 'dart:convert';
+
+import 'package:gena/features/workspace/data/models/workspace_rag_result.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_backend.dart';
+import 'package:mobile_rag_engine/mobile_rag_engine.dart';
+
+/// Builds the native `mobile_rag_engine`-backed RAG backend.
+WorkspaceRagBackend createWorkspaceRagBackend() => MobileWorkspaceRagBackend();
+
+/// Native workspace RAG backend powered by `mobile_rag_engine`.
+///
+/// Each workspace maps to a `workspace_<id>` collection so ingest, removal,
+/// rebuild, and search are fully isolated per workspace.
+class MobileWorkspaceRagBackend implements WorkspaceRagBackend {
+  MobileWorkspaceRagBackend();
+
+  static const _tokenizerAsset = 'assets/rag/tokenizer.json';
+  static const _modelAsset = 'assets/rag/model.onnx';
+
+  bool _initialized = false;
+
+  @override
+  Future<void> ensureReady() async {
+    if (_initialized) return;
+    await MobileRag.initialize(
+      tokenizerAsset: _tokenizerAsset,
+      modelAsset: _modelAsset,
+      deferIndexWarmup: true,
+    );
+    _initialized = true;
+  }
+
+  CollectionRag _collection(String workspaceId) =>
+      MobileRag.instance.inCollection(workspaceRagCollectionId(workspaceId));
+
+  @override
+  Future<WorkspaceRagIngestResult> addDocument(
+    String workspaceId,
+    WorkspaceRagDocument document,
+  ) async {
+    await ensureReady();
+    final result = await _collection(workspaceId).addDocument(
+      document.content,
+      name: document.name,
+      metadata: _encodeMetadata(workspaceId, document),
+    );
+    return WorkspaceRagIngestResult(
+      sourceId: result.sourceId,
+      chunkCount: result.chunkCount,
+    );
+  }
+
+  @override
+  Future<void> removeDocument(String workspaceId, int sourceId) async {
+    await ensureReady();
+    await _collection(workspaceId).removeSource(sourceId);
+  }
+
+  @override
+  Future<void> rebuildWorkspace(String workspaceId) async {
+    await ensureReady();
+    await _collection(workspaceId).rebuildIndex(force: true);
+  }
+
+  @override
+  Future<List<WorkspaceRagResult>> search(
+    String workspaceId,
+    String query, {
+    required int topK,
+    required double threshold,
+  }) async {
+    await ensureReady();
+    final collection = _collection(workspaceId);
+    if (!collection.isIndexReady) {
+      await collection.warmupFuture;
+    }
+    final hits = await collection.searchHybrid(query, topK: topK);
+    return hits
+        .where((hit) => hit.score >= threshold)
+        .map(
+          (hit) => WorkspaceRagResult(
+            id: 'wsdoc_${hit.sourceId.toInt()}_chunk_${hit.chunkIndex}',
+            similarity: hit.score,
+            content: hit.content,
+            metadata: hit.metadata ?? '',
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  String _encodeMetadata(String workspaceId, WorkspaceRagDocument document) {
+    return jsonEncode({
+      'workspace_id': workspaceId,
+      'document_id': document.documentId,
+      'source_type': document.sourceType,
+      'source_path': document.sourcePath,
+      'name': document.name,
+    });
+  }
+}

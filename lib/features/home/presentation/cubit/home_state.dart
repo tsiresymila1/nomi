@@ -7,8 +7,7 @@ class HomeState {
     this.models = const [],
     this.installedModels = const [],
     this.selectedModelId,
-    this.embedderStatus = 'Embedder status unknown',
-    this.selectedEmbedderModel = 'embeddinggemma_300m',
+    this.embedderStatus = 'Workspace RAG engine status unknown',
     this.loading = true,
     this.errorMessage,
   });
@@ -18,7 +17,6 @@ class HomeState {
   final List<String> installedModels;
   final int? selectedModelId;
   final String embedderStatus;
-  final String selectedEmbedderModel;
   final bool loading;
   final String? errorMessage;
 
@@ -29,7 +27,6 @@ class HomeState {
     int? selectedModelId,
     bool clearSelectedModel = false,
     String? embedderStatus,
-    String? selectedEmbedderModel,
     bool? loading,
     String? errorMessage,
     bool clearError = false,
@@ -42,8 +39,6 @@ class HomeState {
           ? null
           : (selectedModelId ?? this.selectedModelId),
       embedderStatus: embedderStatus ?? this.embedderStatus,
-      selectedEmbedderModel:
-          selectedEmbedderModel ?? this.selectedEmbedderModel,
       loading: loading ?? this.loading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );

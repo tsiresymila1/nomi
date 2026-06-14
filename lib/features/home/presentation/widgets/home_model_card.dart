@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_model_selection_sheet.dart';
-import 'package:gena/features/downloads/data/default_embedder_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:gena/features/home/presentation/widgets/embedder_model_selection_sheet.dart';
 
 class HomeModelCard extends StatelessWidget {
   const HomeModelCard({
     required this.models,
     required this.selectedModelId,
     required this.embedderStatus,
-    required this.selectedEmbedderModel,
     required this.onResetSeed,
     required this.onOpenModels,
-    required this.onSelectEmbedder,
     required this.onInstallOrCheckEmbedder,
     super.key,
   });
@@ -22,10 +18,8 @@ class HomeModelCard extends StatelessWidget {
   final List<ModelInfo> models;
   final int? selectedModelId;
   final String embedderStatus;
-  final String selectedEmbedderModel;
   final VoidCallback onResetSeed;
   final VoidCallback onOpenModels;
-  final ValueChanged<String> onSelectEmbedder;
   final Future<void> Function() onInstallOrCheckEmbedder;
 
   @override
@@ -38,8 +32,6 @@ class HomeModelCard extends StatelessWidget {
         break;
       }
     }
-
-    final selectedEmbedder = findDefaultEmbedderModel(selectedEmbedderModel);
 
     return Card(
       child: Padding(
@@ -92,21 +84,15 @@ class HomeModelCard extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.memory_outlined),
               title: const Text(
-                'Embedder model',
+                'Workspace RAG',
                 style: TextStyle(fontSize: 14),
               ),
               subtitle: Text(
                 !capabilities.supportsWorkspaceRag
                     ? capabilities.workspaceRagUnavailableMessage
-                    : selectedEmbedder == null
-                    ? selectedEmbedderModel
-                    : '${selectedEmbedder.displayName} (${selectedEmbedder.sizeLabel})',
+                    : 'On-device embedding engine (bundled model)',
                 style: const TextStyle(fontSize: 12),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-              onTap: capabilities.supportsWorkspaceRag
-                  ? () => _showEmbedderPicker(context)
-                  : null,
             ),
             const SizedBox(height: 6),
             Row(
@@ -124,10 +110,7 @@ class HomeModelCard extends StatelessWidget {
                   onPressed: capabilities.supportsWorkspaceRag
                       ? onInstallOrCheckEmbedder
                       : null,
-                  child: const Text(
-                    'Install/Check',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                  child: const Text('Check', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -146,21 +129,6 @@ class HomeModelCard extends StatelessWidget {
         reverseDuration: Duration(milliseconds: 200),
       ),
       builder: (_) => const SafeArea(child: ChatModelSelectionSheet()),
-    );
-  }
-
-  Future<void> _showEmbedderPicker(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      sheetAnimationStyle: const AnimationStyle(
-        duration: Duration(milliseconds: 400),
-        reverseDuration: Duration(milliseconds: 200),
-      ),
-      builder: (context) => EmbedderModelSelectionSheet(
-        selectedModelKey: selectedEmbedderModel,
-        onSelect: onSelectEmbedder,
-      ),
     );
   }
 }

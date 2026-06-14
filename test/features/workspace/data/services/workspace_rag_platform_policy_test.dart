@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
-import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_bootstrap.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_queue.dart';
@@ -102,21 +101,6 @@ void main() {
         () => vectorStore.searchWorkspace(workspaceId: '1', query: 'hello'),
         throwsA(_isUnsupportedPlatformError),
       );
-    });
-
-    test('embedder installer fails before status or installation work', () {
-      final installer = WorkspaceEmbedderInstaller(capabilities: unsupported);
-      var statusCalled = false;
-
-      expect(
-        () => installer.ensureInstalled(
-          onStatus: ({required message, modelProgress, tokenizerProgress}) {
-            statusCalled = true;
-          },
-        ),
-        throwsA(_isUnsupportedPlatformError),
-      );
-      expect(statusCalled, isFalse);
     });
   });
 }

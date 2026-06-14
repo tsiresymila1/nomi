@@ -1,47 +1,39 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
-import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 
+/// Tracks workspace RAG engine readiness.
+///
+/// Replaces the former FlutterGemma embedder install flow. The embedding model
+/// is now bundled with the app and provisioned by `mobile_rag_engine`, so there
+/// is nothing to download — this cubit only reports whether the engine
+/// initialized successfully.
 class WorkspaceEmbedderInstallCubit
     extends Cubit<WorkspaceEmbedderInstallState> {
-  WorkspaceEmbedderInstallCubit(this._installer)
+  WorkspaceEmbedderInstallCubit(this._vectorStore)
     : super(const WorkspaceEmbedderInstallState.idle());
 
-  final WorkspaceEmbedderInstaller _installer;
+  final WorkspaceRagVectorStore _vectorStore;
 
   Future<void> ensureInstalled() async {
-    if (state.phase == WorkspaceEmbedderInstallPhase.downloading ||
-        state.phase == WorkspaceEmbedderInstallPhase.checking) {
+    if (state.phase == WorkspaceEmbedderInstallPhase.checking) {
       return;
     }
 
     emit(
       state.copyWith(
         phase: WorkspaceEmbedderInstallPhase.checking,
-        message: 'Checking embedding model...',
+        message: 'Preparing workspace RAG engine...',
         clearError: true,
       ),
     );
 
     try {
-      await _installer.ensureInstalled(
-        onStatus: ({required message, modelProgress, tokenizerProgress}) {
-          emit(
-            state.copyWith(
-              phase: WorkspaceEmbedderInstallPhase.downloading,
-              message: message,
-              modelProgress: modelProgress,
-              tokenizerProgress: tokenizerProgress,
-              clearError: true,
-            ),
-          );
-        },
-      );
+      await _vectorStore.ensureReady();
       emit(
         state.copyWith(
           phase: WorkspaceEmbedderInstallPhase.ready,
-          message: 'Embedding model is ready',
+          message: 'Workspace RAG engine is ready',
           modelProgress: 100,
           tokenizerProgress: 100,
           clearError: true,
@@ -51,7 +43,7 @@ class WorkspaceEmbedderInstallCubit
       emit(
         state.copyWith(
           phase: WorkspaceEmbedderInstallPhase.failed,
-          message: 'Embedding model install failed',
+          message: 'Workspace RAG engine failed to initialize',
           error: error.toString(),
         ),
       );
@@ -63,40 +55,29 @@ class WorkspaceEmbedderInstallCubit
     emit(
       state.copyWith(
         phase: WorkspaceEmbedderInstallPhase.checking,
-        message: 'Checking embedding model...',
+        message: 'Checking workspace RAG engine...',
         clearError: true,
       ),
     );
 
     try {
-      if (FlutterGemma.hasActiveEmbedder()) {
-        await FlutterGemma.getActiveEmbedder();
-        emit(
-          state.copyWith(
-            phase: WorkspaceEmbedderInstallPhase.ready,
-            message: 'Embedding model is ready',
-            modelProgress: 100,
-            tokenizerProgress: 100,
-            clearError: true,
-          ),
-        );
-        return;
-      }
-
+      await _vectorStore.ensureReady();
       emit(
         state.copyWith(
-          phase: WorkspaceEmbedderInstallPhase.idle,
-          message: 'Embedding model is not installed yet',
-          modelProgress: 0,
-          tokenizerProgress: 0,
+          phase: WorkspaceEmbedderInstallPhase.ready,
+          message: 'Workspace RAG engine is ready',
+          modelProgress: 100,
+          tokenizerProgress: 100,
           clearError: true,
         ),
       );
     } catch (error) {
       emit(
         state.copyWith(
-          phase: WorkspaceEmbedderInstallPhase.failed,
-          message: 'Failed to check embedding model',
+          phase: WorkspaceEmbedderInstallPhase.idle,
+          message: 'Workspace RAG engine is not ready yet',
+          modelProgress: 0,
+          tokenizerProgress: 0,
           error: error.toString(),
         ),
       );

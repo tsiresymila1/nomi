@@ -40,6 +40,7 @@ class WorkspaceDocuments extends Table with TableMixin {
   late final ingestionStatus = text().withDefault(const Constant('ready'))();
   late final ingestionError = text().nullable()();
   late final chunkCount = integer().withDefault(const Constant(0))();
+  late final ragSourceId = integer().nullable()();
 }
 
 class Messages extends Table with TableMixin {
@@ -82,7 +83,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -172,6 +173,9 @@ class GenaDatabase extends _$GenaDatabase {
         await customStatement(
           "UPDATE models SET provider = 'local' WHERE provider IS NULL OR TRIM(provider) = ''",
         );
+      }
+      if (from < 13) {
+        await m.addColumn(workspaceDocuments, workspaceDocuments.ragSourceId);
       }
     },
   );

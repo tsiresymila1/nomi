@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:gena/core/services/device_system_info_service.dart';
-import 'package:gena/features/downloads/data/default_embedder_models.dart';
 import 'package:gena/features/downloads/data/default_seed_models.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:path_provider/path_provider.dart';
@@ -123,38 +122,6 @@ class ModelCatalogInsightsService {
         compatible: compatible,
         recommended: recommended,
         isRemote: isRemote,
-      ),
-    );
-  }
-
-  Future<ModelCatalogInsight> describeEmbedderModel(String modelKey) async {
-    final deviceInfo = await _deviceInfoService.getInfo();
-    final embedder = findDefaultEmbedderModel(modelKey);
-    final sizeBytes = embedder?.sizeBytes ?? 0;
-    final recommendedRamBytes = embedder?.recommendedRamBytes ?? 0;
-    final compatible = _isCompatible(
-      totalRamBytes: deviceInfo.totalRamBytes,
-      recommendedRamBytes: recommendedRamBytes,
-      freeStorageBytes: deviceInfo.freeStorageBytes,
-      sizeBytes: sizeBytes,
-    );
-    final recommended = _isRecommended(
-      totalRamBytes: deviceInfo.totalRamBytes,
-      recommendedRamBytes: recommendedRamBytes,
-    );
-
-    return ModelCatalogInsight(
-      usage: ModelUsage.embedder,
-      isRemote: false,
-      sizeBytes: sizeBytes,
-      sizeLabel: embedder?.sizeLabel ?? _formatSize(sizeBytes),
-      recommendedRamBytes: recommendedRamBytes,
-      compatible: compatible,
-      recommended: recommended,
-      statusLabel: _buildStatusLabel(
-        compatible: compatible,
-        recommended: recommended,
-        isRemote: false,
       ),
     );
   }

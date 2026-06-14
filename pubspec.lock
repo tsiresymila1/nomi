@@ -81,6 +81,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.6"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   build_config:
     dependency: transitive
     description:
@@ -598,6 +606,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.34"
+  flutter_rust_bridge:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge
+      sha256: e87d6b9ee934dcd24a128ccb2bd91905d2d5fe5c06245d6a8f5477d4907a437a
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.12.0"
   flutter_shaders:
     dependency: transitive
     description:
@@ -1104,6 +1120,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mobile_rag_engine:
+    dependency: "direct main"
+    description:
+      name: mobile_rag_engine
+      sha256: "6dc0eb481d3658536817904a7c352f6c759957ac7cf640ff613e094d2ed67ea8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.18.6"
   mutex:
     dependency: transitive
     description:
@@ -1128,6 +1152,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  onnxruntime:
+    dependency: transitive
+    description:
+      name: onnxruntime
+      sha256: e77ec05acafc135cc5fe7bcdf11b101b39f06513c9d5e9fa02cb1929f6bac72a
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.1"
   openai_dart:
     dependency: "direct main"
     description:
@@ -1296,6 +1328,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.2"
+  rag_engine_flutter:
+    dependency: transitive
+    description:
+      name: rag_engine_flutter
+      sha256: ab4d9bcf9e63d5b6a83ffb25a6db9a240caa9b19b18d667d08913d8d293cc645
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.18.4"
   rational:
     dependency: transitive
     description:

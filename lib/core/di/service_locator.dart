@@ -10,7 +10,6 @@ import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_in
 import 'package:gena/features/workspace/data/services/workspace_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_config_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_documents_service.dart';
-import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_bootstrap.dart';
@@ -85,14 +84,9 @@ Future<void> setupServiceLocator() async {
       ),
     );
   }
-  if (!sl.isRegistered<WorkspaceEmbedderInstaller>()) {
-    sl.registerLazySingleton<WorkspaceEmbedderInstaller>(
-      WorkspaceEmbedderInstaller.new,
-    );
-  }
   if (!sl.isRegistered<WorkspaceEmbedderInstallCubit>()) {
     sl.registerLazySingleton<WorkspaceEmbedderInstallCubit>(
-      () => WorkspaceEmbedderInstallCubit(sl<WorkspaceEmbedderInstaller>()),
+      () => WorkspaceEmbedderInstallCubit(sl<WorkspaceRagVectorStore>()),
     );
   }
   if (!sl.isRegistered<WorkspaceQueriesService>()) {

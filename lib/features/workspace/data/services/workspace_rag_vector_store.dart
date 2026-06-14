@@ -1,97 +1,69 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:gena/features/workspace/data/models/workspace_rag_result.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_backend.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_backend_factory.dart';
 
-class WorkspaceRagReindexDocument {
-  final String workspaceId;
-  final int documentId;
-  final String sourceType;
-  final String name;
-  final List<String> chunks;
-
-  const WorkspaceRagReindexDocument({
-    required this.workspaceId,
-    required this.documentId,
-    required this.sourceType,
-    required this.name,
-    required this.chunks,
-  });
-}
-
+/// App-facing RAG boundary. Delegates all storage and retrieval to a
+/// platform-selected [WorkspaceRagBackend] (native `mobile_rag_engine` on
+/// supported platforms, unsupported elsewhere) while keeping per-workspace
+/// isolation and app-owned [WorkspaceRagResult]s.
 class WorkspaceRagVectorStore {
-  WorkspaceRagVectorStore({AppCapabilities? capabilities})
-    : _capabilities = capabilities ?? AppCapabilities.current;
-
-  static const _dbName = 'gena_workspace_rag.db';
+  WorkspaceRagVectorStore({
+    AppCapabilities? capabilities,
+    WorkspaceRagBackend? backend,
+  }) : _capabilities = capabilities ?? AppCapabilities.current,
+       _backend = backend ?? createWorkspaceRagBackend();
 
   final AppCapabilities _capabilities;
-  bool _ready = false;
+  final WorkspaceRagBackend _backend;
 
   Future<void> ensureReady() async {
     _capabilities.requireWorkspaceRag();
-    if (_ready) return;
-
-    if (!FlutterGemma.hasActiveEmbedder()) {
-      throw StateError(
-        'No embedding model is active. Install/select an embedder first.',
-      );
-    }
-
-    await FlutterGemma.getActiveEmbedder();
-    final databasePath = await _resolveVectorDatabasePath();
-    await FlutterGemmaPlugin.instance.initializeVectorStore(databasePath);
-    _ready = true;
+    await _backend.ensureReady();
   }
 
-  Future<void> addDocumentChunks({
+  /// Ingest a single parsed document into its workspace collection and return
+  /// the engine source id + chunk count to persist on the app document row.
+  Future<WorkspaceRagIngestResult> addDocument({
     required String workspaceId,
     required int documentId,
     required String sourceType,
+    required String sourcePath,
     required String name,
-    required List<String> chunks,
+    required String content,
   }) async {
     _capabilities.requireWorkspaceRag();
-    if (chunks.isEmpty) return;
     await ensureReady();
-
-    for (var index = 0; index < chunks.length; index++) {
-      final text = chunks[index].trim();
-      if (text.isEmpty) continue;
-      final metadata = jsonEncode({
-        'workspace_id': workspaceId,
-        'document_id': documentId,
-        'chunk_index': index,
-        'source_type': sourceType,
-        'name': name,
-      });
-      await FlutterGemmaPlugin.instance.addDocument(
-        id: _chunkId(documentId, index),
-        content: text,
-        metadata: metadata,
-      );
-    }
+    return _backend.addDocument(
+      workspaceId,
+      WorkspaceRagDocument(
+        documentId: documentId,
+        name: name,
+        sourceType: sourceType,
+        sourcePath: sourcePath,
+        content: content,
+      ),
+    );
   }
 
-  Future<void> rebuildIndex(List<WorkspaceRagReindexDocument> documents) async {
+  /// Remove a previously-ingested source from its workspace collection.
+  Future<void> removeDocument({
+    required String workspaceId,
+    required int sourceId,
+  }) async {
     _capabilities.requireWorkspaceRag();
     await ensureReady();
-    await FlutterGemmaPlugin.instance.clearVectorStore();
-
-    for (final document in documents) {
-      await addDocumentChunks(
-        workspaceId: document.workspaceId,
-        documentId: document.documentId,
-        sourceType: document.sourceType,
-        name: document.name,
-        chunks: document.chunks,
-      );
-    }
+    await _backend.removeDocument(workspaceId, sourceId);
   }
 
-  Future<List<RetrievalResult>> searchWorkspace({
+  /// Rebuild only the given workspace collection. Never clears a global index.
+  Future<void> rebuildWorkspace(String workspaceId) async {
+    _capabilities.requireWorkspaceRag();
+    await ensureReady();
+    await _backend.rebuildWorkspace(workspaceId);
+  }
+
+  Future<List<WorkspaceRagResult>> searchWorkspace({
     required String workspaceId,
     required String query,
     int topK = 4,
@@ -102,26 +74,11 @@ class WorkspaceRagVectorStore {
     if (cleanedQuery.isEmpty) return const [];
 
     await ensureReady();
-
-    return FlutterGemmaPlugin.instance.searchSimilar(
-      query: cleanedQuery,
+    return _backend.search(
+      workspaceId,
+      cleanedQuery,
       topK: topK,
       threshold: threshold,
-      filter: Filter(
-        must: [FieldEquals(key: 'workspace_id', value: workspaceId)],
-      ),
     );
-  }
-
-  Future<String> _resolveVectorDatabasePath() async {
-    if (kIsWeb) {
-      return _dbName;
-    }
-    final supportDir = await getApplicationSupportDirectory();
-    return '${supportDir.path}/$_dbName';
-  }
-
-  String _chunkId(int documentId, int chunkIndex) {
-    return 'wsdoc_${documentId}_chunk_$chunkIndex';
   }
 }

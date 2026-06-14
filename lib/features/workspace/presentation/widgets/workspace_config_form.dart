@@ -70,7 +70,7 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                   !capabilities.supportsWorkspaceRag
                       ? capabilities.workspaceRagUnavailableMessage
                       : state.ragEnabled
-                      ? 'RAG uses an embedding model. Status: ${state.embedderState.message}'
+                      ? 'RAG runs an on-device engine. Status: ${state.embedderState.message}'
                       : 'Use workspace documents as retrieval context in chat.',
                 ),
                 onChanged: capabilities.supportsWorkspaceRag

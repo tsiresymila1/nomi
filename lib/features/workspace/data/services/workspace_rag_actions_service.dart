@@ -87,6 +87,19 @@ class WorkspaceRagActions {
             .getSingleOrNull();
     if (row == null) return;
 
+    final workspaceId = row.workspace.toString();
+
+    if (_capabilities.supportsWorkspaceRag && row.ragSourceId != null) {
+      try {
+        await _vectorStore.removeDocument(
+          workspaceId: workspaceId,
+          sourceId: row.ragSourceId!,
+        );
+      } catch (error) {
+        logger.w('Failed to remove RAG source ${row.ragSourceId}: $error');
+      }
+    }
+
     await (_database.delete(
       _database.workspaceDocuments,
     )..where((t) => t.id.equals(documentId))).go();
@@ -101,7 +114,7 @@ class WorkspaceRagActions {
     }
 
     if (_capabilities.supportsWorkspaceRag) {
-      await rebuildAllDocumentsIndex();
+      await _vectorStore.rebuildWorkspace(workspaceId);
     }
   }
 
@@ -109,29 +122,20 @@ class WorkspaceRagActions {
     _capabilities.requireWorkspaceRag();
 
     final rows =
-        await (_database.select(_database.workspaceDocuments)
-              ..where(
-                (t) => t.ingestionStatus.equals(
-                  WorkspaceDocumentIngestionStatus.ready.value,
-                ),
-              )
-              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        await (_database.select(_database.workspaceDocuments)..where(
+              (t) => t.ingestionStatus.equals(
+                WorkspaceDocumentIngestionStatus.ready.value,
+              ),
+            ))
             .get();
 
-    final docs = rows
-        .where((row) => row.content.trim().isNotEmpty)
-        .map(
-          (row) => WorkspaceRagReindexDocument(
-            workspaceId: row.workspace.toString(),
-            documentId: row.id,
-            sourceType: row.sourceType,
-            name: row.name,
-            chunks: _parser.splitText(row.content),
-          ),
-        )
-        .toList(growable: false);
+    final workspaceIds = <String>{
+      for (final row in rows) row.workspace.toString(),
+    };
 
-    await _vectorStore.rebuildIndex(docs);
+    for (final workspaceId in workspaceIds) {
+      await _vectorStore.rebuildWorkspace(workspaceId);
+    }
   }
 
   Future<Map<String, dynamic>> runRagTool({

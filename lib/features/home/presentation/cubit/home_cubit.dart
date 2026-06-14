@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
@@ -18,7 +17,7 @@ import 'package:gena/features/home/presentation/cubit/home_state.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/models/workspace_chat_group.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
-import 'package:gena/features/workspace/data/services/workspace_embedder_installer.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
@@ -27,7 +26,7 @@ class HomeCubit extends Cubit<HomeState> {
     required ModelInstallerService modelInstallerService,
     required ModelRepositoryActions modelRepositoryActions,
     required DefaultModelSeeder defaultModelSeeder,
-    required WorkspaceEmbedderInstaller workspaceEmbedderInstaller,
+    required WorkspaceRagVectorStore workspaceRagVectorStore,
     required SelectedModelCubit selectedModelCubit,
     required SelectedWorkspaceCubit selectedWorkspaceCubit,
     required SelectedChatCubit selectedChatCubit,
@@ -37,7 +36,7 @@ class HomeCubit extends Cubit<HomeState> {
        _modelInstallerService = modelInstallerService,
        _modelRepositoryActions = modelRepositoryActions,
        _defaultModelSeeder = defaultModelSeeder,
-       _workspaceEmbedderInstaller = workspaceEmbedderInstaller,
+       _workspaceRagVectorStore = workspaceRagVectorStore,
        _selectedModelCubit = selectedModelCubit,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
        _selectedChatCubit = selectedChatCubit,
@@ -51,7 +50,7 @@ class HomeCubit extends Cubit<HomeState> {
   final ModelInstallerService _modelInstallerService;
   final ModelRepositoryActions _modelRepositoryActions;
   final DefaultModelSeeder _defaultModelSeeder;
-  final WorkspaceEmbedderInstaller _workspaceEmbedderInstaller;
+  final WorkspaceRagVectorStore _workspaceRagVectorStore;
   final SelectedModelCubit _selectedModelCubit;
   final SelectedWorkspaceCubit _selectedWorkspaceCubit;
   final SelectedChatCubit _selectedChatCubit;
@@ -175,34 +174,24 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
-  void setSelectedEmbedderModel(String model) {
-    if (!_capabilities.supportsWorkspaceRag) return;
-    emit(state.copyWith(selectedEmbedderModel: model));
-  }
-
   Future<void> installOrCheckEmbedder() async {
     if (!_capabilities.supportsWorkspaceRag) {
       throw StateError(_capabilities.workspaceRagUnavailableMessage);
     }
     emit(
       state.copyWith(
-        embedderStatus: 'Checking embedding model...',
+        embedderStatus: 'Preparing workspace RAG engine...',
         clearError: true,
       ),
     );
     try {
-      await _workspaceEmbedderInstaller.ensureInstalled(
-        modelKey: state.selectedEmbedderModel,
-        onStatus: ({required message, modelProgress, tokenizerProgress}) {
-          emit(state.copyWith(embedderStatus: message));
-        },
-      );
-      emit(state.copyWith(embedderStatus: 'Embedding model is ready'));
+      await _workspaceRagVectorStore.ensureReady();
+      emit(state.copyWith(embedderStatus: 'Workspace RAG engine is ready'));
     } catch (error, stackTrace) {
       logger.e(error, error: error, stackTrace: stackTrace);
       emit(
         state.copyWith(
-          embedderStatus: 'Embedding model install failed',
+          embedderStatus: 'Workspace RAG engine failed to initialize',
           errorMessage: '$error',
         ),
       );
@@ -322,13 +311,10 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<String> _resolveEmbedderStatus() async {
     try {
-      if (FlutterGemma.hasActiveEmbedder()) {
-        await FlutterGemma.getActiveEmbedder();
-        return 'Embedding model is ready';
-      }
-      return 'Embedding model is not installed yet';
+      await _workspaceRagVectorStore.ensureReady();
+      return 'Workspace RAG engine is ready';
     } catch (_) {
-      return 'Embedder status unknown';
+      return 'Workspace RAG engine is not ready yet';
     }
   }
 

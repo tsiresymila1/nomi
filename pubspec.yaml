@@ -56,6 +56,7 @@ dependencies:
   background_downloader: ^9.5.5
   dio: ^5.9.0
   introduction_screen: ^4.0.0
+  mobile_rag_engine: ^0.18.6
 
 dev_dependencies:
   flutter_test:
@@ -77,3 +78,13 @@ flutter:
     - .env
     - assets/  # JSON data file
     - assets/images/  # JSON data file
+    # Workspace RAG embedding model + tokenizer for mobile_rag_engine.
+    # Source: sentence-transformers/all-MiniLM-L6-v2 (the model recommended by
+    # the mobile_rag_engine README).
+    #   model.onnx  <- onnx/model_qint8_arm64.onnx (INT8 quantized, ~23MB)
+    #     https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model_qint8_arm64.onnx
+    #     sha256: 4278337fd0ff3c68bfb6291042cad8ab363e1d9fbc43dcb499fe91c871902474
+    #   tokenizer.json
+    #     https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json
+    #     sha256: be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037
+    - assets/rag/

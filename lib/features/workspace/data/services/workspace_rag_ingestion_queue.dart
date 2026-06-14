@@ -42,7 +42,12 @@ class WorkspaceRagIngestionQueue {
 
     final rows =
         await (_database.select(_database.workspaceDocuments)..where(
-              (t) => t.ingestionStatus.isIn(const ['queued', 'processing']),
+              (t) =>
+                  t.ingestionStatus.isIn(const ['queued', 'processing']) |
+                  (t.ingestionStatus.equals(
+                        WorkspaceDocumentIngestionStatus.ready.value,
+                      ) &
+                      t.ragSourceId.isNull()),
             ))
             .get();
 
@@ -79,6 +84,8 @@ class WorkspaceRagIngestionQueue {
             .getSingleOrNull();
     if (row == null) return;
 
+    final workspaceId = row.workspace.toString();
+
     await _setStatus(
       documentId,
       WorkspaceDocumentIngestionStatus.processing,
@@ -91,17 +98,37 @@ class WorkspaceRagIngestionQueue {
         sourceType: row.sourceType,
       );
 
+      // Remove an older source id before replacing a re-ingested document so
+      // the workspace collection never accumulates stale duplicates.
+      if (row.ragSourceId != null) {
+        await _vectorStore.removeDocument(
+          workspaceId: workspaceId,
+          sourceId: row.ragSourceId!,
+        );
+      }
+
+      final ingest = await _vectorStore.addDocument(
+        workspaceId: workspaceId,
+        documentId: documentId,
+        sourceType: row.sourceType,
+        sourcePath: row.sourcePath,
+        name: row.name,
+        content: parsed.content,
+      );
+
       await (_database.update(
         _database.workspaceDocuments,
       )..where((t) => t.id.equals(documentId))).write(
         db.WorkspaceDocumentsCompanion(
           content: Value(parsed.content),
-          chunkCount: Value(parsed.chunks.length),
+          chunkCount: Value(ingest.chunkCount),
+          ragSourceId: Value(ingest.sourceId),
           ingestionError: const Value(null),
           ingestionStatus: Value(WorkspaceDocumentIngestionStatus.ready.value),
         ),
       );
-      await _rebuildReadyIndex();
+
+      await _vectorStore.rebuildWorkspace(workspaceId);
     } catch (error, stackTrace) {
       logger.e(
         'Workspace RAG ingestion failed for document=$documentId',
@@ -113,7 +140,6 @@ class WorkspaceRagIngestionQueue {
         WorkspaceDocumentIngestionStatus.failed,
         error: error.toString(),
       );
-      await _rebuildReadyIndex();
     }
   }
 
@@ -130,32 +156,5 @@ class WorkspaceRagIngestionQueue {
         ingestionError: Value(error),
       ),
     );
-  }
-
-  Future<void> _rebuildReadyIndex() async {
-    final rows =
-        await (_database.select(_database.workspaceDocuments)
-              ..where(
-                (t) => t.ingestionStatus.equals(
-                  WorkspaceDocumentIngestionStatus.ready.value,
-                ),
-              )
-              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-            .get();
-
-    final docs = rows
-        .where((row) => row.content.trim().isNotEmpty)
-        .map(
-          (row) => WorkspaceRagReindexDocument(
-            workspaceId: row.workspace.toString(),
-            documentId: row.id,
-            sourceType: row.sourceType,
-            name: row.name,
-            chunks: _parser.splitText(row.content),
-          ),
-        )
-        .toList(growable: false);
-
-    await _vectorStore.rebuildIndex(docs);
   }
 }

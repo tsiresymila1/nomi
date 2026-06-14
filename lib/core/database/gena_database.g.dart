@@ -789,6 +789,17 @@ class $WorkspaceDocumentsTable extends WorkspaceDocuments
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _ragSourceIdMeta = const VerificationMeta(
+    'ragSourceId',
+  );
+  @override
+  late final GeneratedColumn<int> ragSourceId = GeneratedColumn<int>(
+    'rag_source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -801,6 +812,7 @@ class $WorkspaceDocumentsTable extends WorkspaceDocuments
     ingestionStatus,
     ingestionError,
     chunkCount,
+    ragSourceId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -887,6 +899,15 @@ class $WorkspaceDocumentsTable extends WorkspaceDocuments
         chunkCount.isAcceptableOrUnknown(data['chunk_count']!, _chunkCountMeta),
       );
     }
+    if (data.containsKey('rag_source_id')) {
+      context.handle(
+        _ragSourceIdMeta,
+        ragSourceId.isAcceptableOrUnknown(
+          data['rag_source_id']!,
+          _ragSourceIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -936,6 +957,10 @@ class $WorkspaceDocumentsTable extends WorkspaceDocuments
         DriftSqlType.int,
         data['${effectivePrefix}chunk_count'],
       )!,
+      ragSourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rag_source_id'],
+      ),
     );
   }
 
@@ -957,6 +982,7 @@ class WorkspaceDocument extends DataClass
   final String ingestionStatus;
   final String? ingestionError;
   final int chunkCount;
+  final int? ragSourceId;
   const WorkspaceDocument({
     required this.id,
     required this.createdAt,
@@ -968,6 +994,7 @@ class WorkspaceDocument extends DataClass
     required this.ingestionStatus,
     this.ingestionError,
     required this.chunkCount,
+    this.ragSourceId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -984,6 +1011,9 @@ class WorkspaceDocument extends DataClass
       map['ingestion_error'] = Variable<String>(ingestionError);
     }
     map['chunk_count'] = Variable<int>(chunkCount);
+    if (!nullToAbsent || ragSourceId != null) {
+      map['rag_source_id'] = Variable<int>(ragSourceId);
+    }
     return map;
   }
 
@@ -1001,6 +1031,9 @@ class WorkspaceDocument extends DataClass
           ? const Value.absent()
           : Value(ingestionError),
       chunkCount: Value(chunkCount),
+      ragSourceId: ragSourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ragSourceId),
     );
   }
 
@@ -1020,6 +1053,7 @@ class WorkspaceDocument extends DataClass
       ingestionStatus: serializer.fromJson<String>(json['ingestionStatus']),
       ingestionError: serializer.fromJson<String?>(json['ingestionError']),
       chunkCount: serializer.fromJson<int>(json['chunkCount']),
+      ragSourceId: serializer.fromJson<int?>(json['ragSourceId']),
     );
   }
   @override
@@ -1036,6 +1070,7 @@ class WorkspaceDocument extends DataClass
       'ingestionStatus': serializer.toJson<String>(ingestionStatus),
       'ingestionError': serializer.toJson<String?>(ingestionError),
       'chunkCount': serializer.toJson<int>(chunkCount),
+      'ragSourceId': serializer.toJson<int?>(ragSourceId),
     };
   }
 
@@ -1050,6 +1085,7 @@ class WorkspaceDocument extends DataClass
     String? ingestionStatus,
     Value<String?> ingestionError = const Value.absent(),
     int? chunkCount,
+    Value<int?> ragSourceId = const Value.absent(),
   }) => WorkspaceDocument(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -1063,6 +1099,7 @@ class WorkspaceDocument extends DataClass
         ? ingestionError.value
         : this.ingestionError,
     chunkCount: chunkCount ?? this.chunkCount,
+    ragSourceId: ragSourceId.present ? ragSourceId.value : this.ragSourceId,
   );
   WorkspaceDocument copyWithCompanion(WorkspaceDocumentsCompanion data) {
     return WorkspaceDocument(
@@ -1086,6 +1123,9 @@ class WorkspaceDocument extends DataClass
       chunkCount: data.chunkCount.present
           ? data.chunkCount.value
           : this.chunkCount,
+      ragSourceId: data.ragSourceId.present
+          ? data.ragSourceId.value
+          : this.ragSourceId,
     );
   }
 
@@ -1101,7 +1141,8 @@ class WorkspaceDocument extends DataClass
           ..write('content: $content, ')
           ..write('ingestionStatus: $ingestionStatus, ')
           ..write('ingestionError: $ingestionError, ')
-          ..write('chunkCount: $chunkCount')
+          ..write('chunkCount: $chunkCount, ')
+          ..write('ragSourceId: $ragSourceId')
           ..write(')'))
         .toString();
   }
@@ -1118,6 +1159,7 @@ class WorkspaceDocument extends DataClass
     ingestionStatus,
     ingestionError,
     chunkCount,
+    ragSourceId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1132,7 +1174,8 @@ class WorkspaceDocument extends DataClass
           other.content == this.content &&
           other.ingestionStatus == this.ingestionStatus &&
           other.ingestionError == this.ingestionError &&
-          other.chunkCount == this.chunkCount);
+          other.chunkCount == this.chunkCount &&
+          other.ragSourceId == this.ragSourceId);
 }
 
 class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
@@ -1146,6 +1189,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
   final Value<String> ingestionStatus;
   final Value<String?> ingestionError;
   final Value<int> chunkCount;
+  final Value<int?> ragSourceId;
   const WorkspaceDocumentsCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1157,6 +1201,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
     this.ingestionStatus = const Value.absent(),
     this.ingestionError = const Value.absent(),
     this.chunkCount = const Value.absent(),
+    this.ragSourceId = const Value.absent(),
   });
   WorkspaceDocumentsCompanion.insert({
     this.id = const Value.absent(),
@@ -1169,6 +1214,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
     this.ingestionStatus = const Value.absent(),
     this.ingestionError = const Value.absent(),
     this.chunkCount = const Value.absent(),
+    this.ragSourceId = const Value.absent(),
   }) : workspace = Value(workspace),
        name = Value(name),
        sourceType = Value(sourceType),
@@ -1185,6 +1231,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
     Expression<String>? ingestionStatus,
     Expression<String>? ingestionError,
     Expression<int>? chunkCount,
+    Expression<int>? ragSourceId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1197,6 +1244,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
       if (ingestionStatus != null) 'ingestion_status': ingestionStatus,
       if (ingestionError != null) 'ingestion_error': ingestionError,
       if (chunkCount != null) 'chunk_count': chunkCount,
+      if (ragSourceId != null) 'rag_source_id': ragSourceId,
     });
   }
 
@@ -1211,6 +1259,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
     Value<String>? ingestionStatus,
     Value<String?>? ingestionError,
     Value<int>? chunkCount,
+    Value<int?>? ragSourceId,
   }) {
     return WorkspaceDocumentsCompanion(
       id: id ?? this.id,
@@ -1223,6 +1272,7 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
       ingestionStatus: ingestionStatus ?? this.ingestionStatus,
       ingestionError: ingestionError ?? this.ingestionError,
       chunkCount: chunkCount ?? this.chunkCount,
+      ragSourceId: ragSourceId ?? this.ragSourceId,
     );
   }
 
@@ -1259,6 +1309,9 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
     if (chunkCount.present) {
       map['chunk_count'] = Variable<int>(chunkCount.value);
     }
+    if (ragSourceId.present) {
+      map['rag_source_id'] = Variable<int>(ragSourceId.value);
+    }
     return map;
   }
 
@@ -1274,7 +1327,8 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
           ..write('content: $content, ')
           ..write('ingestionStatus: $ingestionStatus, ')
           ..write('ingestionError: $ingestionError, ')
-          ..write('chunkCount: $chunkCount')
+          ..write('chunkCount: $chunkCount, ')
+          ..write('ragSourceId: $ragSourceId')
           ..write(')'))
         .toString();
   }
@@ -3766,6 +3820,7 @@ typedef $$WorkspaceDocumentsTableCreateCompanionBuilder =
       Value<String> ingestionStatus,
       Value<String?> ingestionError,
       Value<int> chunkCount,
+      Value<int?> ragSourceId,
     });
 typedef $$WorkspaceDocumentsTableUpdateCompanionBuilder =
     WorkspaceDocumentsCompanion Function({
@@ -3779,6 +3834,7 @@ typedef $$WorkspaceDocumentsTableUpdateCompanionBuilder =
       Value<String> ingestionStatus,
       Value<String?> ingestionError,
       Value<int> chunkCount,
+      Value<int?> ragSourceId,
     });
 
 final class $$WorkspaceDocumentsTableReferences
@@ -3868,6 +3924,11 @@ class $$WorkspaceDocumentsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get ragSourceId => $composableBuilder(
+    column: $table.ragSourceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$WorkspacesTableFilterComposer get workspace {
     final $$WorkspacesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -3946,6 +4007,11 @@ class $$WorkspaceDocumentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get ragSourceId => $composableBuilder(
+    column: $table.ragSourceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$WorkspacesTableOrderingComposer get workspace {
     final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4016,6 +4082,11 @@ class $$WorkspaceDocumentsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get ragSourceId => $composableBuilder(
+    column: $table.ragSourceId,
+    builder: (column) => column,
+  );
+
   $$WorkspacesTableAnnotationComposer get workspace {
     final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -4083,6 +4154,7 @@ class $$WorkspaceDocumentsTableTableManager
                 Value<String> ingestionStatus = const Value.absent(),
                 Value<String?> ingestionError = const Value.absent(),
                 Value<int> chunkCount = const Value.absent(),
+                Value<int?> ragSourceId = const Value.absent(),
               }) => WorkspaceDocumentsCompanion(
                 id: id,
                 createdAt: createdAt,
@@ -4094,6 +4166,7 @@ class $$WorkspaceDocumentsTableTableManager
                 ingestionStatus: ingestionStatus,
                 ingestionError: ingestionError,
                 chunkCount: chunkCount,
+                ragSourceId: ragSourceId,
               ),
           createCompanionCallback:
               ({
@@ -4107,6 +4180,7 @@ class $$WorkspaceDocumentsTableTableManager
                 Value<String> ingestionStatus = const Value.absent(),
                 Value<String?> ingestionError = const Value.absent(),
                 Value<int> chunkCount = const Value.absent(),
+                Value<int?> ragSourceId = const Value.absent(),
               }) => WorkspaceDocumentsCompanion.insert(
                 id: id,
                 createdAt: createdAt,
@@ -4118,6 +4192,7 @@ class $$WorkspaceDocumentsTableTableManager
                 ingestionStatus: ingestionStatus,
                 ingestionError: ingestionError,
                 chunkCount: chunkCount,
+                ragSourceId: ragSourceId,
               ),
           withReferenceMapper: (p0) => p0
               .map(

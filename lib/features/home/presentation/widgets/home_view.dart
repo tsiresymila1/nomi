@@ -87,26 +87,20 @@ class _HomeViewState extends State<HomeView> {
                         models: state.models,
                         selectedModelId: state.selectedModelId,
                         embedderStatus: state.embedderStatus,
-                        selectedEmbedderModel: state.selectedEmbedderModel,
                         onResetSeed: () => _resetSeededModels(context),
                         onOpenModels: () => context.pushNamed('download'),
-                        onSelectEmbedder: (value) {
-                          context.read<HomeCubit>().setSelectedEmbedderModel(
-                            value,
-                          );
-                        },
                         onInstallOrCheckEmbedder: () async {
                           try {
                             await context
                                 .read<HomeCubit>()
                                 .installOrCheckEmbedder();
                             await AppToast.show(
-                              'Embedder is ready',
+                              'Workspace RAG engine is ready',
                               type: AppToastType.success,
                             );
                           } catch (error) {
                             await AppToast.show(
-                              'Embedder install failed: $error',
+                              'Workspace RAG engine failed: $error',
                               type: AppToastType.error,
                             );
                           }

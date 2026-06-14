@@ -3,12 +3,14 @@ import 'dart:io';
 
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
+import 'package:gena/features/chat/data/tools/calculator.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 const String getCurrentDayToolName = 'get_current_day';
 const String getDeviceInfoToolName = 'get_device_info';
+const String calculatorToolName = 'calculator';
 const String webSearchToolName = 'web_search';
 const String ragSearchToolName = 'workspace_rag_search';
 const String nativeOpenUrlToolName = 'native_open_url';
@@ -86,6 +88,23 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
         'type': 'object',
         'properties': <String, dynamic>{},
         'required': <String>[],
+      },
+    ),
+    UnifiedChatToolDefinition(
+      name: calculatorToolName,
+      description:
+          'Evaluate an arithmetic expression and return the exact result. Use '
+          'this for any math instead of computing it yourself. Supports '
+          '+ - * / %, ^ (power), parentheses, and decimals.',
+      parameters: <String, dynamic>{
+        'type': 'object',
+        'properties': <String, dynamic>{
+          'expression': <String, dynamic>{
+            'type': 'string',
+            'description': 'Arithmetic expression, e.g. "(3 + 4) * 2 ^ 3".',
+          },
+        },
+        'required': <String>['expression'],
       },
     ),
     UnifiedChatToolDefinition(
@@ -445,6 +464,28 @@ Future<Map<String, dynamic>> executeChatToolByName(
         'is_linux': Platform.isLinux,
         'timestamp': now.toIso8601String(),
       };
+    case calculatorToolName:
+      final expression = (args['expression'] ?? '').toString().trim();
+      if (expression.isEmpty) {
+        return <String, dynamic>{
+          'status': 'error',
+          'message': 'No expression provided.',
+        };
+      }
+      try {
+        final result = evaluateExpression(expression);
+        return <String, dynamic>{
+          'status': 'success',
+          'expression': expression,
+          'result': result,
+        };
+      } on CalculatorException catch (e) {
+        return <String, dynamic>{
+          'status': 'error',
+          'expression': expression,
+          'message': e.message,
+        };
+      }
     case webSearchToolName:
       final query = (args['query'] ?? '').toString();
       final maxResults = _toInt(args['max_results'], fallback: 5);

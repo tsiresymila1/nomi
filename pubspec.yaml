@@ -56,6 +56,8 @@ dependencies:
   introduction_screen: ^4.0.0
   mobile_rag_engine: ^0.18.6
   crypto: ^3.0.6
+  whisper_ggml_plus: ^1.5.2
+  record: ^6.2.1
 
 dev_dependencies:
   flutter_test:

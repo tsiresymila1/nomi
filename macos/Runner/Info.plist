@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Nomi needs microphone access to transcribe your voice into chat messages on-device.</string>
 </dict>
 </plist>

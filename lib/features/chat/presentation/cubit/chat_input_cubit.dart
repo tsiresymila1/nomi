@@ -9,21 +9,32 @@ import 'package:path_provider/path_provider.dart';
 enum ChatAttachmentSource { camera, gallery }
 
 class ChatInputState {
-  const ChatInputState({this.selectedImagePath, this.isSending = false});
+  const ChatInputState({
+    this.selectedImagePath,
+    this.isSending = false,
+    this.draftText = '',
+  });
 
   final String? selectedImagePath;
   final bool isSending;
+
+  /// Current draft message text. Kept in sync with the input field so flows
+  /// like voice transcription can append to it without losing what the user
+  /// already typed.
+  final String draftText;
 
   ChatInputState copyWith({
     String? selectedImagePath,
     bool updateSelectedImagePath = false,
     bool? isSending,
+    String? draftText,
   }) {
     return ChatInputState(
       selectedImagePath: updateSelectedImagePath
           ? selectedImagePath
           : this.selectedImagePath,
       isSending: isSending ?? this.isSending,
+      draftText: draftText ?? this.draftText,
     );
   }
 }
@@ -68,6 +79,30 @@ class ChatInputCubit extends Cubit<ChatInputState> {
     }
   }
 
+  /// Replaces the tracked draft text (called as the input field changes).
+  void setDraftText(String text) {
+    if (text == state.draftText) return;
+    emit(state.copyWith(draftText: text));
+  }
+
+  /// Appends [text] to the current draft, inserting a single space separator
+  /// when the existing draft does not already end with whitespace. Used by the
+  /// voice-input flow so a transcript is added to — not replacing — what the
+  /// user already typed.
+  void appendText(String text) {
+    final addition = text.trim();
+    if (addition.isEmpty) return;
+
+    final current = state.draftText;
+    final endsWithWhitespace =
+        current.isNotEmpty &&
+        current.substring(current.length - 1).trim().isEmpty;
+    final combined = current.isEmpty
+        ? addition
+        : '$current${endsWithWhitespace ? '' : ' '}$addition';
+    emit(state.copyWith(draftText: combined));
+  }
+
   void clearSelectedImage() {
     emit(
       state.copyWith(selectedImagePath: null, updateSelectedImagePath: true),
@@ -83,7 +118,11 @@ class ChatInputCubit extends Cubit<ChatInputState> {
     emit(state.copyWith(isSending: true));
     try {
       emit(
-        state.copyWith(selectedImagePath: null, updateSelectedImagePath: true),
+        state.copyWith(
+          selectedImagePath: null,
+          updateSelectedImagePath: true,
+          draftText: '',
+        ),
       );
       await _chatThreadActions.sendMessage(text, imagePath: imagePath);
     } finally {

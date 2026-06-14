@@ -3,15 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_attachment_button.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_send_button.dart';
+import 'package:gena/features/chat/presentation/widgets/chat_input_voice_button.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -52,7 +55,20 @@ class _ChatInputState extends State<ChatInput> {
     if (hasTyped != _hasTypedContent) {
       setState(() => _hasTypedContent = hasTyped);
     }
+    // Mirror typed text into the cubit so flows like voice transcription can
+    // append to the current draft.
+    sl<ChatInputCubit>().setDraftText(_controller.text);
     _scheduleDraftBudgetRefresh();
+  }
+
+  /// Syncs the text field with the cubit draft when it changes from outside the
+  /// field (e.g. a voice transcript appended via [ChatInputCubit.appendText]).
+  void _syncControllerWithDraft(String draftText) {
+    if (_controller.text == draftText) return;
+    _controller.value = TextEditingValue(
+      text: draftText,
+      selection: TextSelection.collapsed(offset: draftText.length),
+    );
   }
 
   @override
@@ -191,7 +207,12 @@ class _ChatInputState extends State<ChatInput> {
 
     return BlocBuilder<ChatGeneratingCubit, bool>(
       builder: (context, isGenerating) {
-        return BlocBuilder<ChatInputCubit, ChatInputState>(
+        return BlocConsumer<ChatInputCubit, ChatInputState>(
+          listenWhen: (previous, current) =>
+              previous.draftText != current.draftText,
+          listener: (context, inputState) {
+            _syncControllerWithDraft(inputState.draftText);
+          },
           builder: (context, inputState) {
             return BlocBuilder<SelectedChatCubit, String?>(
               builder: (context, selectedChatId) {
@@ -200,7 +221,6 @@ class _ChatInputState extends State<ChatInput> {
                   builder: (context, activeModelSnapshot) {
                     final activeModel = activeModelSnapshot.data;
                     final canAttachImage = activeModel?.supportImage ?? false;
-                    final canRecordAudio = activeModel?.supportAudio ?? false;
                     final hasSelectedImage =
                         inputState.selectedImagePath != null;
                     final hasSendableContent =
@@ -237,7 +257,6 @@ class _ChatInputState extends State<ChatInput> {
                       isGenerating: isGenerating,
                       inputState: inputState,
                       canAttachImage: canAttachImage,
-                      canRecordAudio: canRecordAudio,
                       hasSelectedImage: hasSelectedImage,
                       hasSendableContent: hasSendableContent,
                     );
@@ -258,7 +277,6 @@ class _ChatInputState extends State<ChatInput> {
     required bool isGenerating,
     required ChatInputState inputState,
     required bool canAttachImage,
-    required bool canRecordAudio,
     required bool hasSelectedImage,
     required bool hasSendableContent,
   }) {
@@ -383,14 +401,12 @@ class _ChatInputState extends State<ChatInput> {
                                 children: [
                                   if (!isGenerating &&
                                       !hasSendableContent &&
-                                      canRecordAudio)
-                                    suffixActionButton(
-                                      icon: HugeIcons.strokeRoundedMic02,
-                                      onPressed: () {
-                                        AppToast.show("Coming soon ...");
-                                      },
-                                      tooltip: 'Voice input',
-                                      color: colorScheme.primary,
+                                      AppCapabilities
+                                          .current
+                                          .supportsSpeechToText)
+                                    ChatInputVoiceButton(
+                                      cubit: sl<VoiceInputCubit>(),
+                                      enabled: !isGenerating,
                                     ),
                                   if (isGenerating || hasSendableContent)
                                     ChatInputSendButton(

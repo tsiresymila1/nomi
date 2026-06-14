@@ -55,5 +55,7 @@
 		<string>Nomi needs photo library access to attach images from your gallery.</string>
 		<key>NSContactsUsageDescription</key>
 		<string>Nomi needs contacts access to search, read, and create contacts requested by you.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Nomi needs microphone access to transcribe your voice into chat messages on-device.</string>
 	</dict>
 </plist>

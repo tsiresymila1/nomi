@@ -9,6 +9,7 @@ void main() {
       expect(capabilities.supportsRemoteModels, isTrue);
       expect(capabilities.supportsLocalModels, isFalse);
       expect(capabilities.supportsWorkspaceRag, isFalse);
+      expect(capabilities.supportsSpeechToText, isFalse);
     });
 
     for (final platform in [
@@ -16,12 +17,13 @@ void main() {
       AppPlatform.iOS,
       AppPlatform.macOS,
     ]) {
-      test('$platform supports remote models, local models, and RAG', () {
+      test('$platform supports remote models, local models, RAG, and STT', () {
         final capabilities = AppCapabilities.forPlatform(platform);
 
         expect(capabilities.supportsRemoteModels, isTrue);
         expect(capabilities.supportsLocalModels, isTrue);
         expect(capabilities.supportsWorkspaceRag, isTrue);
+        expect(capabilities.supportsSpeechToText, isTrue);
       });
     }
 
@@ -36,6 +38,7 @@ void main() {
         expect(capabilities.supportsRemoteModels, isTrue);
         expect(capabilities.supportsLocalModels, isFalse);
         expect(capabilities.supportsWorkspaceRag, isFalse);
+        expect(capabilities.supportsSpeechToText, isFalse);
       });
     }
   });

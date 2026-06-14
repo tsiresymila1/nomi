@@ -14,6 +14,11 @@ import 'package:gena/features/chat/data/repositories/chat_queries_repository.dar
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime_factory.dart';
+import 'package:gena/features/chat/data/services/audio_recorder_factory.dart';
+import 'package:gena/features/chat/data/services/speech_to_text.dart';
+import 'package:gena/features/chat/data/services/speech_to_text_factory.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
+import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
@@ -61,6 +66,14 @@ void registerChatDependencies() {
   // Local model runtime (native llamadart, or unsupported on web)
   if (!sl.isRegistered<LocalModelRuntime>()) {
     sl.registerLazySingleton<LocalModelRuntime>(createLocalModelRuntime);
+  }
+
+  // On-device speech-to-text (native whisper, or unsupported on web)
+  if (!sl.isRegistered<SpeechToText>()) {
+    sl.registerLazySingleton<SpeechToText>(createSpeechToText);
+  }
+  if (!sl.isRegistered<VoiceAudioRecorder>()) {
+    sl.registerLazySingleton<VoiceAudioRecorder>(createVoiceAudioRecorder);
   }
 
   // Services (no deps or minimal deps)
@@ -152,6 +165,17 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatInputCubit>()) {
     sl.registerLazySingleton<ChatInputCubit>(
       () => ChatInputCubit(chatThreadActions: sl<ChatThreadActions>()),
+    );
+  }
+
+  if (!sl.isRegistered<VoiceInputCubit>()) {
+    sl.registerLazySingleton<VoiceInputCubit>(
+      () => VoiceInputCubit(
+        recorder: sl<VoiceAudioRecorder>(),
+        speechToText: sl<SpeechToText>(),
+        chatInputCubit: sl<ChatInputCubit>(),
+        onError: (message) => AppToast.show(message, type: AppToastType.error),
+      ),
     );
   }
 

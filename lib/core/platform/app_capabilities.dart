@@ -18,18 +18,23 @@ class AppCapabilities {
     required this.supportsRemoteModels,
     required this.supportsLocalModels,
     required this.supportsWorkspaceRag,
+    required this.supportsSpeechToText,
   });
 
   final AppPlatform platform;
   final bool supportsRemoteModels;
   final bool supportsLocalModels;
   final bool supportsWorkspaceRag;
+  final bool supportsSpeechToText;
 
   String get localModelsUnavailableMessage =>
       'Local models and workspace RAG are unavailable $_platformLabel. '
       'Remote models remain available.';
 
   String get workspaceRagUnavailableMessage => localModelsUnavailableMessage;
+
+  String get speechToTextUnavailableMessage =>
+      'Voice input is unavailable $_platformLabel.';
 
   bool isWorkspaceRagEnabled({required bool workspaceRagEnabled}) {
     return supportsWorkspaceRag && workspaceRagEnabled;
@@ -57,6 +62,7 @@ class AppCapabilities {
       supportsRemoteModels: true,
       supportsLocalModels: supportsLocalAi,
       supportsWorkspaceRag: supportsLocalAi,
+      supportsSpeechToText: supportsLocalAi,
     );
   }
 

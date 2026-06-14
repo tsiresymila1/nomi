@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:gena/features/workspace/data/models/workspace_rag_result.dart';
+import 'package:gena/features/workspace/data/services/rag_model_provisioner.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_backend.dart';
 import 'package:mobile_rag_engine/mobile_rag_engine.dart';
 
@@ -12,22 +13,35 @@ WorkspaceRagBackend createWorkspaceRagBackend() => MobileWorkspaceRagBackend();
 /// Each workspace maps to a `workspace_<id>` collection so ingest, removal,
 /// rebuild, and search are fully isolated per workspace.
 class MobileWorkspaceRagBackend implements WorkspaceRagBackend {
-  MobileWorkspaceRagBackend();
+  MobileWorkspaceRagBackend({RagModelProvisioner? provisioner})
+    : _provisioner = provisioner ?? RagModelProvisioner();
 
+  // Basenames must match the files RagModelProvisioner downloads into the app
+  // documents directory, so the engine reuses them instead of loading a bundled
+  // asset (the assets are intentionally not shipped).
   static const _tokenizerAsset = 'assets/rag/tokenizer.json';
   static const _modelAsset = 'assets/rag/model.onnx';
 
-  bool _initialized = false;
+  final RagModelProvisioner _provisioner;
+
+  Future<void>? _readyFuture;
 
   @override
-  Future<void> ensureReady() async {
-    if (_initialized) return;
-    await MobileRag.initialize(
-      tokenizerAsset: _tokenizerAsset,
-      modelAsset: _modelAsset,
-      deferIndexWarmup: true,
-    );
-    _initialized = true;
+  Future<void> ensureReady() => _readyFuture ??= _initialize();
+
+  Future<void> _initialize() async {
+    try {
+      await _provisioner.ensure();
+      await MobileRag.initialize(
+        tokenizerAsset: _tokenizerAsset,
+        modelAsset: _modelAsset,
+        deferIndexWarmup: true,
+      );
+    } catch (error) {
+      // Allow a later retry (e.g. after the network returns) to re-provision.
+      _readyFuture = null;
+      rethrow;
+    }
   }
 
   CollectionRag _collection(String workspaceId) =>

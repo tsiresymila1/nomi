@@ -48,4 +48,51 @@ void main() {
       expect(model.sourceUrl, isNotEmpty);
     }
   });
+
+  test('format reflects the source extension', () {
+    for (final model in kDefaultSeedModels) {
+      final expected = model.sourceUrl.endsWith('.gguf') ? 'GGUF' : 'LiteRT-LM';
+      expect(model.format, expected, reason: model.key);
+    }
+  });
+
+  test('notes describe the llamadart format and capabilities', () {
+    final model = kDefaultSeedModels.firstWhere((m) => m.key == 'gemma4_E2B');
+    expect(model.notes, contains('llamadart'));
+    expect(model.notes, contains(model.format));
+    expect(model.notes, contains(model.size));
+    expect(model.notes, contains('image'));
+  });
+
+  group('matchesModelNameOrSource', () {
+    final model = kDefaultSeedModels.first;
+
+    test('matches on display name case-insensitively', () {
+      expect(
+        model.matchesModelNameOrSource(model.displayName.toUpperCase(), ''),
+        isTrue,
+      );
+    });
+
+    test('matches on base source url', () {
+      expect(model.matchesModelNameOrSource('', model.baseUrl), isTrue);
+    });
+
+    test('does not match an unrelated name or source', () {
+      expect(model.matchesModelNameOrSource('nope', 'http://x/y.gguf'), isFalse);
+    });
+  });
+
+  test('findDefaultSeedModelByNameOrSource resolves by source', () {
+    final first = kDefaultSeedModels.first;
+    final found = findDefaultSeedModelByNameOrSource(
+      name: '',
+      source: first.baseUrl,
+    );
+    expect(found?.key, first.key);
+    expect(
+      findDefaultSeedModelByNameOrSource(name: 'x', source: 'y'),
+      isNull,
+    );
+  });
 }

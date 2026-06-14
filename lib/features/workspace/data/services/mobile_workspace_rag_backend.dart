@@ -89,6 +89,10 @@ class MobileWorkspaceRagBackend implements WorkspaceRagBackend {
       await collection.warmupFuture;
     }
     final hits = await collection.searchHybrid(query, topK: topK);
+    // `score` is an RRF-fused hybrid rank score (typically ~0.01-0.02), not a
+    // 0-1 cosine similarity. `topK` already ranks the best hits; the default
+    // threshold is 0 so callers keep them. A threshold above ~0.05 discards
+    // everything.
     return hits
         .where((hit) => hit.score >= threshold)
         .map(

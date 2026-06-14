@@ -67,7 +67,7 @@ class WorkspaceRagVectorStore {
     required String workspaceId,
     required String query,
     int topK = 4,
-    double threshold = 0.15,
+    double threshold = 0.0,
   }) async {
     _capabilities.requireWorkspaceRag();
     final cleanedQuery = query.trim();

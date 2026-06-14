@@ -266,7 +266,7 @@ Future<void> generateRemoteAssistantResponse({
           parsedArgs,
           ragToolHandler: activeWorkspace == null || !enableRag
               ? null
-              : (query, {topK = 4, threshold = 0.15}) =>
+              : (query, {topK = 4, threshold = 0.0}) =>
                     deps.workspaceRagActions.runRagTool(
                       workspaceId: activeWorkspace.id,
                       query: query,

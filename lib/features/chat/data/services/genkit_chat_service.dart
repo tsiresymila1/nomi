@@ -329,7 +329,7 @@ List<String> _registerTools({
             input,
             ragToolHandler: workspace == null || !enableRag
                 ? null
-                : (query, {topK = 4, threshold = 0.15}) =>
+                : (query, {topK = 4, threshold = 0.0}) =>
                       deps.workspaceRagActions.runRagTool(
                         workspaceId: workspace.id,
                         query: query,

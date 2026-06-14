@@ -134,7 +134,9 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
             },
             'threshold': <String, dynamic>{
               'type': 'number',
-              'description': 'Similarity threshold between 0.0 and 1.0.',
+              'description':
+                  'Minimum hybrid relevance score. Leave at 0 to keep the '
+                  'top results; values above ~0.05 may discard everything.',
             },
           },
           'required': <String>['query'],
@@ -464,7 +466,7 @@ Future<Map<String, dynamic>> executeChatToolByName(
       final topK = _toInt(args['top_k'], fallback: 4).clamp(1, 8);
       final threshold = _toDouble(
         args['threshold'],
-        fallback: 0.15,
+        fallback: 0.0,
       ).clamp(0.0, 1.0);
       return await ragToolHandler(query, topK: topK, threshold: threshold);
     case nativeOpenUrlToolName:

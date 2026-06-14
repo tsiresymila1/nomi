@@ -150,7 +150,7 @@ class WorkspaceRagActions {
     required String workspaceId,
     required String query,
     int topK = 4,
-    double threshold = 0.15,
+    double threshold = 0.0,
   }) async {
     if (!_capabilities.supportsWorkspaceRag) {
       return <String, dynamic>{

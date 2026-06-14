@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
+import 'package:gena/features/workspace/data/workspace_memory_repository.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_state.dart';
 import 'package:gena/features/workspace/presentation/widgets/workspace_config_form.dart';
@@ -26,6 +27,7 @@ class WorkspaceConfigPage extends StatelessWidget {
         parser: sl<WorkspaceDocumentParser>(),
         ingestionController: sl<WorkspaceRagIngestionController>(),
         embedderCubit: sl<WorkspaceEmbedderInstallCubit>(),
+        memoryRepository: sl<WorkspaceMemoryRepository>(),
       )..initialize(),
       child: BlocBuilder<WorkspaceConfigCubit, WorkspaceConfigState>(
         builder: (context, state) {

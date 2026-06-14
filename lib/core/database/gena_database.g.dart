@@ -161,6 +161,21 @@ class $WorkspacesTable extends Workspaces
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _memoryEnabledMeta = const VerificationMeta(
+    'memoryEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> memoryEnabled = GeneratedColumn<bool>(
+    'memory_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("memory_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -174,6 +189,7 @@ class $WorkspacesTable extends Workspaces
     nativeSendEmailEnabled,
     nativeFlashlightEnabled,
     mcpEnabled,
+    memoryEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -270,6 +286,15 @@ class $WorkspacesTable extends Workspaces
         mcpEnabled.isAcceptableOrUnknown(data['mcp_enabled']!, _mcpEnabledMeta),
       );
     }
+    if (data.containsKey('memory_enabled')) {
+      context.handle(
+        _memoryEnabledMeta,
+        memoryEnabled.isAcceptableOrUnknown(
+          data['memory_enabled']!,
+          _memoryEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -323,6 +348,10 @@ class $WorkspacesTable extends Workspaces
         DriftSqlType.bool,
         data['${effectivePrefix}mcp_enabled'],
       )!,
+      memoryEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}memory_enabled'],
+      )!,
     );
   }
 
@@ -344,6 +373,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
   final bool mcpEnabled;
+  final bool memoryEnabled;
   const Workspace({
     required this.id,
     required this.createdAt,
@@ -356,6 +386,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
     required this.mcpEnabled,
+    required this.memoryEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -371,6 +402,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     map['native_send_email_enabled'] = Variable<bool>(nativeSendEmailEnabled);
     map['native_flashlight_enabled'] = Variable<bool>(nativeFlashlightEnabled);
     map['mcp_enabled'] = Variable<bool>(mcpEnabled);
+    map['memory_enabled'] = Variable<bool>(memoryEnabled);
     return map;
   }
 
@@ -387,6 +419,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       nativeSendEmailEnabled: Value(nativeSendEmailEnabled),
       nativeFlashlightEnabled: Value(nativeFlashlightEnabled),
       mcpEnabled: Value(mcpEnabled),
+      memoryEnabled: Value(memoryEnabled),
     );
   }
 
@@ -417,6 +450,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
         json['nativeFlashlightEnabled'],
       ),
       mcpEnabled: serializer.fromJson<bool>(json['mcpEnabled']),
+      memoryEnabled: serializer.fromJson<bool>(json['memoryEnabled']),
     );
   }
   @override
@@ -436,6 +470,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
         nativeFlashlightEnabled,
       ),
       'mcpEnabled': serializer.toJson<bool>(mcpEnabled),
+      'memoryEnabled': serializer.toJson<bool>(memoryEnabled),
     };
   }
 
@@ -451,6 +486,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     bool? nativeSendEmailEnabled,
     bool? nativeFlashlightEnabled,
     bool? mcpEnabled,
+    bool? memoryEnabled,
   }) => Workspace(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -465,6 +501,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     nativeFlashlightEnabled:
         nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
     mcpEnabled: mcpEnabled ?? this.mcpEnabled,
+    memoryEnabled: memoryEnabled ?? this.memoryEnabled,
   );
   Workspace copyWithCompanion(WorkspacesCompanion data) {
     return Workspace(
@@ -495,6 +532,9 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       mcpEnabled: data.mcpEnabled.present
           ? data.mcpEnabled.value
           : this.mcpEnabled,
+      memoryEnabled: data.memoryEnabled.present
+          ? data.memoryEnabled.value
+          : this.memoryEnabled,
     );
   }
 
@@ -511,7 +551,8 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
           ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
           ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled, ')
-          ..write('mcpEnabled: $mcpEnabled')
+          ..write('mcpEnabled: $mcpEnabled, ')
+          ..write('memoryEnabled: $memoryEnabled')
           ..write(')'))
         .toString();
   }
@@ -529,6 +570,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     nativeSendEmailEnabled,
     nativeFlashlightEnabled,
     mcpEnabled,
+    memoryEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -544,7 +586,8 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           other.nativeOpenAppEnabled == this.nativeOpenAppEnabled &&
           other.nativeSendEmailEnabled == this.nativeSendEmailEnabled &&
           other.nativeFlashlightEnabled == this.nativeFlashlightEnabled &&
-          other.mcpEnabled == this.mcpEnabled);
+          other.mcpEnabled == this.mcpEnabled &&
+          other.memoryEnabled == this.memoryEnabled);
 }
 
 class WorkspacesCompanion extends UpdateCompanion<Workspace> {
@@ -559,6 +602,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
   final Value<bool> nativeSendEmailEnabled;
   final Value<bool> nativeFlashlightEnabled;
   final Value<bool> mcpEnabled;
+  final Value<bool> memoryEnabled;
   const WorkspacesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -571,6 +615,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     this.nativeSendEmailEnabled = const Value.absent(),
     this.nativeFlashlightEnabled = const Value.absent(),
     this.mcpEnabled = const Value.absent(),
+    this.memoryEnabled = const Value.absent(),
   });
   WorkspacesCompanion.insert({
     this.id = const Value.absent(),
@@ -584,6 +629,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     this.nativeSendEmailEnabled = const Value.absent(),
     this.nativeFlashlightEnabled = const Value.absent(),
     this.mcpEnabled = const Value.absent(),
+    this.memoryEnabled = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Workspace> custom({
     Expression<int>? id,
@@ -597,6 +643,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Expression<bool>? nativeSendEmailEnabled,
     Expression<bool>? nativeFlashlightEnabled,
     Expression<bool>? mcpEnabled,
+    Expression<bool>? memoryEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -615,6 +662,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
       if (nativeFlashlightEnabled != null)
         'native_flashlight_enabled': nativeFlashlightEnabled,
       if (mcpEnabled != null) 'mcp_enabled': mcpEnabled,
+      if (memoryEnabled != null) 'memory_enabled': memoryEnabled,
     });
   }
 
@@ -630,6 +678,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Value<bool>? nativeSendEmailEnabled,
     Value<bool>? nativeFlashlightEnabled,
     Value<bool>? mcpEnabled,
+    Value<bool>? memoryEnabled,
   }) {
     return WorkspacesCompanion(
       id: id ?? this.id,
@@ -645,6 +694,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
       nativeFlashlightEnabled:
           nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
       mcpEnabled: mcpEnabled ?? this.mcpEnabled,
+      memoryEnabled: memoryEnabled ?? this.memoryEnabled,
     );
   }
 
@@ -692,6 +742,9 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     if (mcpEnabled.present) {
       map['mcp_enabled'] = Variable<bool>(mcpEnabled.value);
     }
+    if (memoryEnabled.present) {
+      map['memory_enabled'] = Variable<bool>(memoryEnabled.value);
+    }
     return map;
   }
 
@@ -708,7 +761,8 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
           ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
           ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
           ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled, ')
-          ..write('mcpEnabled: $mcpEnabled')
+          ..write('mcpEnabled: $mcpEnabled, ')
+          ..write('memoryEnabled: $memoryEnabled')
           ..write(')'))
         .toString();
   }
@@ -1380,6 +1434,307 @@ class WorkspaceDocumentsCompanion extends UpdateCompanion<WorkspaceDocument> {
           ..write('ingestionError: $ingestionError, ')
           ..write('chunkCount: $chunkCount, ')
           ..write('ragSourceId: $ragSourceId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WorkspaceMemoriesTable extends WorkspaceMemories
+    with TableInfo<$WorkspaceMemoriesTable, WorkspaceMemory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorkspaceMemoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _workspaceMeta = const VerificationMeta(
+    'workspace',
+  );
+  @override
+  late final GeneratedColumn<int> workspace = GeneratedColumn<int>(
+    'workspace',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspaces (id)',
+    ),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, createdAt, workspace, content];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'workspace_memories';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WorkspaceMemory> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('workspace')) {
+      context.handle(
+        _workspaceMeta,
+        workspace.isAcceptableOrUnknown(data['workspace']!, _workspaceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_workspaceMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WorkspaceMemory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WorkspaceMemory(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      workspace: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}workspace'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+    );
+  }
+
+  @override
+  $WorkspaceMemoriesTable createAlias(String alias) {
+    return $WorkspaceMemoriesTable(attachedDatabase, alias);
+  }
+}
+
+class WorkspaceMemory extends DataClass implements Insertable<WorkspaceMemory> {
+  final int id;
+  final DateTime createdAt;
+  final int workspace;
+  final String content;
+  const WorkspaceMemory({
+    required this.id,
+    required this.createdAt,
+    required this.workspace,
+    required this.content,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['workspace'] = Variable<int>(workspace);
+    map['content'] = Variable<String>(content);
+    return map;
+  }
+
+  WorkspaceMemoriesCompanion toCompanion(bool nullToAbsent) {
+    return WorkspaceMemoriesCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      workspace: Value(workspace),
+      content: Value(content),
+    );
+  }
+
+  factory WorkspaceMemory.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WorkspaceMemory(
+      id: serializer.fromJson<int>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      workspace: serializer.fromJson<int>(json['workspace']),
+      content: serializer.fromJson<String>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'workspace': serializer.toJson<int>(workspace),
+      'content': serializer.toJson<String>(content),
+    };
+  }
+
+  WorkspaceMemory copyWith({
+    int? id,
+    DateTime? createdAt,
+    int? workspace,
+    String? content,
+  }) => WorkspaceMemory(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    workspace: workspace ?? this.workspace,
+    content: content ?? this.content,
+  );
+  WorkspaceMemory copyWithCompanion(WorkspaceMemoriesCompanion data) {
+    return WorkspaceMemory(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      workspace: data.workspace.present ? data.workspace.value : this.workspace,
+      content: data.content.present ? data.content.value : this.content,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkspaceMemory(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, createdAt, workspace, content);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkspaceMemory &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.workspace == this.workspace &&
+          other.content == this.content);
+}
+
+class WorkspaceMemoriesCompanion extends UpdateCompanion<WorkspaceMemory> {
+  final Value<int> id;
+  final Value<DateTime> createdAt;
+  final Value<int> workspace;
+  final Value<String> content;
+  const WorkspaceMemoriesCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.workspace = const Value.absent(),
+    this.content = const Value.absent(),
+  });
+  WorkspaceMemoriesCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    required int workspace,
+    required String content,
+  }) : workspace = Value(workspace),
+       content = Value(content);
+  static Insertable<WorkspaceMemory> custom({
+    Expression<int>? id,
+    Expression<DateTime>? createdAt,
+    Expression<int>? workspace,
+    Expression<String>? content,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (workspace != null) 'workspace': workspace,
+      if (content != null) 'content': content,
+    });
+  }
+
+  WorkspaceMemoriesCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? createdAt,
+    Value<int>? workspace,
+    Value<String>? content,
+  }) {
+    return WorkspaceMemoriesCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      workspace: workspace ?? this.workspace,
+      content: content ?? this.content,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (workspace.present) {
+      map['workspace'] = Variable<int>(workspace.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkspaceMemoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('workspace: $workspace, ')
+          ..write('content: $content')
           ..write(')'))
         .toString();
   }
@@ -3792,6 +4147,8 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   late final $WorkspacesTable workspaces = $WorkspacesTable(this);
   late final $WorkspaceDocumentsTable workspaceDocuments =
       $WorkspaceDocumentsTable(this);
+  late final $WorkspaceMemoriesTable workspaceMemories =
+      $WorkspaceMemoriesTable(this);
   late final $ChatsTable chats = $ChatsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $ModelsTable models = $ModelsTable(this);
@@ -3803,6 +4160,7 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     workspaces,
     workspaceDocuments,
+    workspaceMemories,
     chats,
     messages,
     models,
@@ -3823,6 +4181,7 @@ typedef $$WorkspacesTableCreateCompanionBuilder =
       Value<bool> nativeSendEmailEnabled,
       Value<bool> nativeFlashlightEnabled,
       Value<bool> mcpEnabled,
+      Value<bool> memoryEnabled,
     });
 typedef $$WorkspacesTableUpdateCompanionBuilder =
     WorkspacesCompanion Function({
@@ -3837,6 +4196,7 @@ typedef $$WorkspacesTableUpdateCompanionBuilder =
       Value<bool> nativeSendEmailEnabled,
       Value<bool> nativeFlashlightEnabled,
       Value<bool> mcpEnabled,
+      Value<bool> memoryEnabled,
     });
 
 final class $$WorkspacesTableReferences
@@ -3861,6 +4221,30 @@ final class $$WorkspacesTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _workspaceDocumentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$WorkspaceMemoriesTable, List<WorkspaceMemory>>
+  _workspaceMemoriesRefsTable(_$GenaDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.workspaceMemories,
+        aliasName: $_aliasNameGenerator(
+          db.workspaces.id,
+          db.workspaceMemories.workspace,
+        ),
+      );
+
+  $$WorkspaceMemoriesTableProcessedTableManager get workspaceMemoriesRefs {
+    final manager = $$WorkspaceMemoriesTableTableManager(
+      $_db,
+      $_db.workspaceMemories,
+    ).filter((f) => f.workspace.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _workspaceMemoriesRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -3951,6 +4335,11 @@ class $$WorkspacesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get memoryEnabled => $composableBuilder(
+    column: $table.memoryEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> workspaceDocumentsRefs(
     Expression<bool> Function($$WorkspaceDocumentsTableFilterComposer f) f,
   ) {
@@ -3967,6 +4356,31 @@ class $$WorkspacesTableFilterComposer
           }) => $$WorkspaceDocumentsTableFilterComposer(
             $db: $db,
             $table: $db.workspaceDocuments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> workspaceMemoriesRefs(
+    Expression<bool> Function($$WorkspaceMemoriesTableFilterComposer f) f,
+  ) {
+    final $$WorkspaceMemoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.workspaceMemories,
+      getReferencedColumn: (t) => t.workspace,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspaceMemoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaceMemories,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4065,6 +4479,11 @@ class $$WorkspacesTableOrderingComposer
     column: $table.mcpEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get memoryEnabled => $composableBuilder(
+    column: $table.memoryEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WorkspacesTableAnnotationComposer
@@ -4125,6 +4544,11 @@ class $$WorkspacesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get memoryEnabled => $composableBuilder(
+    column: $table.memoryEnabled,
+    builder: (column) => column,
+  );
+
   Expression<T> workspaceDocumentsRefs<T extends Object>(
     Expression<T> Function($$WorkspaceDocumentsTableAnnotationComposer a) f,
   ) {
@@ -4142,6 +4566,32 @@ class $$WorkspacesTableAnnotationComposer
               }) => $$WorkspaceDocumentsTableAnnotationComposer(
                 $db: $db,
                 $table: $db.workspaceDocuments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> workspaceMemoriesRefs<T extends Object>(
+    Expression<T> Function($$WorkspaceMemoriesTableAnnotationComposer a) f,
+  ) {
+    final $$WorkspaceMemoriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.workspaceMemories,
+          getReferencedColumn: (t) => t.workspace,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$WorkspaceMemoriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.workspaceMemories,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -4190,7 +4640,11 @@ class $$WorkspacesTableTableManager
           $$WorkspacesTableUpdateCompanionBuilder,
           (Workspace, $$WorkspacesTableReferences),
           Workspace,
-          PrefetchHooks Function({bool workspaceDocumentsRefs, bool chatsRefs})
+          PrefetchHooks Function({
+            bool workspaceDocumentsRefs,
+            bool workspaceMemoriesRefs,
+            bool chatsRefs,
+          })
         > {
   $$WorkspacesTableTableManager(_$GenaDatabase db, $WorkspacesTable table)
     : super(
@@ -4216,6 +4670,7 @@ class $$WorkspacesTableTableManager
                 Value<bool> nativeSendEmailEnabled = const Value.absent(),
                 Value<bool> nativeFlashlightEnabled = const Value.absent(),
                 Value<bool> mcpEnabled = const Value.absent(),
+                Value<bool> memoryEnabled = const Value.absent(),
               }) => WorkspacesCompanion(
                 id: id,
                 createdAt: createdAt,
@@ -4228,6 +4683,7 @@ class $$WorkspacesTableTableManager
                 nativeSendEmailEnabled: nativeSendEmailEnabled,
                 nativeFlashlightEnabled: nativeFlashlightEnabled,
                 mcpEnabled: mcpEnabled,
+                memoryEnabled: memoryEnabled,
               ),
           createCompanionCallback:
               ({
@@ -4242,6 +4698,7 @@ class $$WorkspacesTableTableManager
                 Value<bool> nativeSendEmailEnabled = const Value.absent(),
                 Value<bool> nativeFlashlightEnabled = const Value.absent(),
                 Value<bool> mcpEnabled = const Value.absent(),
+                Value<bool> memoryEnabled = const Value.absent(),
               }) => WorkspacesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
@@ -4254,6 +4711,7 @@ class $$WorkspacesTableTableManager
                 nativeSendEmailEnabled: nativeSendEmailEnabled,
                 nativeFlashlightEnabled: nativeFlashlightEnabled,
                 mcpEnabled: mcpEnabled,
+                memoryEnabled: memoryEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -4264,11 +4722,16 @@ class $$WorkspacesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({workspaceDocumentsRefs = false, chatsRefs = false}) {
+              ({
+                workspaceDocumentsRefs = false,
+                workspaceMemoriesRefs = false,
+                chatsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (workspaceDocumentsRefs) db.workspaceDocuments,
+                    if (workspaceMemoriesRefs) db.workspaceMemories,
                     if (chatsRefs) db.chats,
                   ],
                   addJoins: null,
@@ -4289,6 +4752,27 @@ class $$WorkspacesTableTableManager
                                 table,
                                 p0,
                               ).workspaceDocumentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workspace == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (workspaceMemoriesRefs)
+                        await $_getPrefetchedData<
+                          Workspace,
+                          $WorkspacesTable,
+                          WorkspaceMemory
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspacesTableReferences
+                              ._workspaceMemoriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspacesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).workspaceMemoriesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.workspace == item.id,
@@ -4336,7 +4820,11 @@ typedef $$WorkspacesTableProcessedTableManager =
       $$WorkspacesTableUpdateCompanionBuilder,
       (Workspace, $$WorkspacesTableReferences),
       Workspace,
-      PrefetchHooks Function({bool workspaceDocumentsRefs, bool chatsRefs})
+      PrefetchHooks Function({
+        bool workspaceDocumentsRefs,
+        bool workspaceMemoriesRefs,
+        bool chatsRefs,
+      })
     >;
 typedef $$WorkspaceDocumentsTableCreateCompanionBuilder =
     WorkspaceDocumentsCompanion Function({
@@ -4791,6 +5279,316 @@ typedef $$WorkspaceDocumentsTableProcessedTableManager =
       $$WorkspaceDocumentsTableUpdateCompanionBuilder,
       (WorkspaceDocument, $$WorkspaceDocumentsTableReferences),
       WorkspaceDocument,
+      PrefetchHooks Function({bool workspace})
+    >;
+typedef $$WorkspaceMemoriesTableCreateCompanionBuilder =
+    WorkspaceMemoriesCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      required int workspace,
+      required String content,
+    });
+typedef $$WorkspaceMemoriesTableUpdateCompanionBuilder =
+    WorkspaceMemoriesCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      Value<int> workspace,
+      Value<String> content,
+    });
+
+final class $$WorkspaceMemoriesTableReferences
+    extends
+        BaseReferences<
+          _$GenaDatabase,
+          $WorkspaceMemoriesTable,
+          WorkspaceMemory
+        > {
+  $$WorkspaceMemoriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorkspacesTable _workspaceTable(_$GenaDatabase db) =>
+      db.workspaces.createAlias(
+        $_aliasNameGenerator(db.workspaceMemories.workspace, db.workspaces.id),
+      );
+
+  $$WorkspacesTableProcessedTableManager get workspace {
+    final $_column = $_itemColumn<int>('workspace')!;
+
+    final manager = $$WorkspacesTableTableManager(
+      $_db,
+      $_db.workspaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$WorkspaceMemoriesTableFilterComposer
+    extends Composer<_$GenaDatabase, $WorkspaceMemoriesTable> {
+  $$WorkspaceMemoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorkspacesTableFilterComposer get workspace {
+    final $$WorkspacesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceMemoriesTableOrderingComposer
+    extends Composer<_$GenaDatabase, $WorkspaceMemoriesTable> {
+  $$WorkspaceMemoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorkspacesTableOrderingComposer get workspace {
+    final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceMemoriesTableAnnotationComposer
+    extends Composer<_$GenaDatabase, $WorkspaceMemoriesTable> {
+  $$WorkspaceMemoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  $$WorkspacesTableAnnotationComposer get workspace {
+    final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspace,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorkspaceMemoriesTableTableManager
+    extends
+        RootTableManager<
+          _$GenaDatabase,
+          $WorkspaceMemoriesTable,
+          WorkspaceMemory,
+          $$WorkspaceMemoriesTableFilterComposer,
+          $$WorkspaceMemoriesTableOrderingComposer,
+          $$WorkspaceMemoriesTableAnnotationComposer,
+          $$WorkspaceMemoriesTableCreateCompanionBuilder,
+          $$WorkspaceMemoriesTableUpdateCompanionBuilder,
+          (WorkspaceMemory, $$WorkspaceMemoriesTableReferences),
+          WorkspaceMemory,
+          PrefetchHooks Function({bool workspace})
+        > {
+  $$WorkspaceMemoriesTableTableManager(
+    _$GenaDatabase db,
+    $WorkspaceMemoriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorkspaceMemoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorkspaceMemoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorkspaceMemoriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> workspace = const Value.absent(),
+                Value<String> content = const Value.absent(),
+              }) => WorkspaceMemoriesCompanion(
+                id: id,
+                createdAt: createdAt,
+                workspace: workspace,
+                content: content,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                required int workspace,
+                required String content,
+              }) => WorkspaceMemoriesCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                workspace: workspace,
+                content: content,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WorkspaceMemoriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({workspace = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (workspace) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.workspace,
+                                referencedTable:
+                                    $$WorkspaceMemoriesTableReferences
+                                        ._workspaceTable(db),
+                                referencedColumn:
+                                    $$WorkspaceMemoriesTableReferences
+                                        ._workspaceTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WorkspaceMemoriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GenaDatabase,
+      $WorkspaceMemoriesTable,
+      WorkspaceMemory,
+      $$WorkspaceMemoriesTableFilterComposer,
+      $$WorkspaceMemoriesTableOrderingComposer,
+      $$WorkspaceMemoriesTableAnnotationComposer,
+      $$WorkspaceMemoriesTableCreateCompanionBuilder,
+      $$WorkspaceMemoriesTableUpdateCompanionBuilder,
+      (WorkspaceMemory, $$WorkspaceMemoriesTableReferences),
+      WorkspaceMemory,
       PrefetchHooks Function({bool workspace})
     >;
 typedef $$ChatsTableCreateCompanionBuilder =
@@ -6284,6 +7082,8 @@ class $GenaDatabaseManager {
       $$WorkspacesTableTableManager(_db, _db.workspaces);
   $$WorkspaceDocumentsTableTableManager get workspaceDocuments =>
       $$WorkspaceDocumentsTableTableManager(_db, _db.workspaceDocuments);
+  $$WorkspaceMemoriesTableTableManager get workspaceMemories =>
+      $$WorkspaceMemoriesTableTableManager(_db, _db.workspaceMemories);
   $$ChatsTableTableManager get chats =>
       $$ChatsTableTableManager(_db, _db.chats);
   $$MessagesTableTableManager get messages =>

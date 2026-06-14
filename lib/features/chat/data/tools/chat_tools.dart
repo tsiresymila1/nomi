@@ -14,6 +14,8 @@ const String getDeviceInfoToolName = 'get_device_info';
 const String calculatorToolName = 'calculator';
 const String webSearchToolName = 'web_search';
 const String ragSearchToolName = 'workspace_rag_search';
+const String rememberToolName = 'remember';
+const String forgetToolName = 'forget';
 const String nativeOpenUrlToolName = 'native_open_url';
 const String nativeOpenAppToolName = 'native_open_app';
 const String nativePhoneCallToolName = 'native_phone_call';
@@ -61,6 +63,7 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
   required bool enableNativeSmsTool,
   required bool enableNativeSendEmailTool,
   required bool enableNativeFlashlightTool,
+  bool enableMemoryTools = false,
   AppCapabilities? capabilities,
 }) {
   if (!supportsFunctionCalls) return const <UnifiedChatToolDefinition>[];
@@ -378,6 +381,49 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
     );
   }
 
+  if (enableMemoryTools) {
+    tools.addAll(const <UnifiedChatToolDefinition>[
+      UnifiedChatToolDefinition(
+        name: rememberToolName,
+        description:
+            'Store a durable fact about the user or project so it is '
+            'remembered across future chats in this workspace. Use this only '
+            'for stable, useful facts the user wants kept (preferences, names, '
+            'goals, ongoing context) — not for transient or one-off details. '
+            'Remembered facts are injected automatically next turn; no need to '
+            'recall them.',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'content': <String, dynamic>{
+              'type': 'string',
+              'description':
+                  'The single durable fact to remember, written as a short '
+                  'self-contained statement.',
+            },
+          },
+          'required': <String>['content'],
+        },
+      ),
+      UnifiedChatToolDefinition(
+        name: forgetToolName,
+        description:
+            'Remove a previously remembered fact for this workspace. Provide '
+            'the content of the fact to forget (matched by its text).',
+        parameters: <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'content': <String, dynamic>{
+              'type': 'string',
+              'description': 'The remembered fact text to forget.',
+            },
+          },
+          'required': <String>['content'],
+        },
+      ),
+    ]);
+  }
+
   return tools;
 }
 
@@ -416,6 +462,7 @@ List<openai.Tool> buildRemoteChatTools({
   required bool enableNativeSmsTool,
   required bool enableNativeSendEmailTool,
   required bool enableNativeFlashlightTool,
+  bool enableMemoryTools = false,
 }) {
   final definitions = buildUnifiedChatToolDefinitions(
     supportsFunctionCalls: supportsFunctionCalls,
@@ -427,6 +474,7 @@ List<openai.Tool> buildRemoteChatTools({
     enableNativeSmsTool: enableNativeSmsTool,
     enableNativeSendEmailTool: enableNativeSendEmailTool,
     enableNativeFlashlightTool: enableNativeFlashlightTool,
+    enableMemoryTools: enableMemoryTools,
   );
   return definitions
       .map(
@@ -462,9 +510,17 @@ Future<Map<String, dynamic>> executeChatToolByName(
     Map<String, dynamic> args,
   )?
   mcpToolHandler,
+  Future<Map<String, dynamic>> Function(String op, {String? content})?
+  memoryToolHandler,
 }) async {
-  logger.i(toolName);
-  logger.i(args);
+  // Avoid logging memory content (sensitive). Only log the tool name for the
+  // memory tools; other tools log their args as before.
+  if (toolName == rememberToolName || toolName == forgetToolName) {
+    logger.i(toolName);
+  } else {
+    logger.i(toolName);
+    logger.i(args);
+  }
   switch (toolName) {
     case getCurrentDayToolName:
       final now = DateTime.now();
@@ -541,6 +597,20 @@ Future<Map<String, dynamic>> executeChatToolByName(
         fallback: 0.0,
       ).clamp(0.0, 1.0);
       return await ragToolHandler(query, topK: topK, threshold: threshold);
+    case rememberToolName:
+    case forgetToolName:
+      if (memoryToolHandler == null) {
+        return <String, dynamic>{
+          'status': 'error',
+          'error': 'memory_disabled',
+          'message': 'Memory tools are not available in this workspace.',
+        };
+      }
+      final content = (args['content'] ?? '').toString().trim();
+      return await memoryToolHandler(
+        toolName,
+        content: content.isEmpty ? null : content,
+      );
     case nativeOpenUrlToolName:
     case nativeOpenAppToolName:
     case nativePhoneCallToolName:

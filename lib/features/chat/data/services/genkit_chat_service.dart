@@ -31,13 +31,25 @@ Future<void> generateAssistantResponseWithGenkit({
 }) async {
   final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
-  final systemInstruction = buildSystemInstruction(basePrompt);
+  final enableMemory =
+      (activeWorkspace?.memoryEnabled ?? false) &&
+      activeModel.supportsFunctionCalls;
+  final memoryBlock = enableMemory && activeWorkspace != null
+      ? await deps.workspaceMemoryActions.buildMemoryBlock(
+          workspaceId: activeWorkspace.id,
+        )
+      : '';
+  final composedBasePrompt = memoryBlock.isEmpty
+      ? basePrompt
+      : (basePrompt.isEmpty ? memoryBlock : '$basePrompt\n\n$memoryBlock');
+  final systemInstruction = buildSystemInstruction(composedBasePrompt);
   final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
     workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
   );
   final toolDefinitions = buildUnifiedChatToolDefinitions(
     supportsFunctionCalls: activeModel.supportsFunctionCalls,
     enableRagTool: enableRag,
+    enableMemoryTools: enableMemory,
     enableNativeOpenUrlTool:
         (activeWorkspace?.nativeToolsEnabled ?? false) &&
         (activeWorkspace?.nativeOpenUrlEnabled ?? false),
@@ -116,6 +128,7 @@ Future<void> generateAssistantResponseWithGenkit({
     deps: deps,
     workspace: activeWorkspace,
     enableRag: enableRag,
+    enableMemory: enableMemory,
     isCancelled: isCancelled,
     toolResultCollector: toolResultCollector,
     stringifyToolResultForGemma4LiteRt: stringifyToolResultForGemma4LiteRt,
@@ -296,6 +309,7 @@ List<String> _registerTools({
   required ChatRuntimeDependencies deps,
   required WorkspaceEntity? workspace,
   required bool enableRag,
+  required bool enableMemory,
   required bool Function() isCancelled,
   required ToolResultCollector toolResultCollector,
   required bool stringifyToolResultForGemma4LiteRt,
@@ -349,6 +363,17 @@ List<String> _registerTools({
                     namespacedName: toolName,
                     args: args,
                   ),
+            memoryToolHandler: workspace == null || !enableMemory
+                ? null
+                : (op, {content}) => op == rememberToolName
+                      ? deps.workspaceMemoryActions.runRememberTool(
+                          workspaceId: workspace.id,
+                          content: content ?? '',
+                        )
+                      : deps.workspaceMemoryActions.runForgetTool(
+                          workspaceId: workspace.id,
+                          content: content,
+                        ),
           );
           logger.i(
             'tool result: ${_formatToolTraceMessage(toolName: definition.name, args: input, result: toolResult)}',
@@ -408,8 +433,14 @@ String _formatToolTraceMessage({
   required Map<String, dynamic> args,
   required Map<String, dynamic> result,
 }) {
+  // Memory content is sensitive: never persist/log the remembered/forgotten
+  // text. Redact the args for the memory tools while keeping the trace shape.
+  final tracedArgs =
+      (toolName == rememberToolName || toolName == forgetToolName)
+      ? <String, dynamic>{'content': '[redacted]'}
+      : args;
   final payload = <String, dynamic>{
-    'call': <String, dynamic>{'name': toolName, 'args': args},
+    'call': <String, dynamic>{'name': toolName, 'args': tracedArgs},
     'result': result,
   };
   const encoder = JsonEncoder.withIndent('  ');

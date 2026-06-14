@@ -1,12 +1,14 @@
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
+import 'package:gena/features/workspace/data/models/workspace_memory_entity.dart';
 
 class WorkspaceConfigState {
   const WorkspaceConfigState({
     required this.workspaceLoading,
     required this.workspace,
     required this.documents,
+    required this.memories,
     required this.embedderState,
     required this.isSaving,
     required this.isImporting,
@@ -18,6 +20,7 @@ class WorkspaceConfigState {
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
     required this.mcpEnabled,
+    required this.memoryEnabled,
     required this.hydratedWorkspaceId,
   });
 
@@ -26,6 +29,7 @@ class WorkspaceConfigState {
       workspaceLoading: true,
       workspace: null,
       documents: null,
+      memories: null,
       embedderState: WorkspaceEmbedderInstallState.idle(),
       isSaving: false,
       isImporting: false,
@@ -37,6 +41,7 @@ class WorkspaceConfigState {
       nativeSendEmailEnabled: true,
       nativeFlashlightEnabled: true,
       mcpEnabled: false,
+      memoryEnabled: true,
       hydratedWorkspaceId: null,
     );
   }
@@ -44,6 +49,7 @@ class WorkspaceConfigState {
   final bool workspaceLoading;
   final WorkspaceEntity? workspace;
   final List<WorkspaceDocumentEntity>? documents;
+  final List<WorkspaceMemoryEntity>? memories;
   final WorkspaceEmbedderInstallState embedderState;
   final bool isSaving;
   final bool isImporting;
@@ -55,6 +61,7 @@ class WorkspaceConfigState {
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
   final bool mcpEnabled;
+  final bool memoryEnabled;
   final String? hydratedWorkspaceId;
 
   bool get workspaceNotFound => !workspaceLoading && workspace == null;
@@ -64,6 +71,7 @@ class WorkspaceConfigState {
     WorkspaceEntity? workspace,
     bool clearWorkspace = false,
     List<WorkspaceDocumentEntity>? documents,
+    List<WorkspaceMemoryEntity>? memories,
     WorkspaceEmbedderInstallState? embedderState,
     bool? isSaving,
     bool? isImporting,
@@ -75,6 +83,7 @@ class WorkspaceConfigState {
     bool? nativeSendEmailEnabled,
     bool? nativeFlashlightEnabled,
     bool? mcpEnabled,
+    bool? memoryEnabled,
     String? hydratedWorkspaceId,
     bool clearHydratedWorkspaceId = false,
   }) {
@@ -82,6 +91,7 @@ class WorkspaceConfigState {
       workspaceLoading: workspaceLoading ?? this.workspaceLoading,
       workspace: clearWorkspace ? null : workspace ?? this.workspace,
       documents: documents ?? this.documents,
+      memories: memories ?? this.memories,
       embedderState: embedderState ?? this.embedderState,
       isSaving: isSaving ?? this.isSaving,
       isImporting: isImporting ?? this.isImporting,
@@ -95,6 +105,7 @@ class WorkspaceConfigState {
       nativeFlashlightEnabled:
           nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
       mcpEnabled: mcpEnabled ?? this.mcpEnabled,
+      memoryEnabled: memoryEnabled ?? this.memoryEnabled,
       hydratedWorkspaceId: clearHydratedWorkspaceId
           ? null
           : hydratedWorkspaceId ?? this.hydratedWorkspaceId,

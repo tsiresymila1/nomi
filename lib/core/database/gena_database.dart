@@ -30,6 +30,12 @@ class Workspaces extends Table with TableMixin {
     const Constant(true),
   )();
   late final mcpEnabled = boolean().withDefault(const Constant(false))();
+  late final memoryEnabled = boolean().withDefault(const Constant(true))();
+}
+
+class WorkspaceMemories extends Table with TableMixin {
+  late final workspace = integer().references(Workspaces, #id)();
+  late final content = text()();
 }
 
 class McpServers extends Table with TableMixin {
@@ -86,13 +92,21 @@ class Models extends Table with TableMixin {
 }
 
 @DriftDatabase(
-  tables: [Workspaces, WorkspaceDocuments, Chats, Messages, Models, McpServers],
+  tables: [
+    Workspaces,
+    WorkspaceDocuments,
+    WorkspaceMemories,
+    Chats,
+    Messages,
+    Models,
+    McpServers,
+  ],
 )
 class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -192,6 +206,10 @@ class GenaDatabase extends _$GenaDatabase {
       if (from < 15) {
         await m.createTable(mcpServers);
         await m.addColumn(workspaces, workspaces.mcpEnabled);
+      }
+      if (from < 16) {
+        await m.createTable(workspaceMemories);
+        await m.addColumn(workspaces, workspaces.memoryEnabled);
       }
     },
   );

@@ -6,6 +6,7 @@ import 'package:gena/features/workspace/presentation/cubit/workspace_drawer_cubi
 import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
+import 'package:gena/features/workspace/data/workspace_memory_repository.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_local_chat_actions.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_rag_ingestion_controller.dart';
 
@@ -19,6 +20,12 @@ void registerWorkspacePresentationDependencies() {
   if (!sl.isRegistered<WorkspaceRagVectorStore>()) {
     sl.registerLazySingleton<WorkspaceRagVectorStore>(
       WorkspaceRagVectorStore.new,
+    );
+  }
+
+  if (!sl.isRegistered<WorkspaceMemoryRepository>()) {
+    sl.registerLazySingleton<WorkspaceMemoryRepository>(
+      () => WorkspaceMemoryRepository(database: sl<GenaDatabase>()),
     );
   }
 

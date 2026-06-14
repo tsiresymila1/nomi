@@ -9,6 +9,7 @@ class WorkspaceEntity {
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
   final bool mcpEnabled;
+  final bool memoryEnabled;
   final DateTime createdAt;
 
   const WorkspaceEntity({
@@ -22,6 +23,7 @@ class WorkspaceEntity {
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
     required this.mcpEnabled,
+    required this.memoryEnabled,
     required this.createdAt,
   });
 }

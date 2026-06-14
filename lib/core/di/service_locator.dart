@@ -11,8 +11,10 @@ import 'package:gena/features/workspace/data/services/workspace_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_config_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_documents_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_service.dart';
+import 'package:gena/features/workspace/data/services/workspace_memory_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_bootstrap.dart';
+import 'package:gena/features/workspace/data/workspace_memory_repository.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_ingestion_queue.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
@@ -66,6 +68,16 @@ Future<void> setupServiceLocator() async {
         ingestionQueue: sl<WorkspaceRagIngestionQueue>(),
         ingestionBootstrap: sl<WorkspaceRagIngestionBootstrap>(),
       ),
+    );
+  }
+  if (!sl.isRegistered<WorkspaceMemoryRepository>()) {
+    sl.registerLazySingleton<WorkspaceMemoryRepository>(
+      () => WorkspaceMemoryRepository(database: sl<GenaDatabase>()),
+    );
+  }
+  if (!sl.isRegistered<WorkspaceMemoryActions>()) {
+    sl.registerLazySingleton<WorkspaceMemoryActions>(
+      () => WorkspaceMemoryActions(repository: sl<WorkspaceMemoryRepository>()),
     );
   }
   if (!sl.isRegistered<SelectedWorkspaceCubit>()) {

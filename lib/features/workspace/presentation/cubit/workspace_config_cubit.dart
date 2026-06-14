@@ -10,7 +10,9 @@ import 'package:gena/features/workspace/data/models/workspace_document_entity.da
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
 import 'package:gena/features/workspace/data/models/workspace_embedder_install_state.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
+import 'package:gena/features/workspace/data/models/workspace_memory_entity.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
+import 'package:gena/features/workspace/data/workspace_memory_repository.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_state.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_rag_ingestion_controller.dart';
 
@@ -30,11 +32,13 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
     required WorkspaceDocumentParser parser,
     required WorkspaceRagIngestionController ingestionController,
     required WorkspaceEmbedderInstallCubit embedderCubit,
+    required WorkspaceMemoryRepository memoryRepository,
     AppCapabilities? capabilities,
   }) : _database = database,
        _parser = parser,
        _ingestionController = ingestionController,
        _embedderCubit = embedderCubit,
+       _memoryRepository = memoryRepository,
        _capabilities = capabilities ?? AppCapabilities.current,
        super(WorkspaceConfigState.initial());
 
@@ -43,12 +47,14 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   final WorkspaceDocumentParser _parser;
   final WorkspaceRagIngestionController _ingestionController;
   final WorkspaceEmbedderInstallCubit _embedderCubit;
+  final WorkspaceMemoryRepository _memoryRepository;
   final AppCapabilities _capabilities;
 
   AppCapabilities get capabilities => _capabilities;
 
   StreamSubscription<db.Workspace?>? _workspaceSubscription;
   StreamSubscription<List<WorkspaceDocumentEntity>>? _documentsSubscription;
+  StreamSubscription<List<WorkspaceMemoryEntity>>? _memoriesSubscription;
   StreamSubscription<WorkspaceEmbedderInstallState>? _embedderSubscription;
   bool _initialized = false;
 
@@ -100,6 +106,22 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
     emit(state.copyWith(mcpEnabled: value));
   }
 
+  void setMemoryEnabled(bool value) {
+    emit(state.copyWith(memoryEnabled: value));
+  }
+
+  Future<void> addMemory(String content) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    final targetWorkspaceId = state.workspace?.id ?? workspaceId;
+    if (targetWorkspaceId.trim().isEmpty) return;
+    await _memoryRepository.addMemory(targetWorkspaceId, trimmed);
+  }
+
+  Future<void> deleteMemory(int memoryId) async {
+    await _memoryRepository.deleteMemory(memoryId);
+  }
+
   Future<void> save() async {
     if (state.isSaving) return;
     if (workspaceId.trim().isEmpty) {
@@ -133,6 +155,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
           nativeSendEmailEnabled: Value(state.nativeSendEmailEnabled),
           nativeFlashlightEnabled: Value(state.nativeFlashlightEnabled),
           mcpEnabled: Value(_capabilities.supportsMcp && state.mcpEnabled),
+          memoryEnabled: Value(state.memoryEnabled),
         ),
       );
     } finally {
@@ -239,11 +262,13 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
                 nativeSendEmailEnabled: row.nativeSendEmailEnabled,
                 nativeFlashlightEnabled: row.nativeFlashlightEnabled,
                 mcpEnabled: row.mcpEnabled,
+                memoryEnabled: row.memoryEnabled,
                 createdAt: row.createdAt,
               );
 
               _hydrateFromWorkspace(workspace);
               _watchDocuments(row.id);
+              _watchMemories(workspace.id);
             });
   }
 
@@ -278,7 +303,19 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
         mcpEnabled: _capabilities.supportsMcp
             ? (shouldHydrate ? workspace.mcpEnabled : state.mcpEnabled)
             : false,
+        memoryEnabled: shouldHydrate
+            ? workspace.memoryEnabled
+            : state.memoryEnabled,
       ),
+    );
+  }
+
+  void _watchMemories(String workspaceId) {
+    _memoriesSubscription?.cancel();
+    _memoriesSubscription = _memoryRepository.watchMemories(workspaceId).listen(
+      (memories) {
+        emit(state.copyWith(memories: memories));
+      },
     );
   }
 
@@ -326,6 +363,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
   Future<void> close() async {
     await _workspaceSubscription?.cancel();
     await _documentsSubscription?.cancel();
+    await _memoriesSubscription?.cancel();
     await _embedderSubscription?.cancel();
     return super.close();
   }

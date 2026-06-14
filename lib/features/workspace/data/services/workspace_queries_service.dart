@@ -121,6 +121,7 @@ class WorkspaceQueriesService {
       nativeSendEmailEnabled: row.nativeSendEmailEnabled,
       nativeFlashlightEnabled: row.nativeFlashlightEnabled,
       mcpEnabled: row.mcpEnabled,
+      memoryEnabled: row.memoryEnabled,
       createdAt: row.createdAt,
     );
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gena/features/workspace/data/models/workspace_memory_entity.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_state.dart';
 import 'package:gena/features/workspace/presentation/services/workspace_config_actions.dart';
@@ -18,16 +19,19 @@ class WorkspaceConfigForm extends StatefulWidget {
 
 class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
   late final TextEditingController _instructionController;
+  late final TextEditingController _memoryController;
 
   @override
   void initState() {
     super.initState();
     _instructionController = TextEditingController();
+    _memoryController = TextEditingController();
   }
 
   @override
   void dispose() {
     _instructionController.dispose();
+    _memoryController.dispose();
     super.dispose();
   }
 
@@ -152,6 +156,31 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                     ? cubit.setMcpEnabled
                     : null,
               ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: state.memoryEnabled,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enable persistent memory'),
+                subtitle: const Text(
+                  'Let the assistant remember durable facts about you across '
+                  'chats in this workspace, and inject them automatically.',
+                ),
+                onChanged: cubit.setMemoryEnabled,
+              ),
+              if (state.memoryEnabled) ...[
+                const SizedBox(height: 8),
+                _MemorySection(
+                  memories: state.memories,
+                  controller: _memoryController,
+                  onAdd: () {
+                    final text = _memoryController.text.trim();
+                    if (text.isEmpty) return;
+                    unawaited(cubit.addMemory(text));
+                    _memoryController.clear();
+                  },
+                  onDelete: (id) => unawaited(cubit.deleteMemory(id)),
+                ),
+              ],
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -221,6 +250,94 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
           ),
         );
       },
+    );
+  }
+}
+
+class _MemorySection extends StatelessWidget {
+  const _MemorySection({
+    required this.memories,
+    required this.controller,
+    required this.onAdd,
+    required this.onDelete,
+  });
+
+  final List<WorkspaceMemoryEntity>? memories;
+  final TextEditingController controller;
+  final VoidCallback onAdd;
+  final void Function(int id) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = memories;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Remembered facts',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                style: const TextStyle(fontSize: 13),
+                decoration: const InputDecoration(
+                  hintText: 'Add a fact to remember',
+                  isDense: true,
+                ),
+                onSubmitted: (_) => onAdd(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (items == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (items.isEmpty)
+          Text(
+            'No remembered facts yet.',
+            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+          )
+        else
+          Column(
+            children: [
+              for (final memory in items)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(
+                      memory.content,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      tooltip: 'Forget',
+                      onPressed: () => onDelete(memory.id),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ],
     );
   }
 }

@@ -28,6 +28,7 @@ import 'package:gena/features/mcp/data/services/mcp_tool_actions_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
+import 'package:gena/features/workspace/data/services/workspace_memory_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 
@@ -141,6 +142,7 @@ void registerChatDependencies() {
         nativeToolActions: sl<NativeToolActions>(),
         workspaceQueries: sl<WorkspaceQueries>(),
         workspaceRagActions: sl<WorkspaceRagActions>(),
+        workspaceMemoryActions: sl<WorkspaceMemoryActions>(),
         mcpRepository: sl<McpRepository>(),
         mcpClientManager: sl<McpClientManager>(),
         mcpToolActions: sl<McpToolActions>(),

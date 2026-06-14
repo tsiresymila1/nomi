@@ -4,6 +4,7 @@ import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/mcp/data/mcp_repository.dart';
 import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
 import 'package:gena/features/mcp/data/services/mcp_tool_actions_service.dart';
+import 'package:gena/features/workspace/data/services/workspace_memory_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 
@@ -17,6 +18,7 @@ class ChatRuntimeDependencies {
     required this.nativeToolActions,
     required this.workspaceQueries,
     required this.workspaceRagActions,
+    required this.workspaceMemoryActions,
     required this.mcpRepository,
     required this.mcpClientManager,
     required this.mcpToolActions,
@@ -30,6 +32,7 @@ class ChatRuntimeDependencies {
   final NativeToolActions nativeToolActions;
   final WorkspaceQueries workspaceQueries;
   final WorkspaceRagActions workspaceRagActions;
+  final WorkspaceMemoryActions workspaceMemoryActions;
   final McpRepository mcpRepository;
   final McpClientManager mcpClientManager;
   final McpToolActions mcpToolActions;

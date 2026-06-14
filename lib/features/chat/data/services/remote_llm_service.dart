@@ -179,13 +179,25 @@ Future<void> generateRemoteAssistantResponse({
 }) async {
   final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
   final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
-  final systemInstruction = buildSystemInstruction(basePrompt);
+  final enableMemory =
+      (activeWorkspace?.memoryEnabled ?? false) &&
+      activeModel.supportsFunctionCalls;
+  final memoryBlock = enableMemory && activeWorkspace != null
+      ? await deps.workspaceMemoryActions.buildMemoryBlock(
+          workspaceId: activeWorkspace.id,
+        )
+      : '';
+  final composedBasePrompt = memoryBlock.isEmpty
+      ? basePrompt
+      : (basePrompt.isEmpty ? memoryBlock : '$basePrompt\n\n$memoryBlock');
+  final systemInstruction = buildSystemInstruction(composedBasePrompt);
   final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
     workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
   );
   final remoteTools = buildRemoteChatTools(
     supportsFunctionCalls: activeModel.supportsFunctionCalls,
     enableRagTool: enableRag,
+    enableMemoryTools: enableMemory,
     enableNativeOpenUrlTool:
         (activeWorkspace?.nativeToolsEnabled ?? false) &&
         (activeWorkspace?.nativeOpenUrlEnabled ?? false),
@@ -283,6 +295,17 @@ Future<void> generateRemoteAssistantResponse({
                   toolName: toolName,
                   args: args,
                 ),
+          memoryToolHandler: activeWorkspace == null || !enableMemory
+              ? null
+              : (op, {content}) => op == rememberToolName
+                    ? deps.workspaceMemoryActions.runRememberTool(
+                        workspaceId: activeWorkspace.id,
+                        content: content ?? '',
+                      )
+                    : deps.workspaceMemoryActions.runForgetTool(
+                        workspaceId: activeWorkspace.id,
+                        content: content,
+                      ),
         );
 
         await database
@@ -342,12 +365,13 @@ String _formatRemoteToolTraceMessage(
   ToolCall call,
   Map<String, dynamic> result,
 ) {
+  // Memory content is sensitive: redact remembered/forgotten text from traces.
+  final name = call.function.name;
+  final tracedArgs = (name == rememberToolName || name == forgetToolName)
+      ? '{"content":"[redacted]"}'
+      : call.function.arguments;
   final payload = <String, dynamic>{
-    'call': <String, dynamic>{
-      'id': call.id,
-      'name': call.function.name,
-      'args': call.function.arguments,
-    },
+    'call': <String, dynamic>{'id': call.id, 'name': name, 'args': tracedArgs},
     'result': result,
   };
   const encoder = JsonEncoder.withIndent('  ');

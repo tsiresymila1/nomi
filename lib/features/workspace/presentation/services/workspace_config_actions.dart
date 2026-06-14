@@ -1,8 +1,23 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/workspace/data/services/document_text_extraction.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_entity.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_config_cubit.dart';
+
+/// File extensions the workspace document picker accepts.
+///
+/// Combines the document formats handled by the external extractor
+/// (PDF/DOC(X)/Markdown) with the CSV/TSV and code/plaintext extensions handled
+/// purely by [DocumentTextExtraction].
+final List<String> _allowedDocumentExtensions = <String>{
+  'pdf',
+  'doc',
+  'docx',
+  'md',
+  'markdown',
+  ...DocumentTextExtraction.supportedPureExtensions,
+}.toList(growable: false);
 
 class WorkspaceConfigActions {
   const WorkspaceConfigActions._();
@@ -34,16 +49,8 @@ class WorkspaceConfigActions {
       final picked = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.custom,
-        allowedExtensions: const [
-          'pdf',
-          'txt',
-          'md',
-          'markdown',
-          'text',
-          'doc',
-          'docx',
-        ],
-        dialogTitle: 'Choose a document (PDF, DOC/DOCX, text)',
+        allowedExtensions: _allowedDocumentExtensions,
+        dialogTitle: 'Choose a document (PDF, DOC/DOCX, CSV, text, code)',
       );
       final path = picked?.files.single.path;
       if (path == null || path.trim().isEmpty || !context.mounted) return;

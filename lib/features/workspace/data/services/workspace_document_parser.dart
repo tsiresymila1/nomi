@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:doc_text_extractor/doc_text_extractor.dart';
+import 'package:gena/features/workspace/data/services/document_text_extraction.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ParsedWorkspaceDocument {
@@ -115,10 +115,15 @@ class WorkspaceDocumentParser {
     if (lower.endsWith('.doc')) return 'doc';
     if (lower.endsWith('.docx')) return 'docx';
     if (lower.endsWith('.md') || lower.endsWith('.markdown')) return 'md';
-    if (lower.endsWith('.txt') || lower.endsWith('.text')) return 'text';
+
+    // CSV/TSV and code/plaintext are handled by the pure extraction layer.
+    final extension = DocumentTextExtraction.extensionOf(lower);
+    final pureType = DocumentTextExtraction.sourceTypeForExtension(extension);
+    if (pureType != null) return pureType;
 
     throw const FormatException(
-      'Only PDF, DOC/DOCX, and text files are supported',
+      'Unsupported file type. Supported: PDF, DOC/DOCX, Markdown, CSV/TSV, '
+      'and common text/code files (txt, json, yaml, dart, py, js, ts, etc.)',
     );
   }
 
@@ -153,12 +158,19 @@ class WorkspaceDocumentParser {
         file.path,
         isUrl: false,
       );
-      return extracted.text;
+      return DocumentTextExtraction.capLength(extracted.text);
     }
 
-    if (sourceType == 'text') {
+    if (DocumentTextExtraction.pureSourceTypes.contains(sourceType)) {
       final bytes = await file.readAsBytes();
-      return utf8.decode(bytes, allowMalformed: true);
+      final text = DocumentTextExtraction.extractFromBytes(
+        bytes: bytes,
+        sourceType: sourceType,
+        fileName: file.uri.pathSegments.isEmpty
+            ? ''
+            : file.uri.pathSegments.last,
+      );
+      return DocumentTextExtraction.capLength(text);
     }
 
     throw const FormatException('Unsupported document type');

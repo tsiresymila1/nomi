@@ -6,9 +6,11 @@ import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/native_tool_execution_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/features/chat/presentation/chat_page.dart';
+import 'package:gena/features/chat/presentation/voice_conversation_page.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/presentation/add_model_page.dart';
 import 'package:gena/features/downloads/presentation/download_page.dart';
@@ -50,6 +52,17 @@ final router = GoRouter(
             BlocProvider.value(value: sl<ChatContextWindowCubit>()),
           ],
           child: const ChatPage(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: '/chat/voice',
+      name: 'voice-conversation',
+      pageBuilder: (context, state) => _buildTransitionPage(
+        state: state,
+        child: BlocProvider<VoiceConversationCubit>(
+          create: (_) => sl<VoiceConversationCubit>(),
+          child: const VoiceConversationPage(),
         ),
       ),
     ),

@@ -5,6 +5,7 @@ import 'package:record/record.dart';
 
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'speech_to_text.dart';
+import 'vad_controller.dart';
 
 /// Wraps the `record` plugin to capture microphone audio as a 16 kHz mono WAV
 /// file — exactly the format whisper expects, so the output feeds
@@ -12,7 +13,7 @@ import 'speech_to_text.dart';
 ///
 /// `dart:io` only; native and capability-gated. Web/unsupported paths never
 /// import this file.
-class AudioRecorderService implements VoiceAudioRecorder {
+class AudioRecorderService implements VoiceAudioRecorder, VoiceLevelSource {
   AudioRecorderService({AudioRecorder? recorder})
     : _recorder = recorder ?? AudioRecorder();
 
@@ -69,6 +70,15 @@ class AudioRecorderService implements VoiceAudioRecorder {
         await file.delete();
       }
     }
+  }
+
+  /// Microphone level stream sampled at [interval], mapped from `record`'s
+  /// `Amplitude` (whose `current` is dBFS) to the plugin-neutral [MicLevel].
+  @override
+  Stream<MicLevel> levelStream(Duration interval) {
+    return _recorder
+        .onAmplitudeChanged(interval)
+        .map((amplitude) => MicLevel(amplitude.current));
   }
 
   /// Releases the underlying recorder.

@@ -16,6 +16,7 @@ import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview
 import 'package:gena/features/chat/presentation/widgets/chat_input_send_button.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_voice_button.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class ChatInput extends StatefulWidget {
@@ -410,11 +411,20 @@ class _ChatInputState extends State<ChatInput> {
                                       !hasSendableContent &&
                                       AppCapabilities
                                           .current
-                                          .supportsSpeechToText)
+                                          .supportsSpeechToText) ...[
                                     ChatInputVoiceButton(
                                       cubit: sl<VoiceInputCubit>(),
                                       enabled: !isGenerating,
                                     ),
+                                    suffixActionButton(
+                                      icon: HugeIcons.strokeRoundedVoice,
+                                      color: colorScheme.primary,
+                                      tooltip: 'Hands-free voice conversation',
+                                      onPressed: () => context.pushNamed(
+                                        'voice-conversation',
+                                      ),
+                                    ),
+                                  ],
                                   if (isGenerating || hasSendableContent)
                                     ChatInputSendButton(
                                       isGenerating: isGenerating,

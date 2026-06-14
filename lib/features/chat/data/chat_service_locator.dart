@@ -15,9 +15,13 @@ import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart'
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime_factory.dart';
 import 'package:gena/features/chat/data/services/audio_recorder_factory.dart';
+import 'package:gena/features/chat/data/services/chat_generation_signal_service.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/speech_to_text_factory.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
+import 'package:gena/features/chat/data/services/vad_controller.dart';
+import 'package:gena/features/chat/data/services/voice_level_source_factory.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/core/toast/app_toast.dart';
@@ -198,6 +202,32 @@ void registerChatDependencies() {
     sl.registerLazySingleton<VoiceOutputCubit>(
       () => VoiceOutputCubit(
         textToSpeech: sl<TextToSpeech>(),
+        onError: (message) => AppToast.show(message, type: AppToastType.error),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<GenerationSignal>()) {
+    sl.registerLazySingleton<GenerationSignal>(
+      () => ChatGenerationSignal(
+        generatingCubit: sl<ChatGeneratingCubit>(),
+        draftResponseCubit: sl<ChatDraftResponseCubit>(),
+      ),
+    );
+  }
+
+  // Fresh per page push: the cubit owns a live recorder/TTS session and tears
+  // it down on close, so it must not be shared as a singleton.
+  if (!sl.isRegistered<VoiceConversationCubit>()) {
+    sl.registerFactory<VoiceConversationCubit>(
+      () => VoiceConversationCubit(
+        recorder: sl<VoiceAudioRecorder>(),
+        speechToText: sl<SpeechToText>(),
+        textToSpeech: sl<TextToSpeech>(),
+        vad: VadController(),
+        levelSource: voiceLevelSourceFor(sl<VoiceAudioRecorder>()),
+        sendMessage: (text) => sl<ChatThreadActions>().sendMessage(text),
+        generationSignal: sl<GenerationSignal>(),
         onError: (message) => AppToast.show(message, type: AppToastType.error),
       ),
     );

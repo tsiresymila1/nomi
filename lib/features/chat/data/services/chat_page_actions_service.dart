@@ -6,8 +6,8 @@ import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/data/model_readiness.dart';
@@ -28,7 +28,7 @@ class ChatPageActions {
     required ActiveModelInfoResolver activeModelInfoResolver,
     required ModelRepository modelRepository,
     required ModelInstallerService modelInstallerService,
-    required ChatSessionController chatSessionController,
+    required LocalModelRuntime localModelRuntime,
     AppCapabilities? capabilities,
   }) : _selectedChatCubit = selectedChatCubit,
        _selectedWorkspaceCubit = selectedWorkspaceCubit,
@@ -39,7 +39,7 @@ class ChatPageActions {
        _activeModelInfoResolver = activeModelInfoResolver,
        _modelRepository = modelRepository,
        _modelInstallerService = modelInstallerService,
-       _chatSessionController = chatSessionController,
+       _localModelRuntime = localModelRuntime,
        _capabilities = capabilities ?? AppCapabilities.current;
 
   final SelectedChatCubit _selectedChatCubit;
@@ -51,7 +51,7 @@ class ChatPageActions {
   final ActiveModelInfoResolver _activeModelInfoResolver;
   final ModelRepository _modelRepository;
   final ModelInstallerService _modelInstallerService;
-  final ChatSessionController _chatSessionController;
+  final LocalModelRuntime _localModelRuntime;
   final AppCapabilities _capabilities;
 
   Future<void> createNewThread() async {
@@ -158,8 +158,7 @@ class ChatPageActions {
   Future<void> _setModelAsActive(int modelId) async {
     await _selectedModelCubit.selectModel(modelId);
     await _activeModelInfoResolver.getActiveModelInfo();
-    _chatSessionController.resetRuntime();
-    _chatSessionController.resetActiveChatSession();
+    await _localModelRuntime.reset();
     _warmupLocalSessionInBackground();
   }
 
@@ -218,8 +217,14 @@ class ChatPageActions {
     if (_downloadsCubit.state.activeInstall != null) return;
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
-    await _chatSessionController.getRuntime();
-    await _chatSessionController.getActiveChatSession();
+    try {
+      await _localModelRuntime.prepare(model);
+    } catch (error, stackTrace) {
+      logger.w(
+        'Local model warm-up prepare failed: $error',
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   void _requestStopGenerationInBackground() {

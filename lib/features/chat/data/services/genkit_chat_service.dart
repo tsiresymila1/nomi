@@ -2,24 +2,23 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
-import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
-import 'package:genkit_flutter_gemma/genkit_flutter_gemma.dart';
+import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 import 'package:schemantic/schemantic.dart';
 
-const String _localModelName = 'active-local-model';
 const String _remoteNamespace = 'remote';
 
 Future<void> generateAssistantResponseWithGenkit({
@@ -69,6 +68,11 @@ Future<void> generateAssistantResponseWithGenkit({
 
   if (isCancelled()) return;
 
+  PreparedLocalModel? prepared;
+  if (activeModel.provider == ModelProviderType.local) {
+    prepared = await deps.localModelRuntime.prepare(activeModel);
+  }
+
   final messageWindow = await _resolveMessageWindow(
     deps: deps,
     activeModel: activeModel,
@@ -79,7 +83,7 @@ Future<void> generateAssistantResponseWithGenkit({
     systemInstruction: systemInstruction,
     storedMessages: messageWindow.keptMessages,
   );
-  final ai = _buildGenkit(activeModel);
+  final ai = prepared?.ai ?? _buildRemoteGenkit(activeModel);
   final toolResultCollector = _ToolResultCollector();
   final stringifyToolResultForGemma4LiteRt =
       _shouldStringifyToolResultForGemma4LiteRt(activeModel);
@@ -110,12 +114,9 @@ Future<void> generateAssistantResponseWithGenkit({
   final thinkingBuffer = StringBuffer();
 
   final stream = ai.generateStream(
-    model: _resolveModelRef(activeModel),
+    model: _resolveModelRef(activeModel, prepared),
     messages: messages,
-    config: _resolveModelConfig(
-      activeModel: activeModel,
-      systemInstruction: systemInstruction,
-    ),
+    config: _resolveModelConfig(activeModel: activeModel),
     toolNames: toolNames.isEmpty ? null : toolNames,
     maxTurns: 5,
   );
@@ -181,22 +182,7 @@ Future<void> generateAssistantResponseWithGenkit({
       );
 }
 
-Genkit _buildGenkit(ModelInfo model) {
-  if (model.provider == ModelProviderType.local) {
-    return Genkit(
-      plugins: [
-        GenkitFlutterGemmaPlugin(
-          models: [
-            FlutterGemmaModelConfig(
-              name: _localModelName,
-              modelType: parseModelType(model.modelType),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
+Genkit _buildRemoteGenkit(ModelInfo model) {
   final baseUrl = _normalizeBaseUrl((model.apiUrl ?? '').trim());
   final apiToken = _normalizeApiKey((model.apiToken ?? '').trim());
   return Genkit(
@@ -225,22 +211,14 @@ Future<StoredContextWindowPlan> _resolveMessageWindow({
     );
   }
 
-  final chatSession = await deps.chatSessionController.getActiveChatSession();
-  if (chatSession == null) {
-    return _defaultMessageWindowPlan(
-      storedMessages: storedMessages,
-      maxTokens: activeModel.maxTokens,
-      tokenBuffer: activeModel.tokenBuffer,
-    );
-  }
-
+  final countTokens = deps.localModelRuntime.countTokens;
   final systemTokens = await _estimateSystemInstructionTokens(
-    chatSession.chat,
+    countTokens,
     systemInstruction,
   );
 
   return planStoredMessagesWindow(
-    chat: chatSession.chat,
+    countTokens: countTokens,
     storedMessages: storedMessages,
     settingsMaxTokens: activeModel.maxTokens,
     requestedOutputReserve: activeModel.tokenBuffer,
@@ -250,16 +228,12 @@ Future<StoredContextWindowPlan> _resolveMessageWindow({
 }
 
 Future<int> _estimateSystemInstructionTokens(
-  gemma.InferenceChat chat,
+  Future<int> Function(String text) countTokens,
   String systemInstruction,
 ) async {
   final trimmed = systemInstruction.trim();
   if (trimmed.isEmpty) return 0;
-  try {
-    return await chat.session.sizeInTokens(trimmed);
-  } catch (_) {
-    return fallbackTokenEstimate(trimmed);
-  }
+  return countTokens(trimmed);
 }
 
 StoredContextWindowPlan _defaultMessageWindowPlan({
@@ -280,9 +254,15 @@ StoredContextWindowPlan _defaultMessageWindowPlan({
   );
 }
 
-ModelRef<dynamic> _resolveModelRef(ModelInfo model) {
+ModelRef<dynamic> _resolveModelRef(
+  ModelInfo model,
+  PreparedLocalModel? prepared,
+) {
   if (model.provider == ModelProviderType.local) {
-    return flutterGemma.model(_localModelName);
+    if (prepared == null) {
+      throw StateError('Local model runtime was not prepared.');
+    }
+    return prepared.modelRef;
   }
   return openAI.model(
     _resolveRemoteModelId(model),
@@ -290,22 +270,16 @@ ModelRef<dynamic> _resolveModelRef(ModelInfo model) {
   );
 }
 
-Object _resolveModelConfig({
-  required ModelInfo activeModel,
-  required String systemInstruction,
-}) {
+Object _resolveModelConfig({required ModelInfo activeModel}) {
   if (activeModel.provider == ModelProviderType.local) {
-    return FlutterGemmaModelOptions(
-      maxTokens: activeModel.maxTokens,
+    return LlamaDartGenerationConfig(
       temperature: activeModel.temperature,
-      topK: activeModel.topK,
       topP: activeModel.topP,
-      supportImage: activeModel.supportImage,
-      supportAudio: activeModel.supportAudio,
-      isThinking: activeModel.isThinking,
-      randomSeed: activeModel.randomSeed,
-      toolChoice: activeModel.supportsFunctionCalls ? 'auto' : 'none',
-      systemInstruction: systemInstruction,
+      topK: activeModel.topK,
+      maxTokens: activeModel.tokenBuffer,
+      seed: activeModel.randomSeed,
+      enableThinking: activeModel.isThinking,
+      parallelToolCalls: activeModel.supportsFunctionCalls,
     );
   }
 
@@ -684,8 +658,8 @@ String _truncate(String value, int maxLength) {
 
 bool _shouldStringifyToolResultForGemma4LiteRt(ModelInfo model) {
   if (model.provider != ModelProviderType.local) return false;
-  if (parseModelType(model.modelType) != gemma.ModelType.gemma4) return false;
-  return inferFileTypeFromSource(model.source) == gemma.ModelFileType.litertlm;
+  if (model.modelType.toLowerCase() != 'gemma4') return false;
+  return model.source.toLowerCase().endsWith('.litertlm');
 }
 
 class _ToolResultCollector {

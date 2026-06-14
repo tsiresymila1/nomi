@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
+import 'package:gena/features/chat/data/services/unsupported_local_model_runtime.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
@@ -29,7 +29,7 @@ void main() {
         activeModelInfoResolver: _ActiveModelInfoResolverFake(),
         modelRepository: _ModelRepositoryFake([_remoteModel]),
         modelInstallerService: _ThrowingModelInstallerService(),
-        chatSessionController: _ChatSessionControllerFake(),
+        localModelRuntime: UnsupportedLocalModelRuntime(),
         capabilities: AppCapabilities.forPlatform(AppPlatform.web),
       );
 
@@ -121,12 +121,4 @@ class _ActiveModelInfoResolverFake extends Fake
     implements ActiveModelInfoResolver {
   @override
   Future<ModelInfo?> getActiveModelInfo() async => _remoteModel;
-}
-
-class _ChatSessionControllerFake extends Fake implements ChatSessionController {
-  @override
-  void resetRuntime() {}
-
-  @override
-  void resetActiveChatSession() {}
 }

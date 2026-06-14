@@ -6,8 +6,6 @@ export '../tools/native_tool_execution_service.dart';
 export 'chat_queries_service.dart';
 export 'chat_history_actions_service.dart';
 export 'chat_input_controller_service.dart';
-export 'chat_session_service.dart';
 export 'chat_thread_actions_service.dart';
 export 'chat_ui_state_service.dart';
-export '../models/gemma_chat_session.dart';
 export 'selected_chat_service.dart';

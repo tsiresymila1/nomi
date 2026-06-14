@@ -1,5 +1,5 @@
 import 'package:gena/core/platform/app_capabilities.dart';
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/workspace/presentation/cubit/workspace_embedder_install_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_actions_service.dart';
 
@@ -38,16 +38,16 @@ class WorkspaceConfigActions {
   WorkspaceConfigActions({
     required WorkspaceEmbedderInstallCubit embedderInstallCubit,
     required WorkspaceActions workspaceActions,
-    required ChatSessionController chatSessionController,
+    required LocalModelRuntime localModelRuntime,
     AppCapabilities? capabilities,
   }) : _embedderInstallCubit = embedderInstallCubit,
        _workspaceActions = workspaceActions,
-       _chatSessionController = chatSessionController,
+       _localModelRuntime = localModelRuntime,
        _capabilities = capabilities ?? AppCapabilities.current;
 
   final WorkspaceEmbedderInstallCubit _embedderInstallCubit;
   final WorkspaceActions _workspaceActions;
-  final ChatSessionController _chatSessionController;
+  final LocalModelRuntime _localModelRuntime;
   final AppCapabilities _capabilities;
 
   Future<void> save(WorkspaceConfigSaveInput input) async {
@@ -82,6 +82,6 @@ class WorkspaceConfigActions {
       flashlightEnabled: input.nativeFlashlightEnabled,
     );
 
-    _chatSessionController.resetActiveChatSession();
+    await _localModelRuntime.reset();
   }
 }

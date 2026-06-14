@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
-import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:openai_dart/openai_dart.dart';

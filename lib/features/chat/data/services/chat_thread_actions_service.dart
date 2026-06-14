@@ -1,20 +1,18 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/genkit_chat_service.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
-import 'package:gena/features/chat/data/services/chat_session_runtime_service.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
-import 'package:gena/features/chat/data/services/chat_thread_execution_service.dart';
 import 'package:gena/features/chat/data/services/chat_title_service.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 
 class LocalMessageBudgetPlan {
   const LocalMessageBudgetPlan({
@@ -46,7 +44,7 @@ class ChatThreadActions {
     required db.GenaDatabase database,
     required SelectedChatCubit selectedChatCubit,
     required ActiveModelInfoResolver activeModelInfoResolver,
-    required ChatSessionController sessionController,
+    required LocalModelRuntime localModelRuntime,
     required ChatGeneratingCubit chatGeneratingCubit,
     required ChatDraftResponseCubit chatDraftResponseCubit,
     required ChatDraftThinkingCubit chatDraftThinkingCubit,
@@ -55,7 +53,7 @@ class ChatThreadActions {
   }) : _database = database,
        _selectedChatCubit = selectedChatCubit,
        _activeModelInfoResolver = activeModelInfoResolver,
-       _sessionController = sessionController,
+       _localModelRuntime = localModelRuntime,
        _chatGeneratingCubit = chatGeneratingCubit,
        _chatDraftResponseCubit = chatDraftResponseCubit,
        _chatDraftThinkingCubit = chatDraftThinkingCubit,
@@ -65,7 +63,7 @@ class ChatThreadActions {
   final db.GenaDatabase _database;
   final SelectedChatCubit _selectedChatCubit;
   final ActiveModelInfoResolver _activeModelInfoResolver;
-  final ChatSessionController _sessionController;
+  final LocalModelRuntime _localModelRuntime;
   final ChatGeneratingCubit _chatGeneratingCubit;
   final ChatDraftResponseCubit _chatDraftResponseCubit;
   final ChatDraftThinkingCubit _chatDraftThinkingCubit;
@@ -97,13 +95,17 @@ class ChatThreadActions {
       return;
     }
 
-    final localRuntime = await _sessionController.getRuntime();
-    if (activeModel.provider == 'local' && localRuntime == null) {
-      await AppToast.show(
-        'Model is not ready yet. Please wait a moment and try again.',
-        type: AppToastType.info,
-      );
-      return;
+    if (activeModel.provider == 'local') {
+      try {
+        await _localModelRuntime.prepare(activeModel);
+      } catch (error) {
+        logger.w('Local model is not ready yet: $error');
+        await AppToast.show(
+          'Model is not ready yet. Please wait a moment and try again.',
+          type: AppToastType.info,
+        );
+        return;
+      }
     }
 
     if (activeModel.provider == 'local') {
@@ -146,7 +148,7 @@ class ChatThreadActions {
       }
 
       scheduleThreadTitleUpdate(
-        sessionController: _sessionController,
+        localModelRuntime: _localModelRuntime,
         database: _database,
         chatId: parsedChatId,
         messageText: text,
@@ -208,34 +210,10 @@ class ChatThreadActions {
 
   Future<void> _cancelActiveLocalGeneration() async {
     try {
-      final activeSession = _sessionController.currentChatSession;
-      if (activeSession != null) {
-        await activeSession.chat.stopGeneration();
-      }
+      _localModelRuntime.cancelActiveGeneration();
     } catch (error, stackTrace) {
       logger.w(
-        'Failed to cancel active local chat session generation: $error',
-        stackTrace: stackTrace,
-      );
-    }
-
-    try {
-      final runtime = await _sessionController.getRuntime();
-      final model = runtime?.model;
-      if (model == null) return;
-
-      final activeChat = model.chat;
-      if (activeChat != null) {
-        await activeChat.stopGeneration();
-      }
-
-      final sessions = model.sessions;
-      for (final session in sessions) {
-        await session.stopGeneration();
-      }
-    } catch (error, stackTrace) {
-      logger.w(
-        'Failed to cancel active local model generation sessions: $error',
+        'Failed to cancel active local model generation: $error',
         stackTrace: stackTrace,
       );
     }
@@ -301,17 +279,13 @@ class ChatThreadActions {
       return null;
     }
 
-    final activeSession = await _sessionController.getActiveChatSession();
-    if (activeSession == null) return null;
+    final countTokens = _localModelRuntime.countTokens;
 
-    final userMessage = await buildUserMessage(
-      text: text,
-      imagePath: imagePath,
-    );
-    final messageTokens = await estimateTokens(
-      chat: activeSession.chat,
-      message: userMessage,
-    );
+    var messageTokens = await countTokens(text);
+    final hasImage = imagePath != null && imagePath.trim().isNotEmpty;
+    if (hasImage) {
+      messageTokens += 257;
+    }
 
     final activeWorkspace = await _runtimeDependencies.workspaceQueries
         .resolveActiveWorkspace();
@@ -319,7 +293,7 @@ class ChatThreadActions {
       activeWorkspace?.generalInstruction.trim() ?? '',
     );
     final systemTokens = await _estimateSystemInstructionTokens(
-      activeSession.chat,
+      countTokens,
       systemInstruction,
     );
 
@@ -330,7 +304,7 @@ class ChatThreadActions {
             .get();
 
     final contextPlan = await planStoredMessagesWindow(
-      chat: activeSession.chat,
+      countTokens: countTokens,
       storedMessages: storedMessages,
       settingsMaxTokens: activeModel.maxTokens,
       requestedOutputReserve: activeModel.tokenBuffer,
@@ -356,15 +330,11 @@ class ChatThreadActions {
   }
 
   Future<int> _estimateSystemInstructionTokens(
-    gemma.InferenceChat chat,
+    Future<int> Function(String text) countTokens,
     String systemInstruction,
   ) async {
     final trimmed = systemInstruction.trim();
     if (trimmed.isEmpty) return 0;
-    try {
-      return await chat.session.sizeInTokens(trimmed);
-    } catch (_) {
-      return fallbackTokenEstimate(trimmed);
-    }
+    return countTokens(trimmed);
   }
 }

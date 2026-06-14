@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/database/gena_database.dart' as db;
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
-import 'package:gena/features/chat/data/services/chat_thread_execution_service.dart';
+import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
+import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/remote_llm_service.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:genkit/genkit.dart' hide ModelInfo;
+import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 const String _threadTitleSystemInstruction =
@@ -16,7 +17,7 @@ const String _threadTitleSystemInstruction =
     'Return only the title text.';
 
 void scheduleThreadTitleUpdate({
-  required ChatSessionController sessionController,
+  required LocalModelRuntime localModelRuntime,
   required db.GenaDatabase database,
   required int chatId,
   required String messageText,
@@ -29,7 +30,7 @@ void scheduleThreadTitleUpdate({
     messageText: messageText,
     hasImage: hasImage,
     titleGenerator: (text, {required hasImage}) => _generateAiThreadTitle(
-      sessionController: sessionController,
+      localModelRuntime: localModelRuntime,
       activeModel: activeModel,
       messageText: text,
       hasImage: hasImage,
@@ -38,7 +39,7 @@ void scheduleThreadTitleUpdate({
 }
 
 Future<String?> _generateAiThreadTitle({
-  required ChatSessionController sessionController,
+  required LocalModelRuntime localModelRuntime,
   required ModelInfo activeModel,
   required String messageText,
   required bool hasImage,
@@ -59,7 +60,8 @@ Future<String?> _generateAiThreadTitle({
     }
 
     return await _generateLocalThreadTitle(
-      sessionController: sessionController,
+      localModelRuntime: localModelRuntime,
+      activeModel: activeModel,
       messageText: content,
       hasImage: hasImage,
     ).timeout(const Duration(seconds: 5));
@@ -89,39 +91,35 @@ Future<String?> _generateRemoteThreadTitle({
 }
 
 Future<String?> _generateLocalThreadTitle({
-  required ChatSessionController sessionController,
+  required LocalModelRuntime localModelRuntime,
+  required ModelInfo activeModel,
   required String messageText,
   required bool hasImage,
 }) async {
-  final runtime = await sessionController.getRuntime();
-  if (runtime == null) return null;
-
-  final session = await runtime.model.createSession(
-    temperature: 0.2,
-    randomSeed: runtime.randomSeed,
-    topK: runtime.topK,
-    topP: runtime.topP,
-    systemInstruction: _threadTitleSystemInstruction,
+  final prepared = await localModelRuntime.prepare(activeModel);
+  final userPrompt = _buildTitlePrompt(
+    messageText: messageText,
+    hasImage: hasImage,
   );
-
-  try {
-    await session.addQueryChunk(
-      gemma.Message.text(
-        text: _buildTitlePrompt(messageText: messageText, hasImage: hasImage),
-        isUser: true,
+  final res = await prepared.ai.generate(
+    model: prepared.modelRef,
+    messages: [
+      Message(
+        role: Role.system,
+        content: [TextPart(text: _threadTitleSystemInstruction)],
       ),
-    );
-    final responseStream = session.getResponseAsync();
-    final responseBuffer = StringBuffer();
-    await for (final response in responseStream) {
-      if (response is gemma.TextResponse) {
-        responseBuffer.write(response);
-      }
-    }
-    return responseBuffer.toString();
-  } finally {
-    await session.close();
-  }
+      Message(
+        role: Role.user,
+        content: [TextPart(text: userPrompt)],
+      ),
+    ],
+    config: const LlamaDartGenerationConfig(
+      maxTokens: 24,
+      temperature: 0.2,
+      enableThinking: false,
+    ),
+  );
+  return res.text;
 }
 
 String _buildTitlePrompt({

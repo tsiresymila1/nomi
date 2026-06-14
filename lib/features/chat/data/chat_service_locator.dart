@@ -8,7 +8,6 @@ import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart'
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/data/services/chat_history_actions_service.dart';
 import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
-import 'package:gena/features/chat/data/services/chat_session_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/chat/data/repositories/chat_queries_repository.dart';
@@ -99,17 +98,6 @@ void registerChatDependencies() {
     );
   }
 
-  if (!sl.isRegistered<ChatSessionController>()) {
-    sl.registerLazySingleton<ChatSessionController>(
-      () => ChatSessionController(
-        database: sl<GenaDatabase>(),
-        activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
-        workspaceQueries: sl<WorkspaceQueries>(),
-        selectedChatCubit: sl<SelectedChatCubit>(),
-      ),
-    );
-  }
-
   if (!sl.isRegistered<ChatQueriesRepository>()) {
     sl.registerLazySingleton<ChatQueriesRepository>(
       () => ChatQueriesRepository(
@@ -126,7 +114,7 @@ void registerChatDependencies() {
         chatDraftThinkingCubit: sl<ChatDraftThinkingCubit>(),
         chatToolWaitingCubit: sl<ChatToolWaitingCubit>(),
         chatContextWindowCubit: sl<ChatContextWindowCubit>(),
-        chatSessionController: sl<ChatSessionController>(),
+        localModelRuntime: sl<LocalModelRuntime>(),
         nativeToolActions: sl<NativeToolActions>(),
         workspaceQueries: sl<WorkspaceQueries>(),
         workspaceRagActions: sl<WorkspaceRagActions>(),
@@ -140,7 +128,7 @@ void registerChatDependencies() {
         database: sl<GenaDatabase>(),
         selectedChatCubit: sl<SelectedChatCubit>(),
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
-        sessionController: sl<ChatSessionController>(),
+        localModelRuntime: sl<LocalModelRuntime>(),
         chatGeneratingCubit: sl<ChatGeneratingCubit>(),
         chatDraftResponseCubit: sl<ChatDraftResponseCubit>(),
         chatDraftThinkingCubit: sl<ChatDraftThinkingCubit>(),
@@ -179,7 +167,7 @@ void registerChatDependencies() {
         activeModelInfoResolver: sl<ActiveModelInfoResolver>(),
         modelRepository: sl<ModelRepository>(),
         modelInstallerService: sl<ModelInstallerService>(),
-        chatSessionController: sl<ChatSessionController>(),
+        localModelRuntime: sl<LocalModelRuntime>(),
       ),
     );
   }

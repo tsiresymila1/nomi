@@ -82,10 +82,13 @@ List<String> _extractSourceUrls(String source) {
 
 /// Follows redirects manually so a Hugging Face CDN redirect to a signed CAS URL
 /// reports the final status rather than the intermediate 302.
+///
+/// Uses HEAD (not GET) so the model body is never downloaded — only the status
+/// matters for catalog verification.
 Future<int> _resolve(HttpClient client, String url) async {
   var current = Uri.parse(url);
   for (var hop = 0; hop < 10; hop++) {
-    final request = await client.getUrl(current);
+    final request = await client.headUrl(current);
     request.followRedirects = false;
     final response = await request.close();
     final status = response.statusCode;

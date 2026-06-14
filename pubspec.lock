@@ -241,14 +241,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
-  dart_sentencepiece_tokenizer:
-    dependency: transitive
-    description:
-      name: dart_sentencepiece_tokenizer
-      sha256: "85825632845cf6427ea0cd13dfba96b4341cf63525165155e5b9b97011239289"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.2"
   dart_style:
     dependency: transitive
     description:
@@ -454,14 +446,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.1"
-  flutter_gemma:
-    dependency: "direct main"
-    description:
-      name: flutter_gemma
-      sha256: "1d25693a6fb0947308053152857afc4618739af7812dc58f0432e7339e6e1b11"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.16.3"
   flutter_highlight:
     dependency: "direct main"
     description:
@@ -696,14 +680,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.2"
-  genkit_flutter_gemma:
-    dependency: "direct main"
-    description:
-      name: genkit_flutter_gemma
-      sha256: "82f6a72e05f20b66e7cbdcd6d682fa3799a7d59d778f1def895c44249dcfcebe"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.3.1"
   genkit_llamadart:
     dependency: "direct main"
     description:
@@ -992,14 +968,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.14.0"
-  large_file_handler:
-    dependency: transitive
-    description:
-      name: large_file_handler
-      sha256: "1657db12b4591242b186c23eee437997be91e655ab0d803fd74829074460757f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -1056,14 +1024,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.1"
-  local_hnsw:
-    dependency: transitive
-    description:
-      name: local_hnsw
-      sha256: "7fb0988e3f850121774d9dfe94068f843d87908d6b1e9ed5039710d8d9ae3f7a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0"
   logger:
     dependency: "direct main"
     description:
@@ -1128,14 +1088,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.18.6"
-  mutex:
-    dependency: transitive
-    description:
-      name: mutex
-      sha256: "8827da25de792088eb33e572115a5eb0d61d61a3c01acbc8bcbe76ed78f1a1f2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -1677,14 +1629,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.5"
-  uuid:
-    dependency: transitive
-    description:
-      name: uuid
-      sha256: "1fef9e8e11e2991bb773070d4656b7bd5d850967a2456cfc83cf47925ba79489"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.5.3"
   vector_graphics:
     dependency: transitive
     description:

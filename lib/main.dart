@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_gemma/core/api/flutter_gemma.dart';
-import 'package:flutter_gemma/core/domain/web_storage_mode.dart';
 import 'package:flutter/services.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/router.dart';
@@ -31,10 +29,6 @@ void main() async {
     storageDirectory: HydratedStorageDirectory(
       (await getTemporaryDirectory()).path,
     ),
-  );
-  await FlutterGemma.initialize(
-    huggingFaceToken: dotenv.env['HUGGING_FACE_TOKEN']!,
-    webStorageMode: WebStorageMode.cacheApi,
   );
 
   runApp(const GenaApp());

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:gena/features/downloads/data/models/local_model_capabilities.dart';
 
 class DefaultSeedModel {
   const DefaultSeedModel({
@@ -27,8 +27,8 @@ class DefaultSeedModel {
   final String? webUrl;
   final String? desktopUrl;
   final String size;
-  final ModelType modelType;
-  final PreferredBackend preferredBackend;
+  final LocalModelType modelType;
+  final LocalModelBackend preferredBackend;
   final double temperature;
   final int topK;
   final double topP;
@@ -101,8 +101,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
     size: '2.4GB',
-    modelType: ModelType.gemma4,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemma4,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -118,8 +118,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm',
     size: '4.3GB',
-    modelType: ModelType.gemma4,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemma4,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -135,8 +135,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4.litertlm',
     size: '3.1GB',
-    modelType: ModelType.gemmaIt,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemmaIt,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -151,8 +151,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/google/gemma-3n-E4B-it-litert-lm/resolve/main/gemma-3n-E4B-it-int4.litertlm',
     size: '6.5GB',
-    modelType: ModelType.gemmaIt,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemmaIt,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -167,8 +167,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm',
     size: '0.5GB',
-    modelType: ModelType.gemmaIt,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemmaIt,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -181,8 +181,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.litertlm',
     size: '0.3GB',
-    modelType: ModelType.gemmaIt,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.gemmaIt,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -195,8 +195,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B.litertlm',
     size: '586MB',
-    modelType: ModelType.qwen3,
-    preferredBackend: PreferredBackend.cpu,
+    modelType: LocalModelType.qwen3,
+    preferredBackend: LocalModelBackend.cpu,
     temperature: 0.7,
     topK: 40,
     topP: 0.95,
@@ -211,8 +211,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
     size: '1.7GB',
-    modelType: ModelType.deepSeek,
-    preferredBackend: PreferredBackend.cpu,
+    modelType: LocalModelType.deepSeek,
+    preferredBackend: LocalModelBackend.cpu,
     temperature: 0.6,
     topK: 40,
     topP: 0.7,
@@ -226,8 +226,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
     size: '1.6GB',
-    modelType: ModelType.qwen,
-    preferredBackend: PreferredBackend.cpu,
+    modelType: LocalModelType.qwen,
+    preferredBackend: LocalModelBackend.cpu,
     temperature: 1.0,
     topK: 40,
     topP: 0.95,
@@ -241,8 +241,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
     size: '0.4GB',
-    modelType: ModelType.qwen,
-    preferredBackend: PreferredBackend.cpu,
+    modelType: LocalModelType.qwen,
+    preferredBackend: LocalModelBackend.cpu,
     temperature: 1.0,
     topK: 40,
     topP: 0.95,
@@ -256,8 +256,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/SmolLM2-135M-Instruct/resolve/main/SmolLM2_135M_Instruct.litertlm',
     size: '135MB',
-    modelType: ModelType.general,
-    preferredBackend: PreferredBackend.cpu,
+    modelType: LocalModelType.general,
+    preferredBackend: LocalModelBackend.cpu,
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
@@ -270,8 +270,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/FastVLM-0.5B/resolve/main/FastVLM-0.5B.litertlm',
     size: '0.5GB',
-    modelType: ModelType.general,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.general,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 0.7,
     topK: 40,
     topP: 0.95,
@@ -285,8 +285,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
     size: '3.9GB',
-    modelType: ModelType.general,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.general,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 0.7,
     topK: 40,
     topP: 0.95,
@@ -300,8 +300,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/sasha-denisov/function-gemma-270M-it/resolve/main/functiongemma-270M-it.litertlm',
     size: '284MB',
-    modelType: ModelType.functionGemma,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.functionGemma,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,
@@ -315,8 +315,8 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     baseUrl:
         'https://huggingface.co/sasha-denisov/functiongemma-flutter-gemma-demo/resolve/main/functiongemma-flutter_q8_ekv1024.litertlm',
     size: '284MB',
-    modelType: ModelType.functionGemma,
-    preferredBackend: PreferredBackend.gpu,
+    modelType: LocalModelType.functionGemma,
+    preferredBackend: LocalModelBackend.gpu,
     temperature: 1.0,
     topK: 64,
     topP: 0.95,

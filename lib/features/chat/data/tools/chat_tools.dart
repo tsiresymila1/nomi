@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
@@ -360,39 +359,6 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
   return tools;
 }
 
-List<gemma.Tool> buildChatTools({
-  required bool supportsFunctionCalls,
-  required bool enableRagTool,
-  required bool enableNativeOpenUrlTool,
-  required bool enableNativeOpenAppTool,
-  required bool enableNativePhoneCallTool,
-  required bool enableNativeContactsTool,
-  required bool enableNativeSmsTool,
-  required bool enableNativeSendEmailTool,
-  required bool enableNativeFlashlightTool,
-}) {
-  final definitions = buildUnifiedChatToolDefinitions(
-    supportsFunctionCalls: supportsFunctionCalls,
-    enableRagTool: enableRagTool,
-    enableNativeOpenUrlTool: enableNativeOpenUrlTool,
-    enableNativeOpenAppTool: enableNativeOpenAppTool,
-    enableNativePhoneCallTool: enableNativePhoneCallTool,
-    enableNativeContactsTool: enableNativeContactsTool,
-    enableNativeSmsTool: enableNativeSmsTool,
-    enableNativeSendEmailTool: enableNativeSendEmailTool,
-    enableNativeFlashlightTool: enableNativeFlashlightTool,
-  );
-  return definitions
-      .map(
-        (definition) => gemma.Tool(
-          name: definition.name,
-          description: definition.description,
-          parameters: _cloneToolParameters(definition.parameters),
-        ),
-      )
-      .toList(growable: false);
-}
-
 List<openai.Tool> buildRemoteChatTools({
   required bool supportsFunctionCalls,
   required bool enableRagTool,
@@ -428,30 +394,6 @@ List<openai.Tool> buildRemoteChatTools({
 
 Map<String, dynamic> _cloneToolParameters(Map<String, dynamic> parameters) {
   return jsonDecode(jsonEncode(parameters)) as Map<String, dynamic>;
-}
-
-Future<Map<String, dynamic>> executeChatTool(
-  gemma.FunctionCallResponse call, {
-  Future<Map<String, dynamic>> Function(
-    String query, {
-    int topK,
-    double threshold,
-  })?
-  ragToolHandler,
-  Future<Map<String, dynamic>> Function(
-    String toolName,
-    Map<String, dynamic> args,
-  )?
-  nativeToolHandler,
-}) async {
-  logger.i(call.name);
-  logger.i(call.args);
-  return executeChatToolByName(
-    call.name,
-    _toArgsMap(call.args),
-    ragToolHandler: ragToolHandler,
-    nativeToolHandler: nativeToolHandler,
-  );
 }
 
 Future<Map<String, dynamic>> executeChatToolByName(
@@ -549,10 +491,6 @@ Future<Map<String, dynamic>> executeChatToolByName(
         'message': 'Tool "$toolName" is not supported by this app.',
       };
   }
-}
-
-Map<String, dynamic> _toArgsMap(Map<Object?, Object?> rawArgs) {
-  return rawArgs.map((key, value) => MapEntry(key?.toString() ?? '', value));
 }
 
 int _toInt(Object? value, {required int fallback}) {

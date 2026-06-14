@@ -1,4 +1,4 @@
-import 'package:flutter_gemma/flutter_gemma.dart' as gemma;
+import 'package:gena/features/downloads/data/models/local_model_capabilities.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatModelSettings {
@@ -92,14 +92,7 @@ class ChatModelSettings {
     );
   }
 
-  gemma.PreferredBackend? get backend {
-    return switch (preferredBackend) {
-      'cpu' => gemma.PreferredBackend.cpu,
-      'gpu' => gemma.PreferredBackend.gpu,
-      'npu' => gemma.PreferredBackend.npu,
-      _ => null,
-    };
-  }
+  LocalModelBackend? get backend => parseLocalModelBackend(preferredBackend);
 
   factory ChatModelSettings.fromPrefs(SharedPreferences prefs) {
     final defaults = ChatModelSettings.defaults();

@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 
-/// Provider-neutral helpers shared by the chat runtime. These survive the
-/// removal of the flutter_gemma local engine and must not depend on it.
+/// Provider-neutral helpers shared by the chat runtime. These are independent
+/// of any specific local inference engine.
 
 /// Builds the system instruction, appending current local date context.
 String buildSystemInstruction(String basePrompt) {

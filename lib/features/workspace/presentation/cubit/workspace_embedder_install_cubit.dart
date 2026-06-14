@@ -4,7 +4,7 @@ import 'package:gena/features/workspace/data/services/workspace_rag_vector_store
 
 /// Tracks workspace RAG engine readiness.
 ///
-/// Replaces the former FlutterGemma embedder install flow. The embedding model
+/// Replaces the former local embedder install flow. The embedding model
 /// is now bundled with the app and provisioned by `mobile_rag_engine`, so there
 /// is nothing to download — this cubit only reports whether the engine
 /// initialized successfully.

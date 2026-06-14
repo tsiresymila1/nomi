@@ -14,6 +14,7 @@ list(APPEND FLUTTER_FFI_PLUGIN_LIST
   jni
   onnxruntime
   rag_engine_flutter
+  vad
   whisper_ggml_plus
 )
 

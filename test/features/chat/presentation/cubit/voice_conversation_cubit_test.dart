@@ -1,24 +1,35 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gena/features/chat/data/services/speech_segmenter.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
-import 'package:gena/features/chat/data/services/vad_controller.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
-import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 
-/// Recorder fake. Real mic levels arrive via the level stream during listening;
-/// the cubit only proceeds when the VAD saw speech, so tests feed the VAD
-/// directly via [_speakAndStop].
-class _FakeRecorder implements VoiceAudioRecorder {
-  _FakeRecorder();
-
+/// Fake neural-VAD segmenter. Tests drive an utterance by calling [emitSpeech]
+/// (the real Silero VAD fires `onSpeech` when the user stops talking).
+class _FakeSegmenter implements SpeechSegmenter {
   bool failStart = false;
 
-  String? wavPath = 'recording.wav';
   int startCount = 0;
+  int pauseCount = 0;
   int stopCount = 0;
-  int cancelCount = 0;
+  int disposeCount = 0;
+
+  final StreamController<double> _level = StreamController<double>.broadcast();
+  final StreamController<SpeechSegment> _speech =
+      StreamController<SpeechSegment>.broadcast();
+  final StreamController<void> _speechStart =
+      StreamController<void>.broadcast();
+
+  @override
+  Stream<double> get levelStream => _level.stream;
+
+  @override
+  Stream<SpeechSegment> get onSpeech => _speech.stream;
+
+  @override
+  Stream<void> get onSpeechStart => _speechStart.stream;
 
   @override
   Future<void> start() async {
@@ -29,15 +40,27 @@ class _FakeRecorder implements VoiceAudioRecorder {
   }
 
   @override
-  Future<String?> stop() async {
-    stopCount++;
-    return wavPath;
+  Future<void> pause() async {
+    pauseCount++;
   }
 
   @override
-  Future<void> cancel() async {
-    cancelCount++;
+  Future<void> stop() async {
+    stopCount++;
   }
+
+  @override
+  Future<void> dispose() async {
+    disposeCount++;
+    await _level.close();
+    await _speech.close();
+    await _speechStart.close();
+  }
+
+  void emitLevel(double v) => _level.add(v);
+  void emitSpeechStart() => _speechStart.add(null);
+  void emitSpeech({List<double>? pcm}) =>
+      _speech.add(SpeechSegment(pcm16: pcm ?? const <double>[0.1, -0.1, 0.2]));
 }
 
 class _FakeSpeechToText implements SpeechToText {
@@ -112,40 +135,36 @@ class _FakeGenerationSignal implements GenerationSignal {
 /// Pumps the microtask/event queue so awaited phase transitions settle.
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
-/// Feeds above-threshold "speech" into [vad] and ends the listen turn — the
-/// cubit only proceeds to transcribe/send when the VAD saw speech this turn.
-Future<void> _speakAndStop(
-  VoiceConversationCubit cubit,
-  VadController vad,
-) async {
-  vad.add(const MicLevel(-10)); // above the -35 speech threshold
-  await cubit.onTap();
+/// Emits a completed utterance and lets the cubit advance through transcribe →
+/// send → speak.
+Future<void> _speak(VoiceConversationCubit cubit, _FakeSegmenter seg) async {
+  seg.emitSpeechStart();
+  seg.emitSpeech();
+  await _settle();
   await _settle();
 }
 
 void main() {
-  late _FakeRecorder recorder;
+  late _FakeSegmenter seg;
   late _FakeSpeechToText stt;
   late _FakeTextToSpeech tts;
   late _FakeGenerationSignal gen;
-  late VadController vad;
   late List<String> sent;
 
   VoiceConversationCubit build({List<String>? errors}) {
     sent = <String>[];
-    vad = VadController();
-    recorder = _FakeRecorder();
+    seg = _FakeSegmenter();
     return VoiceConversationCubit(
-      recorder: recorder,
+      segmenter: seg,
       speechToText: stt,
       textToSpeech: tts,
-      vad: vad,
-      levelSource: null,
       sendMessage: (text) async {
         sent.add(text);
       },
       generationSignal: gen,
       onError: errors?.add,
+      // Avoid touching the filesystem in unit tests.
+      writeWav: (segment) async => 'segment.wav',
     );
   }
 
@@ -165,13 +184,13 @@ void main() {
 
     await cubit.enter();
     expect(cubit.state.phase, VoiceConversationPhase.listening);
-    expect(recorder.startCount, 1);
+    expect(seg.startCount, 1);
 
-    // Speak, then stop the turn.
-    await _speakAndStop(cubit, vad);
+    // The user speaks an utterance.
+    await _speak(cubit, seg);
 
-    // Transcribe ran, message sent, generation ran, reply spoken.
-    expect(recorder.stopCount, 1);
+    // Segment paused the mic, transcribe ran, message sent, reply spoken.
+    expect(seg.pauseCount, greaterThanOrEqualTo(1));
     expect(stt.text, 'hello there');
     expect(sent, ['hello there']);
     expect(gen.runCount, 1);
@@ -183,7 +202,19 @@ void main() {
     tts.finish();
     await _settle();
     expect(cubit.state.phase, VoiceConversationPhase.listening);
-    expect(recorder.startCount, 2);
+    expect(seg.startCount, 2);
+
+    await cubit.exit();
+    await cubit.close();
+  });
+
+  test('level stream drives the orb only while listening', () async {
+    final cubit = build();
+    await cubit.enter();
+
+    seg.emitLevel(0.8);
+    await _settle();
+    expect(cubit.state.micLevel, closeTo(0.8, 1e-9));
 
     await cubit.exit();
     await cubit.close();
@@ -194,24 +225,24 @@ void main() {
     final cubit = build();
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
 
     expect(sent, isEmpty);
     expect(gen.runCount, 0);
     expect(cubit.state.phase, VoiceConversationPhase.listening);
     // Started once on enter, again after the blank transcript.
-    expect(recorder.startCount, 2);
+    expect(seg.startCount, 2);
 
     await cubit.exit();
     await cubit.close();
   });
 
-  test('a silent turn (no speech detected) loops without sending', () async {
+  test('an empty segment loops without sending', () async {
     final cubit = build();
 
     await cubit.enter();
-    // No speech fed into the VAD this turn.
-    await cubit.onTap(); // stop-now, but VAD saw no speech
+    seg.emitSpeech(pcm: const <double>[]);
+    await _settle();
     await _settle();
 
     expect(sent, isEmpty);
@@ -228,7 +259,7 @@ void main() {
       final cubit = build();
 
       await cubit.enter();
-      await _speakAndStop(cubit, vad);
+      await _speak(cubit, seg);
       expect(cubit.state.phase, VoiceConversationPhase.speaking);
 
       // Tap to barge in.
@@ -243,20 +274,27 @@ void main() {
     },
   );
 
-  test('exit stops recorder + TTS and returns to idle', () async {
+  test('exit stops segmenter + TTS and returns to idle', () async {
     final cubit = build();
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
     expect(cubit.state.phase, VoiceConversationPhase.speaking);
 
     await cubit.exit();
 
     expect(cubit.state.phase, VoiceConversationPhase.idle);
-    expect(recorder.cancelCount, greaterThanOrEqualTo(1));
+    expect(seg.stopCount, greaterThanOrEqualTo(1));
     expect(tts.stopCount, greaterThanOrEqualTo(1));
 
     await cubit.close();
+  });
+
+  test('close disposes the segmenter', () async {
+    final cubit = build();
+    await cubit.enter();
+    await cubit.close();
+    expect(seg.disposeCount, 1);
   });
 
   test('STT error returns to listening without throwing', () async {
@@ -265,7 +303,7 @@ void main() {
     final cubit = build(errors: errors);
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
 
     expect(sent, isEmpty);
     expect(errors, contains('whisper failed'));
@@ -281,7 +319,7 @@ void main() {
     final cubit = build(errors: errors);
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
 
     expect(cubit.state.phase, VoiceConversationPhase.listening);
     expect(errors, isNotEmpty);
@@ -295,12 +333,12 @@ void main() {
     final cubit = build();
 
     await cubit.enter();
-    final startsBefore = recorder.startCount;
-    await _speakAndStop(cubit, vad);
+    final startsBefore = seg.startCount;
+    await _speak(cubit, seg);
 
     expect(tts.spoken, isEmpty);
     expect(cubit.state.phase, VoiceConversationPhase.listening);
-    expect(recorder.startCount, greaterThan(startsBefore));
+    expect(seg.startCount, greaterThan(startsBefore));
 
     await cubit.exit();
     await cubit.close();
@@ -312,7 +350,7 @@ void main() {
     final cubit = build(errors: errors);
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
 
     expect(errors, contains('engine down'));
     expect(cubit.state.phase, VoiceConversationPhase.listening);
@@ -324,7 +362,7 @@ void main() {
   test('mic permission failure on enter exits to idle', () async {
     final errors = <String>[];
     final cubit = build(errors: errors);
-    recorder.failStart = true;
+    seg.failStart = true;
 
     await cubit.enter();
     await _settle();
@@ -340,7 +378,7 @@ void main() {
     final cubit = build();
 
     await cubit.enter();
-    await _speakAndStop(cubit, vad);
+    await _speak(cubit, seg);
 
     expect(tts.spoken, isEmpty);
     expect(cubit.state.phase, VoiceConversationPhase.listening);

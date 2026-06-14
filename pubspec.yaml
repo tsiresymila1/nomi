@@ -60,6 +60,7 @@ dependencies:
   record: ^6.2.1
   flutter_tts: ^4.2.5
   mcp_dart: ^2.2.1
+  vad: ^0.0.8
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +79,10 @@ flutter:
     - .env
     - assets/  # JSON data file
     - assets/images/  # JSON data file
+    # Bundled Silero v5 VAD model for hands-free voice mode. Loaded offline via
+    # baseAssetPath ('assets/vad/') by VadSpeechSegmenter; source/SHA-256 pinned
+    # in that file's header so VAD works without a network round-trip.
+    - assets/vad/
     # Workspace RAG embedding model + tokenizer are NOT bundled. They are
     # downloaded once on first RAG use into the app documents directory by
     # RagModelProvisioner (see rag_model_provisioner.dart), keeping the app

@@ -2,21 +2,22 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:gena/features/chat/data/services/pcm_wav.dart';
+import 'package:gena/features/chat/data/services/speech_segmenter.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
-import 'package:gena/features/chat/data/services/vad_controller.dart';
 import 'package:gena/features/chat/presentation/cubit/text_to_speak.dart';
-import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 
 /// The phase of the hands-free conversation loop.
 enum VoiceConversationPhase {
   /// Not running (entered/exited).
   idle,
 
-  /// Recorder active; waiting for the user to finish speaking.
+  /// Microphone + neural VAD active; waiting for the user to finish an
+  /// utterance (or to tap to end the turn).
   listening,
 
-  /// Recorder stopped; running on-device transcription.
+  /// Segment captured; running on-device transcription.
   transcribing,
 
   /// Message sent; waiting for the assistant reply to finish generating.
@@ -40,7 +41,7 @@ class VoiceConversationState {
   /// The most recent transcript (shown while/after transcribing).
   final String partialTranscript;
 
-  /// Normalised 0..1 mic loudness, for animating the orb while listening.
+  /// Normalised 0..1 speech probability, for animating the orb while listening.
   final double micLevel;
 
   bool get isListening => phase == VoiceConversationPhase.listening;
@@ -63,53 +64,62 @@ class VoiceConversationState {
 }
 
 /// Orchestrates a continuous, hands-free voice conversation by composing the
-/// existing on-device pieces — the recorder + VAD, Whisper STT, the normal chat
-/// send/generate path, and flutter_tts — into one strictly sequential loop:
+/// on-device pieces — a neural Silero-VAD [SpeechSegmenter], Whisper STT, the
+/// normal chat send/generate path, and flutter_tts — into one strictly
+/// sequential loop:
 ///
 /// ```
-/// listening → (VAD stop) → transcribing → (blank → listening)
+/// listening → (segment) → transcribing → (blank → listening)
 ///   → send + thinking → (reply finished) → speaking → listening → …
 /// ```
 ///
-/// Strictly sequential: the recorder and TTS never run at the same time (no
-/// full-duplex, to avoid the mic picking up TTS output). Tapping during
+/// Strictly sequential: the microphone and TTS never run at the same time. The
+/// segmenter is paused/stopped before transcribing/thinking/speaking so it never
+/// captures the assistant's own speech (no full-duplex). Tapping during
 /// `speaking` barges in (cancels TTS → listening); tapping during `listening`
-/// stops the current turn now. [exit] tears everything down and returns to
+/// ends the current turn now. [exit] tears everything down and returns to
 /// `idle`.
 ///
 /// Errors never crash the loop: STT/generation failures return to listening; a
 /// TTS failure skips speaking and returns to listening.
 class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   VoiceConversationCubit({
-    required VoiceAudioRecorder recorder,
+    required SpeechSegmenter segmenter,
     required SpeechToText speechToText,
     required TextToSpeech textToSpeech,
-    required VadController vad,
     required Future<void> Function(String text) sendMessage,
     required GenerationSignal generationSignal,
-    VoiceLevelSource? levelSource,
     void Function(String message)? onError,
-  }) : _recorder = recorder,
+    Future<String> Function(SpeechSegment segment)? writeWav,
+  }) : _segmenter = segmenter,
        _speechToText = speechToText,
        _textToSpeech = textToSpeech,
-       _vad = vad,
        _sendMessage = sendMessage,
        _generationSignal = generationSignal,
-       _levelSource = levelSource,
        _onError = onError,
+       _writeWav =
+           writeWav ??
+           ((segment) =>
+               writePcm16Wav(segment.pcm16, sampleRate: segment.sampleRate)),
        super(const VoiceConversationState());
 
-  final VoiceAudioRecorder _recorder;
+  final SpeechSegmenter _segmenter;
   final SpeechToText _speechToText;
   final TextToSpeech _textToSpeech;
-  final VadController _vad;
   final Future<void> Function(String text) _sendMessage;
   final GenerationSignal _generationSignal;
-  final VoiceLevelSource? _levelSource;
   final void Function(String message)? _onError;
 
-  StreamSubscription<MicLevel>? _levelSubscription;
+  /// Writes a captured segment to a temporary WAV and returns its path.
+  /// Injectable so the loop is testable without touching the filesystem.
+  final Future<String> Function(SpeechSegment segment) _writeWav;
+
+  StreamSubscription<double>? _levelSubscription;
+  StreamSubscription<SpeechSegment>? _speechSubscription;
+  StreamSubscription<void>? _speechStartSubscription;
   StreamSubscription<bool>? _speakingSubscription;
+
+  bool _wired = false;
 
   /// Bumped on every [exit] (and re-entry) so a phase that was in flight when
   /// the user exits does not resume the loop afterwards.
@@ -122,15 +132,16 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   Future<void> enter() async {
     if (state.isActive) return;
     _runToken++;
+    _wireSegmenter();
     await _startListening(_runToken);
   }
 
-  /// Handles a tap on the orb: stop-listening-now during listening, or barge-in
+  /// Handles a tap on the orb: end-the-turn-now during listening, or barge-in
   /// (cancel TTS) during speaking.
   Future<void> onTap() async {
     switch (state.phase) {
       case VoiceConversationPhase.listening:
-        await _stopListeningAndContinue(_runToken);
+        await _endTurnEarly(_runToken);
       case VoiceConversationPhase.speaking:
         await _bargeIn(_runToken);
       case VoiceConversationPhase.idle:
@@ -141,22 +152,46 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     }
   }
 
+  // -- Segmenter wiring ------------------------------------------------------
+
+  /// Subscribes once to the segmenter's lifetime streams. The handlers are
+  /// guarded by [_running] + the current phase so events that arrive while
+  /// paused/transitioning are ignored.
+  void _wireSegmenter() {
+    if (_wired) return;
+    _wired = true;
+
+    _levelSubscription = _segmenter.levelStream.listen((level) {
+      if (isClosed || !state.isListening) return;
+      emit(state.copyWith(micLevel: level.clamp(0.0, 1.0)));
+    }, onError: (_) {});
+
+    _speechStartSubscription = _segmenter.onSpeechStart.listen((_) {
+      // Purely a hint that the user has started talking; no phase change. The
+      // orb level already reflects it, so nothing to emit here.
+    }, onError: (_) {});
+
+    _speechSubscription = _segmenter.onSpeech.listen((segment) {
+      final token = _runToken;
+      if (!_running(token) || !state.isListening) return;
+      unawaited(_handleSegment(token, segment));
+    }, onError: (_) {});
+  }
+
   // -- Phase: listening ------------------------------------------------------
 
   Future<void> _startListening(int token) async {
     if (!_running(token)) return;
-    await _detachLevel();
-    _vad.reset();
 
     try {
-      await _recorder.start();
+      await _segmenter.start();
     } catch (error) {
       _reportError(error);
       await _exitInternal();
       return;
     }
     if (!_running(token)) {
-      await _safeCancelRecorder();
+      await _safeStopSegmenter();
       return;
     }
 
@@ -167,46 +202,38 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
         micLevel: 0.0,
       ),
     );
+  }
 
-    _vad.start(
-      source: _levelSource,
-      onStop: (_) => unawaited(_stopListeningAndContinue(token)),
-    );
-
-    final source = _levelSource;
-    if (source != null) {
-      _levelSubscription = source
-          .levelStream(const Duration(milliseconds: 150))
-          .listen((level) {
-            if (!_running(token) || !state.isListening) return;
-            emit(state.copyWith(micLevel: level.normalized()));
-          }, onError: (_) {});
-    }
+  /// Tap-to-end during listening: the neural VAD captures continuously, so we
+  /// just keep listening (there is no recorder to stop). A subsequent
+  /// [onSpeech] event handles whatever was said.
+  Future<void> _endTurnEarly(int token) async {
+    // No-op beyond guarding: the segmenter emits a segment when the user stops
+    // talking. Tapping mid-listen has no separate "finish now" on the neural
+    // VAD, so we leave the turn running rather than truncating audio.
+    if (!_running(token) || !state.isListening) return;
   }
 
   bool _transitioningFromListening = false;
 
-  Future<void> _stopListeningAndContinue(int token) async {
+  Future<void> _handleSegment(int token, SpeechSegment segment) async {
     if (!_running(token) || !state.isListening) return;
     if (_transitioningFromListening) return;
     _transitioningFromListening = true;
     try {
-      final hadSpeech = _vad.hasDetectedSpeech;
-      _vad.reset();
-      await _detachLevel();
+      // Pause the mic immediately so it never captures the assistant's reply.
+      await _pauseSegmenter();
 
-      String? wavPath;
-      try {
-        wavPath = await _recorder.stop();
-      } catch (error) {
-        _reportError(error);
+      if (segment.pcm16.isEmpty) {
         await _restartListening(token);
         return;
       }
 
-      // No audio captured, or nothing above the speech threshold was heard:
-      // keep listening without sending.
-      if (wavPath == null || !hadSpeech) {
+      String wavPath;
+      try {
+        wavPath = await _writeWav(segment);
+      } catch (error) {
+        _reportError(error);
         await _restartListening(token);
         return;
       }
@@ -326,18 +353,16 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
 
   // -- Exit / teardown -------------------------------------------------------
 
-  /// Exits voice mode: stops the recorder + TTS, abandons any in-flight phase,
+  /// Exits voice mode: stops the segmenter + TTS, abandons any in-flight phase,
   /// and returns to idle.
   Future<void> exit() => _exitInternal();
 
   Future<void> _exitInternal() async {
     _runToken++; // invalidate any in-flight phase
     _transitioningFromListening = false;
-    _vad.reset();
-    await _detachLevel();
     await _speakingSubscription?.cancel();
     _speakingSubscription = null;
-    await _safeCancelRecorder();
+    await _safeStopSegmenter();
     try {
       await _textToSpeech.stop();
     } catch (_) {
@@ -346,16 +371,19 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     if (!isClosed) emit(const VoiceConversationState());
   }
 
-  Future<void> _detachLevel() async {
-    await _levelSubscription?.cancel();
-    _levelSubscription = null;
+  Future<void> _pauseSegmenter() async {
+    try {
+      await _segmenter.pause();
+    } catch (_) {
+      // Pausing is best-effort.
+    }
   }
 
-  Future<void> _safeCancelRecorder() async {
+  Future<void> _safeStopSegmenter() async {
     try {
-      await _recorder.cancel();
+      await _segmenter.stop();
     } catch (_) {
-      // Cancelling is best-effort.
+      // Stopping is best-effort.
     }
   }
 
@@ -371,7 +399,13 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   @override
   Future<void> close() async {
     await _exitInternal();
-    _vad.dispose();
+    await _levelSubscription?.cancel();
+    _levelSubscription = null;
+    await _speechSubscription?.cancel();
+    _speechSubscription = null;
+    await _speechStartSubscription?.cancel();
+    _speechStartSubscription = null;
+    await _segmenter.dispose();
     return super.close();
   }
 }

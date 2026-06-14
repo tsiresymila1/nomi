@@ -22,18 +22,23 @@ class ChatGenerationSignal implements GenerationSignal {
   final ChatDraftResponseCubit _draftResponseCubit;
 
   @override
-  Future<String?> run(Future<void> Function() send) async {
+  Future<String?> run(
+    Future<void> Function() send, {
+    void Function(String draftSoFar)? onDraft,
+  }) async {
     String? lastNonEmptyDraft;
 
     // Seed with whatever is already in the draft (normally null/empty).
     final seed = _draftResponseCubit.state;
     if (seed != null && seed.trim().isNotEmpty) {
       lastNonEmptyDraft = seed;
+      onDraft?.call(seed);
     }
 
     final subscription = _draftResponseCubit.stream.listen((draft) {
       if (draft != null && draft.trim().isNotEmpty) {
         lastNonEmptyDraft = draft;
+        onDraft?.call(draft);
       }
     });
 

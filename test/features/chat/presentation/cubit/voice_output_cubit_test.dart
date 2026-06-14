@@ -12,7 +12,9 @@ class _FakeTextToSpeech implements TextToSpeech {
   final Object? speakError;
 
   final List<String> spokenTexts = <String>[];
+  final List<String> queuedTexts = <String>[];
   int stopCount = 0;
+  int clearCount = 0;
   final StreamController<bool> _controller = StreamController<bool>.broadcast();
 
   @override
@@ -29,8 +31,22 @@ class _FakeTextToSpeech implements TextToSpeech {
   }
 
   @override
+  Future<void> enqueue(String text) async {
+    if (speakError != null) throw speakError!;
+    queuedTexts.add(text);
+  }
+
+  @override
+  Future<void> clear() async {
+    clearCount++;
+    queuedTexts.clear();
+    _controller.add(false);
+  }
+
+  @override
   Future<void> stop() async {
     stopCount++;
+    queuedTexts.clear();
     _controller.add(false);
   }
 
@@ -129,8 +145,10 @@ void main() {
 
     await cubit.toggle('m1', markdown);
 
-    expect(tts.spokenTexts, hasLength(1));
-    final spoken = tts.spokenTexts.single;
+    // The message is chunked into sentences: the first plays via speak(), the
+    // rest are queued. The combined spoken text must be markdown-free.
+    expect(tts.spokenTexts, isNotEmpty);
+    final spoken = [...tts.spokenTexts, ...tts.queuedTexts].join(' ');
 
     expect(spoken, isNot(contains('**')));
     expect(spoken, isNot(contains('`')));
@@ -144,6 +162,18 @@ void main() {
     expect(spoken, contains('quoted line'));
 
     await cubit.close();
+  });
+
+  test('a multi-sentence message is chunked: first spoken, rest queued', () {
+    final cubit = buildCubit();
+
+    return cubit
+        .toggle('m1', 'First sentence. Second sentence. Third sentence.')
+        .then((_) async {
+          expect(tts.spokenTexts, ['First sentence.']);
+          expect(tts.queuedTexts, ['Second sentence.', 'Third sentence.']);
+          await cubit.close();
+        });
   });
 
   test('a speak failure surfaces an error and clears state', () async {

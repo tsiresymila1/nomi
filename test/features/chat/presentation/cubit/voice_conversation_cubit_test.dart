@@ -84,8 +84,18 @@ class _FakeTextToSpeech implements TextToSpeech {
   bool available = true;
   Object? speakError;
 
+  /// Items that have actually started "playing", in order. Queued items move
+  /// here as the queue drains via [finish]/[finishAll].
   final List<String> spoken = <String>[];
+
+  /// Every utterance handed to the engine (played + still queued), in order.
+  final List<String> allEnqueued = <String>[];
+
+  /// Pending queued items (not yet "playing"), drained on [finish].
+  final List<String> _queue = <String>[];
+  bool _active = false;
   int stopCount = 0;
+  int clearCount = 0;
   final StreamController<bool> _controller = StreamController<bool>.broadcast();
 
   @override
@@ -97,18 +107,63 @@ class _FakeTextToSpeech implements TextToSpeech {
   @override
   Future<void> speak(String text) async {
     if (speakError != null) throw speakError!;
+    _queue.clear();
     spoken.add(text);
+    allEnqueued.add(text);
+    _active = true;
     _controller.add(true);
+  }
+
+  @override
+  Future<void> enqueue(String text) async {
+    if (speakError != null) throw speakError!;
+    allEnqueued.add(text);
+    if (_active) {
+      _queue.add(text);
+      return;
+    }
+    spoken.add(text);
+    _active = true;
+    _controller.add(true);
+  }
+
+  @override
+  Future<void> clear() async {
+    clearCount++;
+    _queue.clear();
+    _active = false;
+    _controller.add(false);
   }
 
   @override
   Future<void> stop() async {
     stopCount++;
+    _queue.clear();
+    _active = false;
     _controller.add(false);
   }
 
-  /// Simulates the engine finishing the utterance.
-  void finish() => _controller.add(false);
+  /// Simulates the engine finishing the current utterance. Advances the queue
+  /// (staying "speaking") or emits idle when drained — mirroring the real queue.
+  void finish() {
+    _active = false;
+    if (_queue.isNotEmpty) {
+      spoken.add(_queue.removeAt(0));
+      _active = true;
+      // No idle emitted between queued items.
+      return;
+    }
+    _controller.add(false);
+  }
+
+  /// Drains the entire queue and emits idle, as if every utterance finished.
+  void finishAll() {
+    while (_queue.isNotEmpty) {
+      spoken.add(_queue.removeAt(0));
+    }
+    _active = false;
+    _controller.add(false);
+  }
 
   @override
   Future<void> dispose() async {
@@ -116,18 +171,38 @@ class _FakeTextToSpeech implements TextToSpeech {
   }
 }
 
-/// Generation signal that returns a canned reply (or throws) without touching
-/// real chat cubits.
+/// Generation signal that streams a canned reply through [onDraft] (so the cubit
+/// chunks + enqueues sentences) and returns the final text, or throws.
 class _FakeGenerationSignal implements GenerationSignal {
   String? reply = 'assistant reply';
+
+  /// When set, the reply is delivered as these incremental draft snapshots
+  /// (cumulative text-so-far) before completing.
+  List<String>? draftChunks;
   Object? error;
   int runCount = 0;
 
   @override
-  Future<String?> run(Future<void> Function() send) async {
+  Future<String?> run(
+    Future<void> Function() send, {
+    void Function(String draftSoFar)? onDraft,
+  }) async {
     runCount++;
     await send();
     if (error != null) throw error!;
+
+    final chunks = draftChunks;
+    if (chunks != null) {
+      for (final draft in chunks) {
+        onDraft?.call(draft);
+      }
+      return chunks.isEmpty ? reply : chunks.last;
+    }
+
+    // Default: deliver the whole reply as one final draft snapshot.
+    if (reply != null && reply!.trim().isNotEmpty) {
+      onDraft?.call(reply!);
+    }
     return reply;
   }
 }
@@ -203,6 +278,53 @@ void main() {
     await _settle();
     expect(cubit.state.phase, VoiceConversationPhase.listening);
     expect(seg.startCount, 2);
+
+    await cubit.exit();
+    await cubit.close();
+  });
+
+  test('streams completed sentences into TTS as the reply grows', () async {
+    // The reply arrives as growing draft snapshots; each completed sentence is
+    // enqueued before the whole reply is done.
+    gen.draftChunks = <String>[
+      'First sentence. Second sen',
+      'First sentence. Second sentence. Third sen',
+      'First sentence. Second sentence. Third sentence.',
+    ];
+    final cubit = build();
+
+    await cubit.enter();
+    await _speak(cubit, seg);
+
+    // All three completed sentences reached the engine in order, and the cubit
+    // is in the speaking phase while the queue drains.
+    expect(cubit.state.phase, VoiceConversationPhase.speaking);
+    expect(tts.allEnqueued, [
+      'First sentence.',
+      'Second sentence.',
+      'Third sentence.',
+    ]);
+    // Only the first is "playing"; the rest are queued behind it.
+    expect(tts.spoken, ['First sentence.']);
+
+    // Drain the queue -> back to listening for the next turn.
+    tts.finishAll();
+    await _settle();
+    expect(cubit.state.phase, VoiceConversationPhase.listening);
+
+    await cubit.exit();
+    await cubit.close();
+  });
+
+  test('flushes the trailing partial when generation completes', () async {
+    // The reply never ends with a terminator, so it only emits on flush.
+    gen.draftChunks = <String>['No trailing', 'No trailing terminator here'];
+    final cubit = build();
+
+    await cubit.enter();
+    await _speak(cubit, seg);
+
+    expect(tts.spoken, ['No trailing terminator here']);
 
     await cubit.exit();
     await cubit.close();

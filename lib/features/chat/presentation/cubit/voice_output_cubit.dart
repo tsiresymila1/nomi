@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
-import 'package:gena/features/chat/presentation/cubit/text_to_speak.dart';
+import 'package:gena/features/chat/presentation/cubit/sentence_chunker.dart';
 
 /// State for the read-aloud feature: which assistant message is currently being
 /// spoken (if any) and whether playback is active.
@@ -58,13 +58,24 @@ class VoiceOutputCubit extends Cubit<VoiceOutputState> {
       return;
     }
 
-    final plainText = stripMarkdownForSpeech(text);
-    if (plainText.isEmpty) return;
+    // The message is already complete, so split it into sentences and queue
+    // them: the engine starts on the first sentence (smoother start) and the
+    // rest follow, while a mid-playback stop only needs to clear the queue.
+    final chunker = SentenceChunker();
+    final sentences = <String>[
+      ...chunker.takeCompletedSentences(text),
+      ...chunker.flush(text),
+    ];
+    if (sentences.isEmpty) return;
 
     // Reflect the new target immediately; the start handler will confirm.
     emit(VoiceOutputState(speakingMessageId: messageId, isSpeaking: true));
     try {
-      await _textToSpeech.speak(plainText);
+      // First sentence replaces any prior playback + queue; the rest append.
+      await _textToSpeech.speak(sentences.first);
+      for (final sentence in sentences.skip(1)) {
+        await _textToSpeech.enqueue(sentence);
+      }
     } catch (error) {
       emit(const VoiceOutputState());
       _reportError(error);

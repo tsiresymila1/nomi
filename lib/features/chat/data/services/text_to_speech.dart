@@ -15,10 +15,24 @@ abstract interface class TextToSpeech {
   /// Whether text-to-speech is available on the current platform.
   bool get isAvailable;
 
-  /// Speaks [text] aloud. Any in-progress utterance is stopped first.
+  /// Speaks [text] aloud. Any in-progress utterance is stopped first, and any
+  /// queued utterances (see [enqueue]) are cleared.
   Future<void> speak(String text);
 
-  /// Stops any in-progress utterance.
+  /// Queues [text] to be spoken after any currently-playing and previously
+  /// queued utterances finish. Use this to stream a reply sentence-by-sentence:
+  /// enqueue each completed sentence as it arrives so playback starts on the
+  /// first sentence without waiting for the whole reply.
+  ///
+  /// Empty/blank text is ignored. The queue is drained in FIFO order; the next
+  /// item starts when the engine reports the previous utterance finished.
+  Future<void> enqueue(String text);
+
+  /// Clears any queued utterances and stops the current one (barge-in). Leaves
+  /// the engine ready for a new [speak]/[enqueue].
+  Future<void> clear();
+
+  /// Stops any in-progress utterance and clears the queue.
   Future<void> stop();
 
   /// Emits `true` when speaking starts and `false` when it ends (on
@@ -44,6 +58,13 @@ class FlutterTextToSpeech implements TextToSpeech {
   final StreamController<bool> _speakingController =
       StreamController<bool>.broadcast();
 
+  /// Pending utterances queued via [enqueue], drained FIFO as each finishes.
+  final List<String> _queue = <String>[];
+
+  /// Whether an utterance is currently playing (so the completion handler knows
+  /// to start the next queued item rather than emit idle).
+  bool _utteranceActive = false;
+
   bool _disposed = false;
 
   @override
@@ -54,9 +75,37 @@ class FlutterTextToSpeech implements TextToSpeech {
 
   void _wireHandlers() {
     _tts.setStartHandler(() => _emit(true));
-    _tts.setCompletionHandler(() => _emit(false));
-    _tts.setCancelHandler(() => _emit(false));
-    _tts.setErrorHandler((_) => _emit(false));
+    _tts.setCompletionHandler(_onUtteranceFinished);
+    // A cancel/error ends the whole queue: speakers expect barge-in/stop to
+    // halt everything, and an engine error should not silently advance.
+    _tts.setCancelHandler(() {
+      _utteranceActive = false;
+      _queue.clear();
+      _emit(false);
+    });
+    _tts.setErrorHandler((_) {
+      _utteranceActive = false;
+      _queue.clear();
+      _emit(false);
+    });
+  }
+
+  /// Called when the engine finishes one utterance. If more are queued, speak
+  /// the next one (staying "speaking"); otherwise go idle.
+  void _onUtteranceFinished() {
+    _utteranceActive = false;
+    if (_disposed) {
+      _emit(false);
+      return;
+    }
+    if (_queue.isNotEmpty) {
+      final next = _queue.removeAt(0);
+      _utteranceActive = true;
+      // Do not emit idle between queued sentences; keep listeners "speaking".
+      unawaited(_tts.speak(next));
+      return;
+    }
+    _emit(false);
   }
 
   void _applyDefaults() {
@@ -80,14 +129,43 @@ class FlutterTextToSpeech implements TextToSpeech {
     final spoken = text.trim();
     if (spoken.isEmpty) return;
 
-    // Stop any in-progress utterance before starting a new one so toggling
-    // between messages does not overlap audio.
+    // Stop any in-progress utterance and discard the queue before starting a
+    // fresh one-shot so toggling between messages does not overlap audio.
+    _queue.clear();
     await _tts.stop();
+    _utteranceActive = true;
     await _tts.speak(spoken);
   }
 
   @override
+  Future<void> enqueue(String text) async {
+    if (!isAvailable) {
+      throw TextToSpeechException(_capabilities.textToSpeechUnavailableMessage);
+    }
+    final spoken = text.trim();
+    if (spoken.isEmpty) return;
+
+    if (_utteranceActive) {
+      _queue.add(spoken);
+      return;
+    }
+    // Nothing playing: start immediately so the first sentence is not delayed.
+    _utteranceActive = true;
+    await _tts.speak(spoken);
+  }
+
+  @override
+  Future<void> clear() async {
+    _queue.clear();
+    _utteranceActive = false;
+    await _tts.stop();
+    _emit(false);
+  }
+
+  @override
   Future<void> stop() async {
+    _queue.clear();
+    _utteranceActive = false;
     await _tts.stop();
     // Some platforms do not fire the cancel handler on an explicit stop, so
     // surface the idle state proactively.
@@ -98,6 +176,8 @@ class FlutterTextToSpeech implements TextToSpeech {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _queue.clear();
+    _utteranceActive = false;
     await _tts.stop();
     await _speakingController.close();
   }

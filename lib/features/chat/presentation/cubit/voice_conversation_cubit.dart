@@ -6,7 +6,7 @@ import 'package:gena/features/chat/data/services/pcm_wav.dart';
 import 'package:gena/features/chat/data/services/speech_segmenter.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
-import 'package:gena/features/chat/presentation/cubit/text_to_speak.dart';
+import 'package:gena/features/chat/presentation/cubit/sentence_chunker.dart';
 
 /// The phase of the hands-free conversation loop.
 enum VoiceConversationPhase {
@@ -113,6 +113,10 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   /// Writes a captured segment to a temporary WAV and returns its path.
   /// Injectable so the loop is testable without touching the filesystem.
   final Future<String> Function(SpeechSegment segment) _writeWav;
+
+  /// Splits the streaming reply into sentences so TTS can start speaking the
+  /// first sentence before the whole reply is generated. Reset per reply.
+  final SentenceChunker _chunker = SentenceChunker();
 
   StreamSubscription<double>? _levelSubscription;
   StreamSubscription<SpeechSegment>? _speechSubscription;
@@ -277,41 +281,98 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     if (!_running(token)) return;
     emit(state.copyWith(phase: VoiceConversationPhase.thinking));
 
+    // Stream completed sentences into TTS as the reply grows. The mic is already
+    // paused for the whole thinking/speaking span, so this never records the
+    // assistant. Sentences are only enqueued when TTS is available.
+    _chunker.reset();
+    final ttsAvailable = _textToSpeech.isAvailable;
+    var spokeAnything = false;
+    var ttsFailed = false;
+    final enqueues = <Future<void>>[];
+
+    void enqueueSentence(String sentence) {
+      if (!spokeAnything) {
+        // First sentence: wire the drain listener and reflect speaking before
+        // audio starts.
+        _beginSpeakingPhase(token);
+        spokeAnything = true;
+      }
+      // Track the future so we can observe enqueue errors before deciding the
+      // post-generation phase, but do not block the streaming callback on it.
+      enqueues.add(_enqueueSpoken(sentence, onError: () => ttsFailed = true));
+    }
+
+    void enqueueCompleted(String draftSoFar) {
+      if (!ttsAvailable || !_running(token) || ttsFailed) return;
+      // Stop feeding the queue if the user barged in / the turn moved on (e.g.
+      // back to listening) while generation is still streaming.
+      if (spokeAnything && state.phase != VoiceConversationPhase.speaking) {
+        return;
+      }
+      for (final sentence in _chunker.takeCompletedSentences(draftSoFar)) {
+        enqueueSentence(sentence);
+      }
+    }
+
     String? reply;
     try {
-      reply = await _generationSignal.run(() => _sendMessage(text));
+      reply = await _generationSignal.run(
+        () => _sendMessage(text),
+        onDraft: enqueueCompleted,
+      );
     } catch (error) {
       _reportError(error);
+      await _clearSpeaking();
       await _restartListening(token);
       return;
     }
     if (!_running(token)) return;
 
-    final spoken = stripMarkdownForSpeech(reply ?? '');
-    if (spoken.isEmpty) {
-      // Nothing to say (e.g. send was a no-op) — keep the conversation going.
+    // Flush the trailing partial sentence (the reply is now complete). Skip if
+    // the user already barged in (back to listening) while we were generating.
+    final fullReply = reply ?? '';
+    final bargedIn =
+        spokeAnything && state.phase != VoiceConversationPhase.speaking;
+    if (ttsAvailable && !bargedIn && !ttsFailed) {
+      for (final sentence in _chunker.flush(fullReply)) {
+        enqueueSentence(sentence);
+      }
+    }
+
+    // Let all in-flight enqueues settle so `ttsFailed` reflects any engine
+    // error before we choose the next phase.
+    await Future.wait(enqueues);
+    if (!_running(token)) return;
+
+    if (bargedIn) {
+      // Already returned to listening via barge-in; nothing more to do.
+      return;
+    }
+    if (ttsFailed) {
+      // The engine errored while enqueuing: tear down speaking and keep looping.
+      await _clearSpeaking();
       await _restartListening(token);
       return;
     }
-
-    await _speak(token, spoken);
+    if (!spokeAnything) {
+      // Nothing to say (empty reply, or TTS unavailable) — keep looping.
+      await _restartListening(token);
+      return;
+    }
+    // Otherwise the speaking-phase listener returns to listening once the queue
+    // drains (speakingChanges -> false).
   }
 
   // -- Phase: speaking -------------------------------------------------------
 
-  Future<void> _speak(int token, String text) async {
-    if (!_running(token)) return;
-
-    if (!_textToSpeech.isAvailable) {
-      // TTS unavailable: skip speaking, keep looping.
-      await _restartListening(token);
-      return;
+  /// Switches to the speaking phase (idempotent) and wires the listener that
+  /// returns to listening once the spoken queue drains.
+  void _beginSpeakingPhase(int token) {
+    if (state.phase != VoiceConversationPhase.speaking) {
+      emit(state.copyWith(phase: VoiceConversationPhase.speaking));
     }
+    if (_speakingSubscription != null) return;
 
-    emit(state.copyWith(phase: VoiceConversationPhase.speaking));
-
-    // Return to listening when the utterance ends (completion/cancel/error).
-    await _speakingSubscription?.cancel();
     _speakingSubscription = _textToSpeech.speakingChanges.listen((speaking) {
       if (speaking) return;
       if (!_running(token) || state.phase != VoiceConversationPhase.speaking) {
@@ -321,14 +382,27 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
       _speakingSubscription = null;
       unawaited(_restartListening(token));
     });
+  }
 
+  Future<void> _enqueueSpoken(
+    String sentence, {
+    void Function()? onError,
+  }) async {
     try {
-      await _textToSpeech.speak(text);
+      await _textToSpeech.enqueue(sentence);
     } catch (error) {
       _reportError(error);
-      await _speakingSubscription?.cancel();
-      _speakingSubscription = null;
-      await _restartListening(token);
+      onError?.call();
+    }
+  }
+
+  Future<void> _clearSpeaking() async {
+    await _speakingSubscription?.cancel();
+    _speakingSubscription = null;
+    try {
+      await _textToSpeech.clear();
+    } catch (_) {
+      // best-effort
     }
   }
 
@@ -415,6 +489,14 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
 /// internals. [run] starts the send (via the supplied action), waits until
 /// generation completes, and returns the final assistant text (or `null` if
 /// none was produced).
+///
+/// While generation is in flight, every growing-draft update is delivered to the
+/// optional [onDraft] callback. This lets the caller stream the partial reply
+/// through a sentence chunker and start speaking completed sentences before the
+/// whole reply is finished.
 abstract interface class GenerationSignal {
-  Future<String?> run(Future<void> Function() send);
+  Future<String?> run(
+    Future<void> Function() send, {
+    void Function(String draftSoFar)? onDraft,
+  });
 }

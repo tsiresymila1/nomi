@@ -5,7 +5,11 @@ import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/unsupported_local_model_runtime.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 
-ModelInfo _model({required String source, int maxTokens = 4096}) {
+ModelInfo _model({
+  required String source,
+  int maxTokens = 4096,
+  String? mmprojSource,
+}) {
   return ModelInfo(
     id: 1,
     name: 'Test',
@@ -25,6 +29,7 @@ ModelInfo _model({required String source, int maxTokens = 4096}) {
     preferredBackend: 'cpu',
     sourceType: 'file',
     source: source,
+    mmprojSource: mmprojSource,
   );
 }
 
@@ -134,6 +139,75 @@ void main() {
         expect(loader.requests[0].contextSize, 4096);
       },
     );
+
+    test('mmprojPath is null when the model has no projector', () async {
+      final loader = _FakeLoader();
+      final runtime = CachingLocalModelRuntime(loader);
+
+      await runtime.prepare(_model(source: '/models/a.gguf'));
+
+      expect(loader.requests.single.mmprojPath, isNull);
+    });
+
+    test(
+      'flows a local mmprojSource into the request as a canonical path',
+      () async {
+        final loader = _FakeLoader();
+        final runtime = CachingLocalModelRuntime(loader);
+
+        await runtime.prepare(
+          _model(
+            source: '/models/a.gguf',
+            mmprojSource: '/models/mmproj-a.gguf',
+          ),
+        );
+
+        expect(loader.requests.single.mmprojPath, isNotNull);
+        expect(loader.requests.single.mmprojPath, contains('mmproj-a.gguf'));
+      },
+    );
+
+    test('ignores a remote (not-yet-downloaded) projector URL', () async {
+      final loader = _FakeLoader();
+      final runtime = CachingLocalModelRuntime(loader);
+
+      await runtime.prepare(
+        _model(
+          source: '/models/a.gguf',
+          mmprojSource: 'https://example.com/mmproj-a.gguf',
+        ),
+      );
+
+      expect(loader.requests.single.mmprojPath, isNull);
+    });
+
+    test('reloads when the projector path changes', () async {
+      final loader = _FakeLoader();
+      final runtime = CachingLocalModelRuntime(loader);
+
+      await runtime.prepare(_model(source: '/models/a.gguf'));
+      await runtime.prepare(
+        _model(source: '/models/a.gguf', mmprojSource: '/models/mmproj-a.gguf'),
+      );
+
+      expect(loader.loads, 2);
+      expect(loader.disposes, 1);
+    });
+
+    test('reuses the cached runtime when the projector is unchanged', () async {
+      final loader = _FakeLoader();
+      final runtime = CachingLocalModelRuntime(loader);
+
+      await runtime.prepare(
+        _model(source: '/models/a.gguf', mmprojSource: '/models/mmproj-a.gguf'),
+      );
+      await runtime.prepare(
+        _model(source: '/models/a.gguf', mmprojSource: '/models/mmproj-a.gguf'),
+      );
+
+      expect(loader.loads, 1);
+      expect(loader.disposes, 0);
+    });
 
     test('rejects unsupported sources', () async {
       final loader = _FakeLoader();

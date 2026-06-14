@@ -2344,6 +2344,17 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _mmprojSourceMeta = const VerificationMeta(
+    'mmprojSource',
+  );
+  @override
+  late final GeneratedColumn<String> mmprojSource = GeneratedColumn<String>(
+    'mmproj_source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2368,6 +2379,7 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     preferredBackend,
     sourceType,
     source,
+    mmprojSource,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2541,6 +2553,15 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
     } else if (isInserting) {
       context.missing(_sourceMeta);
     }
+    if (data.containsKey('mmproj_source')) {
+      context.handle(
+        _mmprojSourceMeta,
+        mmprojSource.isAcceptableOrUnknown(
+          data['mmproj_source']!,
+          _mmprojSourceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2638,6 +2659,10 @@ class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
         DriftSqlType.string,
         data['${effectivePrefix}source'],
       )!,
+      mmprojSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mmproj_source'],
+      ),
     );
   }
 
@@ -2670,6 +2695,7 @@ class Model extends DataClass implements Insertable<Model> {
   final String preferredBackend;
   final String sourceType;
   final String source;
+  final String? mmprojSource;
   const Model({
     required this.id,
     required this.createdAt,
@@ -2693,6 +2719,7 @@ class Model extends DataClass implements Insertable<Model> {
     required this.preferredBackend,
     required this.sourceType,
     required this.source,
+    this.mmprojSource,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2725,6 +2752,9 @@ class Model extends DataClass implements Insertable<Model> {
     map['preferred_backend'] = Variable<String>(preferredBackend);
     map['source_type'] = Variable<String>(sourceType);
     map['source'] = Variable<String>(source);
+    if (!nullToAbsent || mmprojSource != null) {
+      map['mmproj_source'] = Variable<String>(mmprojSource);
+    }
     return map;
   }
 
@@ -2758,6 +2788,9 @@ class Model extends DataClass implements Insertable<Model> {
       preferredBackend: Value(preferredBackend),
       sourceType: Value(sourceType),
       source: Value(source),
+      mmprojSource: mmprojSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mmprojSource),
     );
   }
 
@@ -2791,6 +2824,7 @@ class Model extends DataClass implements Insertable<Model> {
       preferredBackend: serializer.fromJson<String>(json['preferredBackend']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
       source: serializer.fromJson<String>(json['source']),
+      mmprojSource: serializer.fromJson<String?>(json['mmprojSource']),
     );
   }
   @override
@@ -2819,6 +2853,7 @@ class Model extends DataClass implements Insertable<Model> {
       'preferredBackend': serializer.toJson<String>(preferredBackend),
       'sourceType': serializer.toJson<String>(sourceType),
       'source': serializer.toJson<String>(source),
+      'mmprojSource': serializer.toJson<String?>(mmprojSource),
     };
   }
 
@@ -2845,6 +2880,7 @@ class Model extends DataClass implements Insertable<Model> {
     String? preferredBackend,
     String? sourceType,
     String? source,
+    Value<String?> mmprojSource = const Value.absent(),
   }) => Model(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -2868,6 +2904,7 @@ class Model extends DataClass implements Insertable<Model> {
     preferredBackend: preferredBackend ?? this.preferredBackend,
     sourceType: sourceType ?? this.sourceType,
     source: source ?? this.source,
+    mmprojSource: mmprojSource.present ? mmprojSource.value : this.mmprojSource,
   );
   Model copyWithCompanion(ModelsCompanion data) {
     return Model(
@@ -2913,6 +2950,9 @@ class Model extends DataClass implements Insertable<Model> {
           ? data.sourceType.value
           : this.sourceType,
       source: data.source.present ? data.source.value : this.source,
+      mmprojSource: data.mmprojSource.present
+          ? data.mmprojSource.value
+          : this.mmprojSource,
     );
   }
 
@@ -2940,7 +2980,8 @@ class Model extends DataClass implements Insertable<Model> {
           ..write('randomSeed: $randomSeed, ')
           ..write('preferredBackend: $preferredBackend, ')
           ..write('sourceType: $sourceType, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('mmprojSource: $mmprojSource')
           ..write(')'))
         .toString();
   }
@@ -2969,6 +3010,7 @@ class Model extends DataClass implements Insertable<Model> {
     preferredBackend,
     sourceType,
     source,
+    mmprojSource,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2995,7 +3037,8 @@ class Model extends DataClass implements Insertable<Model> {
           other.randomSeed == this.randomSeed &&
           other.preferredBackend == this.preferredBackend &&
           other.sourceType == this.sourceType &&
-          other.source == this.source);
+          other.source == this.source &&
+          other.mmprojSource == this.mmprojSource);
 }
 
 class ModelsCompanion extends UpdateCompanion<Model> {
@@ -3021,6 +3064,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
   final Value<String> preferredBackend;
   final Value<String> sourceType;
   final Value<String> source;
+  final Value<String?> mmprojSource;
   const ModelsCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -3044,6 +3088,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.preferredBackend = const Value.absent(),
     this.sourceType = const Value.absent(),
     this.source = const Value.absent(),
+    this.mmprojSource = const Value.absent(),
   });
   ModelsCompanion.insert({
     this.id = const Value.absent(),
@@ -3068,6 +3113,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     this.preferredBackend = const Value.absent(),
     required String sourceType,
     required String source,
+    this.mmprojSource = const Value.absent(),
   }) : name = Value(name),
        description = Value(description),
        modelType = Value(modelType),
@@ -3096,6 +3142,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Expression<String>? preferredBackend,
     Expression<String>? sourceType,
     Expression<String>? source,
+    Expression<String>? mmprojSource,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3121,6 +3168,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       if (preferredBackend != null) 'preferred_backend': preferredBackend,
       if (sourceType != null) 'source_type': sourceType,
       if (source != null) 'source': source,
+      if (mmprojSource != null) 'mmproj_source': mmprojSource,
     });
   }
 
@@ -3147,6 +3195,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     Value<String>? preferredBackend,
     Value<String>? sourceType,
     Value<String>? source,
+    Value<String?>? mmprojSource,
   }) {
     return ModelsCompanion(
       id: id ?? this.id,
@@ -3172,6 +3221,7 @@ class ModelsCompanion extends UpdateCompanion<Model> {
       preferredBackend: preferredBackend ?? this.preferredBackend,
       sourceType: sourceType ?? this.sourceType,
       source: source ?? this.source,
+      mmprojSource: mmprojSource ?? this.mmprojSource,
     );
   }
 
@@ -3246,6 +3296,9 @@ class ModelsCompanion extends UpdateCompanion<Model> {
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
+    if (mmprojSource.present) {
+      map['mmproj_source'] = Variable<String>(mmprojSource.value);
+    }
     return map;
   }
 
@@ -3273,7 +3326,8 @@ class ModelsCompanion extends UpdateCompanion<Model> {
           ..write('randomSeed: $randomSeed, ')
           ..write('preferredBackend: $preferredBackend, ')
           ..write('sourceType: $sourceType, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('mmprojSource: $mmprojSource')
           ..write(')'))
         .toString();
   }
@@ -5006,6 +5060,7 @@ typedef $$ModelsTableCreateCompanionBuilder =
       Value<String> preferredBackend,
       required String sourceType,
       required String source,
+      Value<String?> mmprojSource,
     });
 typedef $$ModelsTableUpdateCompanionBuilder =
     ModelsCompanion Function({
@@ -5031,6 +5086,7 @@ typedef $$ModelsTableUpdateCompanionBuilder =
       Value<String> preferredBackend,
       Value<String> sourceType,
       Value<String> source,
+      Value<String?> mmprojSource,
     });
 
 class $$ModelsTableFilterComposer
@@ -5149,6 +5205,11 @@ class $$ModelsTableFilterComposer
 
   ColumnFilters<String> get source => $composableBuilder(
     column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mmprojSource => $composableBuilder(
+    column: $table.mmprojSource,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5271,6 +5332,11 @@ class $$ModelsTableOrderingComposer
     column: $table.source,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get mmprojSource => $composableBuilder(
+    column: $table.mmprojSource,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ModelsTableAnnotationComposer
@@ -5367,6 +5433,11 @@ class $$ModelsTableAnnotationComposer
 
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get mmprojSource => $composableBuilder(
+    column: $table.mmprojSource,
+    builder: (column) => column,
+  );
 }
 
 class $$ModelsTableTableManager
@@ -5419,6 +5490,7 @@ class $$ModelsTableTableManager
                 Value<String> preferredBackend = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
                 Value<String> source = const Value.absent(),
+                Value<String?> mmprojSource = const Value.absent(),
               }) => ModelsCompanion(
                 id: id,
                 createdAt: createdAt,
@@ -5442,6 +5514,7 @@ class $$ModelsTableTableManager
                 preferredBackend: preferredBackend,
                 sourceType: sourceType,
                 source: source,
+                mmprojSource: mmprojSource,
               ),
           createCompanionCallback:
               ({
@@ -5467,6 +5540,7 @@ class $$ModelsTableTableManager
                 Value<String> preferredBackend = const Value.absent(),
                 required String sourceType,
                 required String source,
+                Value<String?> mmprojSource = const Value.absent(),
               }) => ModelsCompanion.insert(
                 id: id,
                 createdAt: createdAt,
@@ -5490,6 +5564,7 @@ class $$ModelsTableTableManager
                 preferredBackend: preferredBackend,
                 sourceType: sourceType,
                 source: source,
+                mmprojSource: mmprojSource,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

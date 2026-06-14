@@ -1,5 +1,7 @@
 // Verifies that every default catalog source is a single-file llamadart model
-// (.gguf or .litertlm) that resolves on Hugging Face.
+// (.gguf or .litertlm) that resolves on Hugging Face. This includes vision
+// `mmprojUrl` projector files, which are extracted alongside the model URLs
+// because both are plain `'https://...'` string literals in the catalog.
 //
 // A source "resolves" when the request returns HTTP 200 (public file) or
 // HTTP 401 (gated file that requires the Hugging Face token the app supplies at

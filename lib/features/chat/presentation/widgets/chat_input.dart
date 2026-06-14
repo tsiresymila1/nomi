@@ -304,6 +304,13 @@ class _ChatInputState extends State<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
         children: [
+          _buildVisionPromptChips(
+            context: context,
+            colorScheme: colorScheme,
+            activeModel: activeModel,
+            hasSelectedImage: hasSelectedImage,
+            isGenerating: isGenerating,
+          ),
           _buildTokenBudgetIndicator(
             context: context,
             colorScheme: colorScheme,
@@ -433,6 +440,51 @@ class _ChatInputState extends State<ChatInput> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Preset analyze-image prompts shown when a vision model has an image
+  /// attached. Gated behind local-model support (vision is native-only).
+  Widget _buildVisionPromptChips({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required ModelInfo? activeModel,
+    required bool hasSelectedImage,
+    required bool isGenerating,
+  }) {
+    if (!AppCapabilities.current.supportsLocalModels) {
+      return const SizedBox.shrink();
+    }
+    if (!hasSelectedImage || !(activeModel?.supportImage ?? false)) {
+      return const SizedBox.shrink();
+    }
+
+    const presets = <String>[
+      'Describe this image',
+      'Extract the text',
+      "What's on this receipt?",
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: presets
+              .map(
+                (prompt) => ActionChip(
+                  label: Text(prompt),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: isGenerating
+                      ? null
+                      : () => sl<ChatInputCubit>().setDraftText(prompt),
+                ),
+              )
+              .toList(growable: false),
+        ),
       ),
     );
   }

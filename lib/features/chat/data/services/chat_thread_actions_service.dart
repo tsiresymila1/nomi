@@ -13,6 +13,19 @@ import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
 import 'package:gena/features/chat/data/services/chat_title_service.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
+import 'package:gena/features/downloads/data/models/model_info.dart';
+
+/// Message shown when an image is attached to a model that cannot read images.
+const imageInputUnsupportedMessage =
+    "This model can't read images. Pick a vision model.";
+
+/// Whether an image attachment must be rejected for [model]. Returns true only
+/// when an image is attached and the model does not declare `supportImage`.
+bool isImageInputRejected({required ModelInfo? model, required bool hasImage}) {
+  if (!hasImage) return false;
+  if (model == null) return false;
+  return !model.supportImage;
+}
 
 class LocalMessageBudgetPlan {
   const LocalMessageBudgetPlan({
@@ -90,6 +103,14 @@ class ChatThreadActions {
     if (activeModel == null) {
       await AppToast.show(
         'No model selected. Please add/select a model first.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    if (isImageInputRejected(model: activeModel, hasImage: hasImage)) {
+      await AppToast.show(
+        imageInputUnsupportedMessage,
         type: AppToastType.info,
       );
       return;

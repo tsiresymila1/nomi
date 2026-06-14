@@ -27,6 +27,7 @@ abstract class ModelInfo with _$ModelInfo {
     required String preferredBackend,
     required String sourceType,
     required String source,
+    String? mmprojSource,
   }) = _ModelInfo;
 
   factory ModelInfo.fromJson(Map<String, dynamic> json) =>

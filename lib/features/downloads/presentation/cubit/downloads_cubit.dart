@@ -192,6 +192,10 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         throw StateError('Compatible model file is missing.');
       }
 
+      // Vision GGUF models ship a multimodal projector alongside the model
+      // file. Installation only completes once both files exist locally.
+      await _ensureProjectorDownloaded(model, installKey);
+
       final installedId = localModelIdForPath(effectiveSource);
       await _modelRepositoryActions.updateModelId(
         id: model.id,
@@ -331,6 +335,55 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   Future<void> resetSeedModels() async {
     await _modelRepositoryActions.clearAndReseedDefaultModels();
     await refreshInstalledModels();
+  }
+
+  /// Downloads the multimodal projector for a vision model when it declares one
+  /// and persists the resolved local path. Installation is not considered
+  /// complete until the projector file exists.
+  Future<void> _ensureProjectorDownloaded(
+    ModelInfo model,
+    String installKey,
+  ) async {
+    final mmproj = model.mmprojSource?.trim();
+    if (mmproj == null || mmproj.isEmpty) return;
+
+    final uri = Uri.tryParse(mmproj);
+    final isRemote =
+        uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+
+    if (!isRemote) {
+      // Already a local path; confirm it exists.
+      final existing = File(canonicalLocalModelPath(mmproj));
+      if (await existing.exists()) return;
+      throw StateError('Projector file is missing for this vision model.');
+    }
+
+    _throwIfUnsupportedLocalSource(mmproj);
+    final downloaded = await ModelBackgroundDownloadService.instance
+        .downloadModelToFile(
+          modelKey: '${installKey}_mmproj',
+          modelName: '${model.name} projector',
+          sourceUrl: mmproj,
+          onProgress: (progress, _) {
+            emit(
+              state.copyWith(
+                progressByKey: {
+                  ...state.progressByKey,
+                  installKey: progress.clamp(0, 1),
+                },
+              ),
+            );
+          },
+        );
+
+    final projectorPath = downloaded.path;
+    if (!await File(projectorPath).exists()) {
+      throw StateError('Projector download did not produce a file.');
+    }
+    await _modelRepositoryActions.updateModelMmprojSource(
+      id: model.id,
+      mmprojSource: projectorPath,
+    );
   }
 
   Future<void> _updateModelSource(

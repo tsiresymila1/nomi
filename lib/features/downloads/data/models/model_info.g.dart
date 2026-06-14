@@ -28,6 +28,7 @@ _ModelInfo _$ModelInfoFromJson(Map<String, dynamic> json) => _ModelInfo(
   preferredBackend: json['preferredBackend'] as String,
   sourceType: json['sourceType'] as String,
   source: json['source'] as String,
+  mmprojSource: json['mmprojSource'] as String?,
 );
 
 Map<String, dynamic> _$ModelInfoToJson(_ModelInfo instance) =>
@@ -53,4 +54,5 @@ Map<String, dynamic> _$ModelInfoToJson(_ModelInfo instance) =>
       'preferredBackend': instance.preferredBackend,
       'sourceType': instance.sourceType,
       'source': instance.source,
+      'mmprojSource': instance.mmprojSource,
     };

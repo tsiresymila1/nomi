@@ -18,7 +18,8 @@ void main() {
       expect(
         isCompatible(model.sourceUrl),
         isTrue,
-        reason: '${model.key} sourceUrl must be .gguf/.litertlm: '
+        reason:
+            '${model.key} sourceUrl must be .gguf/.litertlm: '
             '${model.sourceUrl}',
       );
       expect(model.sourceUrl.endsWith('.task'), isFalse);
@@ -36,6 +37,32 @@ void main() {
         expect(url.endsWith('.task'), isFalse);
       }
     }
+  });
+
+  test('vision projector urls are compatible gguf files', () {
+    for (final model in kDefaultSeedModels) {
+      final mmproj = model.mmprojUrl;
+      if (mmproj == null) continue;
+      expect(
+        mmproj.endsWith('.gguf'),
+        isTrue,
+        reason: '${model.key} mmprojUrl must end with .gguf: $mmproj',
+      );
+      // A projector only pairs with a GGUF chat/VL model that supports images.
+      expect(model.sourceUrl.endsWith('.gguf'), isTrue, reason: model.key);
+      expect(model.supportImage, isTrue, reason: model.key);
+    }
+  });
+
+  test('the seeded vision GGUF entry pairs a model with its projector', () {
+    final vision = kDefaultSeedModels.firstWhere(
+      (m) => m.mmprojUrl != null,
+      orElse: () => throw StateError('expected a vision GGUF entry'),
+    );
+    expect(vision.supportImage, isTrue);
+    expect(vision.sourceUrl.endsWith('.gguf'), isTrue);
+    expect(vision.mmprojUrl!.endsWith('.gguf'), isTrue);
+    expect(vision.mmprojSize, isNotNull);
   });
 
   test('catalog keys are unique', () {
@@ -79,7 +106,10 @@ void main() {
     });
 
     test('does not match an unrelated name or source', () {
-      expect(model.matchesModelNameOrSource('nope', 'http://x/y.gguf'), isFalse);
+      expect(
+        model.matchesModelNameOrSource('nope', 'http://x/y.gguf'),
+        isFalse,
+      );
     });
   });
 
@@ -90,9 +120,6 @@ void main() {
       source: first.baseUrl,
     );
     expect(found?.key, first.key);
-    expect(
-      findDefaultSeedModelByNameOrSource(name: 'x', source: 'y'),
-      isNull,
-    );
+    expect(findDefaultSeedModelByNameOrSource(name: 'x', source: 'y'), isNull);
   });
 }

@@ -42,6 +42,7 @@ class ModelRepository {
               preferredBackend: row.preferredBackend,
               sourceType: row.sourceType,
               source: row.source,
+              mmprojSource: row.mmprojSource,
             ),
           )
           .toList(growable: false),
@@ -146,6 +147,7 @@ class DefaultModelSeeder {
               preferredBackend: Value(defaultModel.preferredBackend.name),
               sourceType: 'file',
               source: defaultModel.sourceUrl,
+              mmprojSource: Value(defaultModel.mmprojUrl),
             ),
           );
 
@@ -304,6 +306,16 @@ class ModelRepositoryActions {
   }) async {
     await (_database.update(_database.models)..where((t) => t.id.equals(id)))
         .write(db.ModelsCompanion(modelId: Value(modelId)));
+  }
+
+  /// Persists the resolved multimodal projector path (or its source URL) for a
+  /// model. Leaves every other column untouched.
+  Future<void> updateModelMmprojSource({
+    required int id,
+    required String? mmprojSource,
+  }) async {
+    await (_database.update(_database.models)..where((t) => t.id.equals(id)))
+        .write(db.ModelsCompanion(mmprojSource: Value(mmprojSource)));
   }
 
   Future<void> clearAndReseedDefaultModels() async {

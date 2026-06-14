@@ -24,10 +24,19 @@ class _LlamadartRuntimeLoader implements LocalRuntimeLoader {
       throw LocalModelRuntimeException('Model file not found: $canonical');
     }
 
+    String? mmprojPath = request.mmprojPath?.trim();
+    if (mmprojPath != null && mmprojPath.isEmpty) mmprojPath = null;
+    if (mmprojPath != null && !File(mmprojPath).existsSync()) {
+      throw LocalModelRuntimeException(
+        'Multimodal projector file not found: $mmprojPath',
+      );
+    }
+
     final modelId = localModelIdForPath(canonical);
     final definition = LlamaModelDefinition(
       name: modelId,
       modelPath: canonical,
+      mmprojPath: mmprojPath,
       modelParams: ModelParams(contextSize: request.contextSize),
       supportsEmbeddings: false,
       supportsTools: true,

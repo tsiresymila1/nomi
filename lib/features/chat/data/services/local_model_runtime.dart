@@ -1,5 +1,6 @@
 import 'package:genkit/genkit.dart' hide ModelInfo;
 
+import 'package:gena/features/downloads/data/local_model_files.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 
 /// Provider-neutral local model runtime contract.
@@ -70,6 +71,21 @@ String? localModelRuntimeExtension(String source) {
   return fileName.substring(index);
 }
 
+/// Resolves a stored projector source to a canonical local file path.
+///
+/// Returns null when the projector is absent, blank, or still a remote URL
+/// (i.e. the projector has not been downloaded yet). Once the downloader has
+/// fetched the projector it persists the local path, which resolves here.
+String? resolveLocalMmprojPath(String? mmprojSource) {
+  final trimmed = mmprojSource?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+    return null;
+  }
+  return canonicalLocalModelPath(trimmed);
+}
+
 /// Whether [source] points at a llamadart-compatible local model file.
 bool isLocalModelRuntimeSource(String source) {
   final extension = localModelRuntimeExtension(source);
@@ -85,11 +101,16 @@ class LocalRuntimeRequest {
     required this.modelInfo,
     required this.contextSize,
     required this.constrainedOutput,
+    this.mmprojPath,
   });
 
   final ModelInfo modelInfo;
   final int contextSize;
   final bool constrainedOutput;
+
+  /// Resolved local path to the multimodal projector (`mmproj-*.gguf`), or null
+  /// when the model is text-only or the projector is not yet downloaded.
+  final String? mmprojPath;
 }
 
 /// A loaded runtime returned by a [LocalRuntimeLoader].
@@ -134,7 +155,9 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
       );
     }
 
-    final key = '${model.source.trim()}|${model.maxTokens}';
+    final mmprojPath = resolveLocalMmprojPath(model.mmprojSource);
+
+    final key = '${model.source.trim()}|${model.maxTokens}|${mmprojPath ?? ''}';
     final current = _current;
     if (current != null && _cacheKey == key) {
       return PreparedLocalModel(
@@ -144,7 +167,7 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
       );
     }
 
-    // Switching models or context windows: dispose the previous runtime first.
+    // Switching models, context windows, or projectors: dispose first.
     await reset();
 
     final loaded = await _loader.load(
@@ -152,6 +175,7 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
         modelInfo: model,
         contextSize: model.maxTokens,
         constrainedOutput: localModelRuntimeExtension(model.source) == '.gguf',
+        mmprojPath: mmprojPath,
       ),
     );
     _current = loaded;

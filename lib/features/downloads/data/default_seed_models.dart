@@ -19,6 +19,8 @@ class DefaultSeedModel {
     this.supportAudio = false,
     this.supportsFunctionCalls = false,
     this.isThinking = false,
+    this.mmprojUrl,
+    this.mmprojSize,
   });
 
   final String key;
@@ -27,6 +29,13 @@ class DefaultSeedModel {
   final String? webUrl;
   final String? desktopUrl;
   final String size;
+
+  /// Optional multimodal projector (`mmproj-*.gguf`) for GGUF vision models.
+  /// LiteRT-LM vision bundles do not need a separate projector.
+  final String? mmprojUrl;
+
+  /// Human-readable size of the projector file, when [mmprojUrl] is set.
+  final String? mmprojSize;
   final LocalModelType modelType;
   final LocalModelBackend preferredBackend;
   final double temperature;
@@ -277,6 +286,25 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     topP: 0.95,
     supportImage: true,
     maxTokens: 2048,
+  ),
+  const DefaultSeedModel(
+    key: 'smolVLM2_500M',
+    displayName: 'SmolVLM2 500M Instruct (Vision)',
+    // public (GGUF chat/VL model + its multimodal projector)
+    baseUrl:
+        'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    size: '417MB',
+    modelType: LocalModelType.general,
+    preferredBackend: LocalModelBackend.cpu,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.95,
+    supportImage: true,
+    maxTokens: 4096,
+    // public projector paired with the GGUF model above.
+    mmprojUrl:
+        'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    mmprojSize: '104MB',
   ),
   const DefaultSeedModel(
     key: 'phi4_mini',

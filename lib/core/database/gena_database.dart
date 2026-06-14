@@ -74,6 +74,7 @@ class Models extends Table with TableMixin {
   late final preferredBackend = text().withDefault(const Constant('gpu'))();
   late final sourceType = text()();
   late final source = text()();
+  late final mmprojSource = text().nullable()();
 }
 
 @DriftDatabase(
@@ -83,7 +84,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -176,6 +177,9 @@ class GenaDatabase extends _$GenaDatabase {
       }
       if (from < 13) {
         await m.addColumn(workspaceDocuments, workspaceDocuments.ragSourceId);
+      }
+      if (from < 14) {
+        await m.addColumn(models, models.mmprojSource);
       }
     },
   );

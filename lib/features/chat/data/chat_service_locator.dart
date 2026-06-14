@@ -22,6 +22,9 @@ import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
+import 'package:gena/features/mcp/data/mcp_repository.dart';
+import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
+import 'package:gena/features/mcp/data/services/mcp_tool_actions_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
@@ -138,6 +141,9 @@ void registerChatDependencies() {
         nativeToolActions: sl<NativeToolActions>(),
         workspaceQueries: sl<WorkspaceQueries>(),
         workspaceRagActions: sl<WorkspaceRagActions>(),
+        mcpRepository: sl<McpRepository>(),
+        mcpClientManager: sl<McpClientManager>(),
+        mcpToolActions: sl<McpToolActions>(),
       ),
     );
   }

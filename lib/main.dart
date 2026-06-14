@@ -10,6 +10,7 @@ import 'package:gena/features/chat/data/chat_service_locator.dart';
 import 'package:gena/features/downloads/data/downloads_service_locator.dart';
 import 'package:gena/features/home/presentation/app_introduction_gate.dart';
 import 'package:gena/features/home/presentation/cubit/home_service_locator.dart';
+import 'package:gena/features/mcp/data/mcp_service_locator.dart';
 import 'package:gena/features/remote_servers/data/remote_servers_service_locator.dart';
 import 'package:gena/features/setting/data/settings_service_locator.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -23,6 +24,7 @@ void main() async {
   registerDownloadsDependencies();
   registerRemoteServersDependencies();
   registerSettingsDependencies();
+  registerMcpDependencies();
   registerChatDependencies();
   registerHomeDependencies();
   HydratedBloc.storage = await HydratedStorage.build(

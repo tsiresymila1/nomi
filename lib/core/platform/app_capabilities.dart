@@ -20,6 +20,7 @@ class AppCapabilities {
     required this.supportsWorkspaceRag,
     required this.supportsSpeechToText,
     required this.supportsTextToSpeech,
+    required this.supportsMcp,
   });
 
   final AppPlatform platform;
@@ -28,6 +29,7 @@ class AppCapabilities {
   final bool supportsWorkspaceRag;
   final bool supportsSpeechToText;
   final bool supportsTextToSpeech;
+  final bool supportsMcp;
 
   String get localModelsUnavailableMessage =>
       'Local models and workspace RAG are unavailable $_platformLabel. '
@@ -80,6 +82,9 @@ class AppCapabilities {
       supportsWorkspaceRag: supportsLocalAi,
       supportsSpeechToText: supportsLocalAi,
       supportsTextToSpeech: supportsTextToSpeech,
+      // MCP is a remote feature over Streamable HTTP, available everywhere
+      // (including web). Kept as a seam for future per-platform gating.
+      supportsMcp: true,
     );
   }
 

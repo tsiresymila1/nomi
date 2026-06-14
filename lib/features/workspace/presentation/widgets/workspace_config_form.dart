@@ -139,6 +139,19 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                 sendEmailEnabled: state.nativeSendEmailEnabled,
                 flashlightEnabled: state.nativeFlashlightEnabled,
               ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: capabilities.supportsMcp && state.mcpEnabled,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enable MCP tools'),
+                subtitle: const Text(
+                  'Expose tools from connected MCP servers to the model. '
+                  'Each MCP tool call requires user approval.',
+                ),
+                onChanged: capabilities.supportsMcp
+                    ? cubit.setMcpEnabled
+                    : null,
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [

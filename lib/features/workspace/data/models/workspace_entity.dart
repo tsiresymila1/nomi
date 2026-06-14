@@ -8,6 +8,7 @@ class WorkspaceEntity {
   final bool nativeOpenAppEnabled;
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
+  final bool mcpEnabled;
   final DateTime createdAt;
 
   const WorkspaceEntity({
@@ -20,6 +21,7 @@ class WorkspaceEntity {
     required this.nativeOpenAppEnabled,
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
+    required this.mcpEnabled,
     required this.createdAt,
   });
 }

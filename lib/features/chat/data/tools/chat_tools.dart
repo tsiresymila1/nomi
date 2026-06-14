@@ -5,6 +5,7 @@ import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/chat/data/tools/calculator.dart';
 import 'package:gena/features/chat/data/tools/web_search_service.dart';
+import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
@@ -380,6 +381,31 @@ List<UnifiedChatToolDefinition> buildUnifiedChatToolDefinitions({
   return tools;
 }
 
+/// Maps discovered MCP tool definitions to [UnifiedChatToolDefinition]s.
+///
+/// Returns an empty list when the model does not support function calls so the
+/// tool set stays consistent with [buildUnifiedChatToolDefinitions].
+List<UnifiedChatToolDefinition> buildMcpUnifiedToolDefinitions({
+  required bool supportsFunctionCalls,
+  required bool mcpEnabled,
+  required List<McpToolDef> mcpTools,
+}) {
+  if (!supportsFunctionCalls || !mcpEnabled) {
+    return const <UnifiedChatToolDefinition>[];
+  }
+  return mcpTools
+      .map(
+        (tool) => UnifiedChatToolDefinition(
+          name: tool.namespacedName,
+          description: tool.description.trim().isEmpty
+              ? 'External MCP tool "${tool.toolName}". $_nativeMutatingActionApproval'
+              : '${tool.description.trim()} $_nativeMutatingActionApproval',
+          parameters: tool.parameters,
+        ),
+      )
+      .toList(growable: false);
+}
+
 List<openai.Tool> buildRemoteChatTools({
   required bool supportsFunctionCalls,
   required bool enableRagTool,
@@ -431,6 +457,11 @@ Future<Map<String, dynamic>> executeChatToolByName(
     Map<String, dynamic> args,
   )?
   nativeToolHandler,
+  Future<Map<String, dynamic>> Function(
+    String toolName,
+    Map<String, dynamic> args,
+  )?
+  mcpToolHandler,
 }) async {
   logger.i(toolName);
   logger.i(args);
@@ -528,6 +559,16 @@ Future<Map<String, dynamic>> executeChatToolByName(
       }
       return nativeToolHandler(toolName, args);
     default:
+      if (isMcpToolName(toolName)) {
+        if (mcpToolHandler == null) {
+          return <String, dynamic>{
+            'status': 'error',
+            'error': 'mcp_disabled',
+            'message': 'MCP tools are not available in this workspace.',
+          };
+        }
+        return mcpToolHandler(toolName, args);
+      }
       return <String, dynamic>{
         'status': 'error',
         'error': 'unknown_tool',

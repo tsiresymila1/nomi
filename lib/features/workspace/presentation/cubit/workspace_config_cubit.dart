@@ -95,6 +95,11 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
     emit(state.copyWith(nativeFlashlightEnabled: value));
   }
 
+  void setMcpEnabled(bool value) {
+    if (value && !_capabilities.supportsMcp) return;
+    emit(state.copyWith(mcpEnabled: value));
+  }
+
   Future<void> save() async {
     if (state.isSaving) return;
     if (workspaceId.trim().isEmpty) {
@@ -127,6 +132,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
           nativeOpenAppEnabled: Value(state.nativeOpenAppEnabled),
           nativeSendEmailEnabled: Value(state.nativeSendEmailEnabled),
           nativeFlashlightEnabled: Value(state.nativeFlashlightEnabled),
+          mcpEnabled: Value(_capabilities.supportsMcp && state.mcpEnabled),
         ),
       );
     } finally {
@@ -232,6 +238,7 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
                 nativeOpenAppEnabled: row.nativeOpenAppEnabled,
                 nativeSendEmailEnabled: row.nativeSendEmailEnabled,
                 nativeFlashlightEnabled: row.nativeFlashlightEnabled,
+                mcpEnabled: row.mcpEnabled,
                 createdAt: row.createdAt,
               );
 
@@ -268,6 +275,9 @@ class WorkspaceConfigCubit extends Cubit<WorkspaceConfigState> {
         nativeFlashlightEnabled: shouldHydrate
             ? workspace.nativeFlashlightEnabled
             : state.nativeFlashlightEnabled,
+        mcpEnabled: _capabilities.supportsMcp
+            ? (shouldHydrate ? workspace.mcpEnabled : state.mcpEnabled)
+            : false,
       ),
     );
   }

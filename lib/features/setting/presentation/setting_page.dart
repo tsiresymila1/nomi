@@ -88,6 +88,26 @@ class SettingsPage extends StatelessWidget {
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 100.ms)
                     .slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 8),
+                ListTile(
+                      title: const Text(
+                        'MCP servers',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      subtitle: const Text(
+                        'Connect remote MCP servers and expose their tools to chat',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      leading: const Icon(Icons.extension_outlined),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                      ),
+                      onTap: () => context.pushNamed('mcp-servers'),
+                    )
+                    .animate()
+                    .fadeIn(duration: 220.ms, delay: 140.ms)
+                    .slideY(begin: 0.08, end: 0),
               ],
             ),
           );

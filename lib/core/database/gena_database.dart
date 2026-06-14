@@ -29,6 +29,14 @@ class Workspaces extends Table with TableMixin {
   late final nativeFlashlightEnabled = boolean().withDefault(
     const Constant(true),
   )();
+  late final mcpEnabled = boolean().withDefault(const Constant(false))();
+}
+
+class McpServers extends Table with TableMixin {
+  late final name = text().withLength(min: 1, max: 64)();
+  late final url = text()();
+  late final authHeader = text().nullable()();
+  late final enabled = boolean().withDefault(const Constant(true))();
 }
 
 class WorkspaceDocuments extends Table with TableMixin {
@@ -78,13 +86,13 @@ class Models extends Table with TableMixin {
 }
 
 @DriftDatabase(
-  tables: [Workspaces, WorkspaceDocuments, Chats, Messages, Models],
+  tables: [Workspaces, WorkspaceDocuments, Chats, Messages, Models, McpServers],
 )
 class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -180,6 +188,10 @@ class GenaDatabase extends _$GenaDatabase {
       }
       if (from < 14) {
         await m.addColumn(models, models.mmprojSource);
+      }
+      if (from < 15) {
+        await m.createTable(mcpServers);
+        await m.addColumn(workspaces, workspaces.mcpEnabled);
       }
     },
   );

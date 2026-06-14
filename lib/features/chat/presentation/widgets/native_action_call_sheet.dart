@@ -3,8 +3,13 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/models/native_tool_request.dart';
 import 'package:gena/features/chat/data/tools/native_tool_actions_service.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
+import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
 
 String _toolLabel(String toolName) {
+  final mcpRef = parseMcpToolName(toolName);
+  if (mcpRef != null) {
+    return 'MCP: ${mcpRef.toolName} (server ${mcpRef.serverId})';
+  }
   return switch (toolName) {
     nativeOpenUrlToolName => 'Open URL',
     nativeOpenAppToolName => 'Open App',
@@ -41,9 +46,14 @@ class NativeActionCallSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Approve Native Action',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              Text(
+                isMcpToolName(request.toolName)
+                    ? 'Approve MCP Tool'
+                    : 'Approve Native Action',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 10),
               Text(

@@ -17,6 +17,7 @@ class WorkspaceConfigState {
     required this.nativeOpenAppEnabled,
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
+    required this.mcpEnabled,
     required this.hydratedWorkspaceId,
   });
 
@@ -35,6 +36,7 @@ class WorkspaceConfigState {
       nativeOpenAppEnabled: true,
       nativeSendEmailEnabled: true,
       nativeFlashlightEnabled: true,
+      mcpEnabled: false,
       hydratedWorkspaceId: null,
     );
   }
@@ -52,6 +54,7 @@ class WorkspaceConfigState {
   final bool nativeOpenAppEnabled;
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
+  final bool mcpEnabled;
   final String? hydratedWorkspaceId;
 
   bool get workspaceNotFound => !workspaceLoading && workspace == null;
@@ -71,6 +74,7 @@ class WorkspaceConfigState {
     bool? nativeOpenAppEnabled,
     bool? nativeSendEmailEnabled,
     bool? nativeFlashlightEnabled,
+    bool? mcpEnabled,
     String? hydratedWorkspaceId,
     bool clearHydratedWorkspaceId = false,
   }) {
@@ -90,6 +94,7 @@ class WorkspaceConfigState {
           nativeSendEmailEnabled ?? this.nativeSendEmailEnabled,
       nativeFlashlightEnabled:
           nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
+      mcpEnabled: mcpEnabled ?? this.mcpEnabled,
       hydratedWorkspaceId: clearHydratedWorkspaceId
           ? null
           : hydratedWorkspaceId ?? this.hydratedWorkspaceId,

@@ -34,6 +34,7 @@ class WorkspaceQueries {
               nativeOpenAppEnabled: row.nativeOpenAppEnabled,
               nativeSendEmailEnabled: row.nativeSendEmailEnabled,
               nativeFlashlightEnabled: row.nativeFlashlightEnabled,
+              mcpEnabled: row.mcpEnabled,
               createdAt: row.createdAt,
             ),
           )
@@ -75,6 +76,7 @@ class WorkspaceQueries {
       nativeOpenAppEnabled: row.nativeOpenAppEnabled,
       nativeSendEmailEnabled: row.nativeSendEmailEnabled,
       nativeFlashlightEnabled: row.nativeFlashlightEnabled,
+      mcpEnabled: row.mcpEnabled,
       createdAt: row.createdAt,
     );
   }
@@ -109,6 +111,7 @@ class WorkspaceQueries {
           nativeOpenAppEnabled: workspaceRow.nativeOpenAppEnabled,
           nativeSendEmailEnabled: workspaceRow.nativeSendEmailEnabled,
           nativeFlashlightEnabled: workspaceRow.nativeFlashlightEnabled,
+          mcpEnabled: workspaceRow.mcpEnabled,
           createdAt: workspaceRow.createdAt,
         );
 

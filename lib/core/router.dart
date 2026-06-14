@@ -13,6 +13,7 @@ import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/presentation/add_model_page.dart';
 import 'package:gena/features/downloads/presentation/download_page.dart';
 import 'package:gena/features/home/presentation/home_page.dart';
+import 'package:gena/features/mcp/presentation/mcp_servers_page.dart';
 import 'package:gena/features/remote_servers/presentation/remote_servers_page.dart';
 import 'package:go_router/go_router.dart';
 
@@ -81,6 +82,12 @@ final router = GoRouter(
       name: 'remote-servers',
       pageBuilder: (context, state) =>
           _buildTransitionPage(state: state, child: const RemoteServersPage()),
+    ),
+    GoRoute(
+      path: '/mcp-servers',
+      name: 'mcp-servers',
+      pageBuilder: (context, state) =>
+          _buildTransitionPage(state: state, child: const McpServersPage()),
     ),
     GoRoute(
       path: '/settings/workspace/:workspaceId/config',

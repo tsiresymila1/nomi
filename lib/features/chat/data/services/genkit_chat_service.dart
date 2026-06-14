@@ -12,6 +12,7 @@ import 'package:gena/features/chat/data/services/chat_thread_context_service.dar
 import 'package:gena/features/chat/data/services/genkit_chat_helpers.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
+import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
@@ -59,6 +60,26 @@ Future<void> generateAssistantResponseWithGenkit({
         (activeWorkspace?.nativeToolsEnabled ?? false) &&
         (activeWorkspace?.nativeFlashlightEnabled ?? false),
   );
+
+  final mcpEnabled =
+      AppCapabilities.current.supportsMcp &&
+      (activeWorkspace?.mcpEnabled ?? false) &&
+      activeModel.supportsFunctionCalls;
+  if (mcpEnabled) {
+    final enabledServers = await deps.mcpRepository.listEnabledServers();
+    if (enabledServers.isNotEmpty) {
+      final mcpTools = await deps.mcpClientManager.discoverTools(
+        enabledServers,
+      );
+      toolDefinitions.addAll(
+        buildMcpUnifiedToolDefinitions(
+          supportsFunctionCalls: activeModel.supportsFunctionCalls,
+          mcpEnabled: true,
+          mcpTools: mcpTools,
+        ),
+      );
+    }
+  }
 
   final storedMessages =
       await (database.select(database.messages)
@@ -320,6 +341,12 @@ List<String> _registerTools({
                 ? null
                 : (toolName, args) => deps.nativeToolActions.requestAndExecute(
                     toolName: toolName,
+                    args: args,
+                  ),
+            mcpToolHandler: !isMcpToolName(definition.name)
+                ? null
+                : (toolName, args) => deps.mcpToolActions.requestAndExecute(
+                    namespacedName: toolName,
                     args: args,
                   ),
           );

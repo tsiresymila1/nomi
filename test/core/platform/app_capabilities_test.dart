@@ -13,6 +13,16 @@ void main() {
       expect(capabilities.supportsTextToSpeech, isTrue);
     });
 
+    test('supportsMcp is true on every platform', () {
+      for (final platform in AppPlatform.values) {
+        expect(
+          AppCapabilities.forPlatform(platform).supportsMcp,
+          isTrue,
+          reason: 'MCP should be available on $platform',
+        );
+      }
+    });
+
     for (final platform in [
       AppPlatform.android,
       AppPlatform.iOS,

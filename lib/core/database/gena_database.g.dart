@@ -146,6 +146,21 @@ class $WorkspacesTable extends Workspaces
         ),
         defaultValue: const Constant(true),
       );
+  static const VerificationMeta _mcpEnabledMeta = const VerificationMeta(
+    'mcpEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> mcpEnabled = GeneratedColumn<bool>(
+    'mcp_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("mcp_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -158,6 +173,7 @@ class $WorkspacesTable extends Workspaces
     nativeOpenAppEnabled,
     nativeSendEmailEnabled,
     nativeFlashlightEnabled,
+    mcpEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -248,6 +264,12 @@ class $WorkspacesTable extends Workspaces
         ),
       );
     }
+    if (data.containsKey('mcp_enabled')) {
+      context.handle(
+        _mcpEnabledMeta,
+        mcpEnabled.isAcceptableOrUnknown(data['mcp_enabled']!, _mcpEnabledMeta),
+      );
+    }
     return context;
   }
 
@@ -297,6 +319,10 @@ class $WorkspacesTable extends Workspaces
         DriftSqlType.bool,
         data['${effectivePrefix}native_flashlight_enabled'],
       )!,
+      mcpEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}mcp_enabled'],
+      )!,
     );
   }
 
@@ -317,6 +343,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
   final bool nativeOpenAppEnabled;
   final bool nativeSendEmailEnabled;
   final bool nativeFlashlightEnabled;
+  final bool mcpEnabled;
   const Workspace({
     required this.id,
     required this.createdAt,
@@ -328,6 +355,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     required this.nativeOpenAppEnabled,
     required this.nativeSendEmailEnabled,
     required this.nativeFlashlightEnabled,
+    required this.mcpEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -342,6 +370,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     map['native_open_app_enabled'] = Variable<bool>(nativeOpenAppEnabled);
     map['native_send_email_enabled'] = Variable<bool>(nativeSendEmailEnabled);
     map['native_flashlight_enabled'] = Variable<bool>(nativeFlashlightEnabled);
+    map['mcp_enabled'] = Variable<bool>(mcpEnabled);
     return map;
   }
 
@@ -357,6 +386,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       nativeOpenAppEnabled: Value(nativeOpenAppEnabled),
       nativeSendEmailEnabled: Value(nativeSendEmailEnabled),
       nativeFlashlightEnabled: Value(nativeFlashlightEnabled),
+      mcpEnabled: Value(mcpEnabled),
     );
   }
 
@@ -386,6 +416,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       nativeFlashlightEnabled: serializer.fromJson<bool>(
         json['nativeFlashlightEnabled'],
       ),
+      mcpEnabled: serializer.fromJson<bool>(json['mcpEnabled']),
     );
   }
   @override
@@ -404,6 +435,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       'nativeFlashlightEnabled': serializer.toJson<bool>(
         nativeFlashlightEnabled,
       ),
+      'mcpEnabled': serializer.toJson<bool>(mcpEnabled),
     };
   }
 
@@ -418,6 +450,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     bool? nativeOpenAppEnabled,
     bool? nativeSendEmailEnabled,
     bool? nativeFlashlightEnabled,
+    bool? mcpEnabled,
   }) => Workspace(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -431,6 +464,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
         nativeSendEmailEnabled ?? this.nativeSendEmailEnabled,
     nativeFlashlightEnabled:
         nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
+    mcpEnabled: mcpEnabled ?? this.mcpEnabled,
   );
   Workspace copyWithCompanion(WorkspacesCompanion data) {
     return Workspace(
@@ -458,6 +492,9 @@ class Workspace extends DataClass implements Insertable<Workspace> {
       nativeFlashlightEnabled: data.nativeFlashlightEnabled.present
           ? data.nativeFlashlightEnabled.value
           : this.nativeFlashlightEnabled,
+      mcpEnabled: data.mcpEnabled.present
+          ? data.mcpEnabled.value
+          : this.mcpEnabled,
     );
   }
 
@@ -473,7 +510,8 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           ..write('nativeOpenUrlEnabled: $nativeOpenUrlEnabled, ')
           ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
           ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
-          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled')
+          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled, ')
+          ..write('mcpEnabled: $mcpEnabled')
           ..write(')'))
         .toString();
   }
@@ -490,6 +528,7 @@ class Workspace extends DataClass implements Insertable<Workspace> {
     nativeOpenAppEnabled,
     nativeSendEmailEnabled,
     nativeFlashlightEnabled,
+    mcpEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -504,7 +543,8 @@ class Workspace extends DataClass implements Insertable<Workspace> {
           other.nativeOpenUrlEnabled == this.nativeOpenUrlEnabled &&
           other.nativeOpenAppEnabled == this.nativeOpenAppEnabled &&
           other.nativeSendEmailEnabled == this.nativeSendEmailEnabled &&
-          other.nativeFlashlightEnabled == this.nativeFlashlightEnabled);
+          other.nativeFlashlightEnabled == this.nativeFlashlightEnabled &&
+          other.mcpEnabled == this.mcpEnabled);
 }
 
 class WorkspacesCompanion extends UpdateCompanion<Workspace> {
@@ -518,6 +558,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
   final Value<bool> nativeOpenAppEnabled;
   final Value<bool> nativeSendEmailEnabled;
   final Value<bool> nativeFlashlightEnabled;
+  final Value<bool> mcpEnabled;
   const WorkspacesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -529,6 +570,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     this.nativeOpenAppEnabled = const Value.absent(),
     this.nativeSendEmailEnabled = const Value.absent(),
     this.nativeFlashlightEnabled = const Value.absent(),
+    this.mcpEnabled = const Value.absent(),
   });
   WorkspacesCompanion.insert({
     this.id = const Value.absent(),
@@ -541,6 +583,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     this.nativeOpenAppEnabled = const Value.absent(),
     this.nativeSendEmailEnabled = const Value.absent(),
     this.nativeFlashlightEnabled = const Value.absent(),
+    this.mcpEnabled = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Workspace> custom({
     Expression<int>? id,
@@ -553,6 +596,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Expression<bool>? nativeOpenAppEnabled,
     Expression<bool>? nativeSendEmailEnabled,
     Expression<bool>? nativeFlashlightEnabled,
+    Expression<bool>? mcpEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -570,6 +614,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
         'native_send_email_enabled': nativeSendEmailEnabled,
       if (nativeFlashlightEnabled != null)
         'native_flashlight_enabled': nativeFlashlightEnabled,
+      if (mcpEnabled != null) 'mcp_enabled': mcpEnabled,
     });
   }
 
@@ -584,6 +629,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
     Value<bool>? nativeOpenAppEnabled,
     Value<bool>? nativeSendEmailEnabled,
     Value<bool>? nativeFlashlightEnabled,
+    Value<bool>? mcpEnabled,
   }) {
     return WorkspacesCompanion(
       id: id ?? this.id,
@@ -598,6 +644,7 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
           nativeSendEmailEnabled ?? this.nativeSendEmailEnabled,
       nativeFlashlightEnabled:
           nativeFlashlightEnabled ?? this.nativeFlashlightEnabled,
+      mcpEnabled: mcpEnabled ?? this.mcpEnabled,
     );
   }
 
@@ -642,6 +689,9 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
         nativeFlashlightEnabled.value,
       );
     }
+    if (mcpEnabled.present) {
+      map['mcp_enabled'] = Variable<bool>(mcpEnabled.value);
+    }
     return map;
   }
 
@@ -657,7 +707,8 @@ class WorkspacesCompanion extends UpdateCompanion<Workspace> {
           ..write('nativeOpenUrlEnabled: $nativeOpenUrlEnabled, ')
           ..write('nativeOpenAppEnabled: $nativeOpenAppEnabled, ')
           ..write('nativeSendEmailEnabled: $nativeSendEmailEnabled, ')
-          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled')
+          ..write('nativeFlashlightEnabled: $nativeFlashlightEnabled, ')
+          ..write('mcpEnabled: $mcpEnabled')
           ..write(')'))
         .toString();
   }
@@ -3333,6 +3384,408 @@ class ModelsCompanion extends UpdateCompanion<Model> {
   }
 }
 
+class $McpServersTable extends McpServers
+    with TableInfo<$McpServersTable, McpServer> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $McpServersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 64,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _authHeaderMeta = const VerificationMeta(
+    'authHeader',
+  );
+  @override
+  late final GeneratedColumn<String> authHeader = GeneratedColumn<String>(
+    'auth_header',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    name,
+    url,
+    authHeader,
+    enabled,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mcp_servers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<McpServer> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('auth_header')) {
+      context.handle(
+        _authHeaderMeta,
+        authHeader.isAcceptableOrUnknown(data['auth_header']!, _authHeaderMeta),
+      );
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  McpServer map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return McpServer(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      authHeader: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}auth_header'],
+      ),
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+    );
+  }
+
+  @override
+  $McpServersTable createAlias(String alias) {
+    return $McpServersTable(attachedDatabase, alias);
+  }
+}
+
+class McpServer extends DataClass implements Insertable<McpServer> {
+  final int id;
+  final DateTime createdAt;
+  final String name;
+  final String url;
+  final String? authHeader;
+  final bool enabled;
+  const McpServer({
+    required this.id,
+    required this.createdAt,
+    required this.name,
+    required this.url,
+    this.authHeader,
+    required this.enabled,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['name'] = Variable<String>(name);
+    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || authHeader != null) {
+      map['auth_header'] = Variable<String>(authHeader);
+    }
+    map['enabled'] = Variable<bool>(enabled);
+    return map;
+  }
+
+  McpServersCompanion toCompanion(bool nullToAbsent) {
+    return McpServersCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      name: Value(name),
+      url: Value(url),
+      authHeader: authHeader == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authHeader),
+      enabled: Value(enabled),
+    );
+  }
+
+  factory McpServer.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return McpServer(
+      id: serializer.fromJson<int>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      name: serializer.fromJson<String>(json['name']),
+      url: serializer.fromJson<String>(json['url']),
+      authHeader: serializer.fromJson<String?>(json['authHeader']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'name': serializer.toJson<String>(name),
+      'url': serializer.toJson<String>(url),
+      'authHeader': serializer.toJson<String?>(authHeader),
+      'enabled': serializer.toJson<bool>(enabled),
+    };
+  }
+
+  McpServer copyWith({
+    int? id,
+    DateTime? createdAt,
+    String? name,
+    String? url,
+    Value<String?> authHeader = const Value.absent(),
+    bool? enabled,
+  }) => McpServer(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    name: name ?? this.name,
+    url: url ?? this.url,
+    authHeader: authHeader.present ? authHeader.value : this.authHeader,
+    enabled: enabled ?? this.enabled,
+  );
+  McpServer copyWithCompanion(McpServersCompanion data) {
+    return McpServer(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      name: data.name.present ? data.name.value : this.name,
+      url: data.url.present ? data.url.value : this.url,
+      authHeader: data.authHeader.present
+          ? data.authHeader.value
+          : this.authHeader,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('McpServer(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('authHeader: $authHeader, ')
+          ..write('enabled: $enabled')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, createdAt, name, url, authHeader, enabled);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is McpServer &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.name == this.name &&
+          other.url == this.url &&
+          other.authHeader == this.authHeader &&
+          other.enabled == this.enabled);
+}
+
+class McpServersCompanion extends UpdateCompanion<McpServer> {
+  final Value<int> id;
+  final Value<DateTime> createdAt;
+  final Value<String> name;
+  final Value<String> url;
+  final Value<String?> authHeader;
+  final Value<bool> enabled;
+  const McpServersCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.url = const Value.absent(),
+    this.authHeader = const Value.absent(),
+    this.enabled = const Value.absent(),
+  });
+  McpServersCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    required String name,
+    required String url,
+    this.authHeader = const Value.absent(),
+    this.enabled = const Value.absent(),
+  }) : name = Value(name),
+       url = Value(url);
+  static Insertable<McpServer> custom({
+    Expression<int>? id,
+    Expression<DateTime>? createdAt,
+    Expression<String>? name,
+    Expression<String>? url,
+    Expression<String>? authHeader,
+    Expression<bool>? enabled,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (name != null) 'name': name,
+      if (url != null) 'url': url,
+      if (authHeader != null) 'auth_header': authHeader,
+      if (enabled != null) 'enabled': enabled,
+    });
+  }
+
+  McpServersCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? createdAt,
+    Value<String>? name,
+    Value<String>? url,
+    Value<String?>? authHeader,
+    Value<bool>? enabled,
+  }) {
+    return McpServersCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      name: name ?? this.name,
+      url: url ?? this.url,
+      authHeader: authHeader ?? this.authHeader,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (authHeader.present) {
+      map['auth_header'] = Variable<String>(authHeader.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('McpServersCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('authHeader: $authHeader, ')
+          ..write('enabled: $enabled')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$GenaDatabase extends GeneratedDatabase {
   _$GenaDatabase(QueryExecutor e) : super(e);
   $GenaDatabaseManager get managers => $GenaDatabaseManager(this);
@@ -3342,6 +3795,7 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
   late final $ChatsTable chats = $ChatsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $ModelsTable models = $ModelsTable(this);
+  late final $McpServersTable mcpServers = $McpServersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3352,6 +3806,7 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
     chats,
     messages,
     models,
+    mcpServers,
   ];
 }
 
@@ -3367,6 +3822,7 @@ typedef $$WorkspacesTableCreateCompanionBuilder =
       Value<bool> nativeOpenAppEnabled,
       Value<bool> nativeSendEmailEnabled,
       Value<bool> nativeFlashlightEnabled,
+      Value<bool> mcpEnabled,
     });
 typedef $$WorkspacesTableUpdateCompanionBuilder =
     WorkspacesCompanion Function({
@@ -3380,6 +3836,7 @@ typedef $$WorkspacesTableUpdateCompanionBuilder =
       Value<bool> nativeOpenAppEnabled,
       Value<bool> nativeSendEmailEnabled,
       Value<bool> nativeFlashlightEnabled,
+      Value<bool> mcpEnabled,
     });
 
 final class $$WorkspacesTableReferences
@@ -3486,6 +3943,11 @@ class $$WorkspacesTableFilterComposer
 
   ColumnFilters<bool> get nativeFlashlightEnabled => $composableBuilder(
     column: $table.nativeFlashlightEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get mcpEnabled => $composableBuilder(
+    column: $table.mcpEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3598,6 +4060,11 @@ class $$WorkspacesTableOrderingComposer
     column: $table.nativeFlashlightEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get mcpEnabled => $composableBuilder(
+    column: $table.mcpEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WorkspacesTableAnnotationComposer
@@ -3650,6 +4117,11 @@ class $$WorkspacesTableAnnotationComposer
 
   GeneratedColumn<bool> get nativeFlashlightEnabled => $composableBuilder(
     column: $table.nativeFlashlightEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get mcpEnabled => $composableBuilder(
+    column: $table.mcpEnabled,
     builder: (column) => column,
   );
 
@@ -3743,6 +4215,7 @@ class $$WorkspacesTableTableManager
                 Value<bool> nativeOpenAppEnabled = const Value.absent(),
                 Value<bool> nativeSendEmailEnabled = const Value.absent(),
                 Value<bool> nativeFlashlightEnabled = const Value.absent(),
+                Value<bool> mcpEnabled = const Value.absent(),
               }) => WorkspacesCompanion(
                 id: id,
                 createdAt: createdAt,
@@ -3754,6 +4227,7 @@ class $$WorkspacesTableTableManager
                 nativeOpenAppEnabled: nativeOpenAppEnabled,
                 nativeSendEmailEnabled: nativeSendEmailEnabled,
                 nativeFlashlightEnabled: nativeFlashlightEnabled,
+                mcpEnabled: mcpEnabled,
               ),
           createCompanionCallback:
               ({
@@ -3767,6 +4241,7 @@ class $$WorkspacesTableTableManager
                 Value<bool> nativeOpenAppEnabled = const Value.absent(),
                 Value<bool> nativeSendEmailEnabled = const Value.absent(),
                 Value<bool> nativeFlashlightEnabled = const Value.absent(),
+                Value<bool> mcpEnabled = const Value.absent(),
               }) => WorkspacesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
@@ -3778,6 +4253,7 @@ class $$WorkspacesTableTableManager
                 nativeOpenAppEnabled: nativeOpenAppEnabled,
                 nativeSendEmailEnabled: nativeSendEmailEnabled,
                 nativeFlashlightEnabled: nativeFlashlightEnabled,
+                mcpEnabled: mcpEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -5588,6 +6064,218 @@ typedef $$ModelsTableProcessedTableManager =
       Model,
       PrefetchHooks Function()
     >;
+typedef $$McpServersTableCreateCompanionBuilder =
+    McpServersCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      required String name,
+      required String url,
+      Value<String?> authHeader,
+      Value<bool> enabled,
+    });
+typedef $$McpServersTableUpdateCompanionBuilder =
+    McpServersCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      Value<String> name,
+      Value<String> url,
+      Value<String?> authHeader,
+      Value<bool> enabled,
+    });
+
+class $$McpServersTableFilterComposer
+    extends Composer<_$GenaDatabase, $McpServersTable> {
+  $$McpServersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authHeader => $composableBuilder(
+    column: $table.authHeader,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$McpServersTableOrderingComposer
+    extends Composer<_$GenaDatabase, $McpServersTable> {
+  $$McpServersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authHeader => $composableBuilder(
+    column: $table.authHeader,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$McpServersTableAnnotationComposer
+    extends Composer<_$GenaDatabase, $McpServersTable> {
+  $$McpServersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get authHeader => $composableBuilder(
+    column: $table.authHeader,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+}
+
+class $$McpServersTableTableManager
+    extends
+        RootTableManager<
+          _$GenaDatabase,
+          $McpServersTable,
+          McpServer,
+          $$McpServersTableFilterComposer,
+          $$McpServersTableOrderingComposer,
+          $$McpServersTableAnnotationComposer,
+          $$McpServersTableCreateCompanionBuilder,
+          $$McpServersTableUpdateCompanionBuilder,
+          (
+            McpServer,
+            BaseReferences<_$GenaDatabase, $McpServersTable, McpServer>,
+          ),
+          McpServer,
+          PrefetchHooks Function()
+        > {
+  $$McpServersTableTableManager(_$GenaDatabase db, $McpServersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$McpServersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$McpServersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$McpServersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<String?> authHeader = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+              }) => McpServersCompanion(
+                id: id,
+                createdAt: createdAt,
+                name: name,
+                url: url,
+                authHeader: authHeader,
+                enabled: enabled,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                required String name,
+                required String url,
+                Value<String?> authHeader = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+              }) => McpServersCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                name: name,
+                url: url,
+                authHeader: authHeader,
+                enabled: enabled,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$McpServersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GenaDatabase,
+      $McpServersTable,
+      McpServer,
+      $$McpServersTableFilterComposer,
+      $$McpServersTableOrderingComposer,
+      $$McpServersTableAnnotationComposer,
+      $$McpServersTableCreateCompanionBuilder,
+      $$McpServersTableUpdateCompanionBuilder,
+      (McpServer, BaseReferences<_$GenaDatabase, $McpServersTable, McpServer>),
+      McpServer,
+      PrefetchHooks Function()
+    >;
 
 class $GenaDatabaseManager {
   final _$GenaDatabase _db;
@@ -5602,4 +6290,6 @@ class $GenaDatabaseManager {
       $$MessagesTableTableManager(_db, _db.messages);
   $$ModelsTableTableManager get models =>
       $$ModelsTableTableManager(_db, _db.models);
+  $$McpServersTableTableManager get mcpServers =>
+      $$McpServersTableTableManager(_db, _db.mcpServers);
 }

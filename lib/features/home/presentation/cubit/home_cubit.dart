@@ -285,6 +285,7 @@ class HomeCubit extends Cubit<HomeState> {
           nativeOpenAppEnabled: workspaceRow.nativeOpenAppEnabled,
           nativeSendEmailEnabled: workspaceRow.nativeSendEmailEnabled,
           nativeFlashlightEnabled: workspaceRow.nativeFlashlightEnabled,
+          mcpEnabled: workspaceRow.mcpEnabled,
           createdAt: workspaceRow.createdAt,
         );
         grouped.putIfAbsent(

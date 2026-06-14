@@ -59,6 +59,7 @@ dependencies:
   whisper_ggml_plus: ^1.5.2
   record: ^6.2.1
   flutter_tts: ^4.2.5
+  mcp_dart: ^2.2.1
 
 dev_dependencies:
   flutter_test:

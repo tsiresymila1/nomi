@@ -17,7 +17,9 @@ import 'package:gena/features/chat/data/services/local_model_runtime_factory.dar
 import 'package:gena/features/chat/data/services/audio_recorder_factory.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/speech_to_text_factory.dart';
+import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
@@ -74,6 +76,11 @@ void registerChatDependencies() {
   }
   if (!sl.isRegistered<VoiceAudioRecorder>()) {
     sl.registerLazySingleton<VoiceAudioRecorder>(createVoiceAudioRecorder);
+  }
+
+  // Platform-native text-to-speech (flutter_tts; web + native).
+  if (!sl.isRegistered<TextToSpeech>()) {
+    sl.registerLazySingleton<TextToSpeech>(FlutterTextToSpeech.new);
   }
 
   // Services (no deps or minimal deps)
@@ -174,6 +181,15 @@ void registerChatDependencies() {
         recorder: sl<VoiceAudioRecorder>(),
         speechToText: sl<SpeechToText>(),
         chatInputCubit: sl<ChatInputCubit>(),
+        onError: (message) => AppToast.show(message, type: AppToastType.error),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<VoiceOutputCubit>()) {
+    sl.registerLazySingleton<VoiceOutputCubit>(
+      () => VoiceOutputCubit(
+        textToSpeech: sl<TextToSpeech>(),
         onError: (message) => AppToast.show(message, type: AppToastType.error),
       ),
     );

@@ -216,6 +216,7 @@ class _ChatViewState extends State<ChatView> {
                               final message = messages[index];
                               return ChatBubble(
                                 key: ValueKey('chat-message-${message.id}'),
+                                messageId: message.id.toString(),
                                 message: message.content,
                                 isUser: message.role == 'user',
                                 kind: message.kind,

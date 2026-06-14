@@ -19,6 +19,7 @@ class AppCapabilities {
     required this.supportsLocalModels,
     required this.supportsWorkspaceRag,
     required this.supportsSpeechToText,
+    required this.supportsTextToSpeech,
   });
 
   final AppPlatform platform;
@@ -26,6 +27,7 @@ class AppCapabilities {
   final bool supportsLocalModels;
   final bool supportsWorkspaceRag;
   final bool supportsSpeechToText;
+  final bool supportsTextToSpeech;
 
   String get localModelsUnavailableMessage =>
       'Local models and workspace RAG are unavailable $_platformLabel. '
@@ -35,6 +37,9 @@ class AppCapabilities {
 
   String get speechToTextUnavailableMessage =>
       'Voice input is unavailable $_platformLabel.';
+
+  String get textToSpeechUnavailableMessage =>
+      'Voice output is unavailable $_platformLabel.';
 
   bool isWorkspaceRagEnabled({required bool workspaceRagEnabled}) {
     return supportsWorkspaceRag && workspaceRagEnabled;
@@ -57,12 +62,24 @@ class AppCapabilities {
       AppPlatform.fuchsia => false,
     };
 
+    // Platform-native text-to-speech (flutter_tts) works on the mobile/desktop
+    // Apple/Android targets and on web (Web Speech API). Linux/Windows support
+    // in flutter_tts is weak, so it is treated as unavailable there.
+    final supportsTextToSpeech = switch (platform) {
+      AppPlatform.android ||
+      AppPlatform.iOS ||
+      AppPlatform.macOS ||
+      AppPlatform.web => true,
+      AppPlatform.windows || AppPlatform.linux || AppPlatform.fuchsia => false,
+    };
+
     return AppCapabilities(
       platform: platform,
       supportsRemoteModels: true,
       supportsLocalModels: supportsLocalAi,
       supportsWorkspaceRag: supportsLocalAi,
       supportsSpeechToText: supportsLocalAi,
+      supportsTextToSpeech: supportsTextToSpeech,
     );
   }
 

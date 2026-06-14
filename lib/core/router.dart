@@ -7,6 +7,7 @@ import 'package:gena/features/chat/presentation/cubit/native_tool_execution_cubi
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/features/chat/presentation/chat_page.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/presentation/add_model_page.dart';
@@ -44,6 +45,7 @@ final router = GoRouter(
             BlocProvider.value(value: sl<ChatToolWaitingCubit>()),
             BlocProvider.value(value: sl<ChatInputCubit>()),
             BlocProvider.value(value: sl<VoiceInputCubit>()),
+            BlocProvider.value(value: sl<VoiceOutputCubit>()),
             BlocProvider.value(value: sl<ChatContextWindowCubit>()),
           ],
           child: const ChatPage(),

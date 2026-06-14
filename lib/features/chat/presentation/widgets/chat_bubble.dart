@@ -5,9 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fullscreen_image_viewer/fullscreen_image_viewer.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/utils.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ChatBubble extends StatelessWidget {
@@ -18,6 +21,7 @@ class ChatBubble extends StatelessWidget {
     this.kind = 'text',
     this.mediaPath,
     this.isStreaming = false,
+    this.messageId,
   });
 
   final String message;
@@ -25,6 +29,10 @@ class ChatBubble extends StatelessWidget {
   final String kind;
   final String? mediaPath;
   final bool isStreaming;
+
+  /// Persisted message id, used to drive the read-aloud toggle. Null for
+  /// transient streaming drafts (which are not yet read-aloud targets).
+  final String? messageId;
 
   String get _normalizedKind => kind.trim().toLowerCase();
 
@@ -135,7 +143,61 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    return GptMarkdown(message, style: TextStyle(fontSize: isUser ? 14 : 13));
+    final markdown = GptMarkdown(
+      message,
+      style: TextStyle(fontSize: isUser ? 14 : 13),
+    );
+
+    if (!_canSpeak) return markdown;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        markdown,
+        const SizedBox(height: 2),
+        _buildSpeakButton(context),
+      ],
+    );
+  }
+
+  /// True for assistant text replies on platforms that support voice output.
+  bool get _canSpeak =>
+      !isUser &&
+      !isStreaming &&
+      messageId != null &&
+      message.trim().isNotEmpty &&
+      kind == 'text' &&
+      AppCapabilities.current.supportsTextToSpeech;
+
+  Widget _buildSpeakButton(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final cubit = sl<VoiceOutputCubit>();
+    final id = messageId!;
+
+    return BlocBuilder<VoiceOutputCubit, VoiceOutputState>(
+      bloc: cubit,
+      builder: (context, state) {
+        final speaking = state.isSpeakingMessage(id);
+        return IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          visualDensity: VisualDensity.compact,
+          splashRadius: 16,
+          tooltip: speaking ? 'Stop reading aloud' : 'Read aloud',
+          onPressed: () => cubit.toggle(id, message),
+          icon: HugeIcon(
+            icon: speaking
+                ? HugeIcons.strokeRoundedStopCircle
+                : HugeIcons.strokeRoundedVolumeHigh,
+            size: 18,
+            color: speaking
+                ? colorScheme.primary
+                : colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildInsightChip(BuildContext context) {

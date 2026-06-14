@@ -3,13 +3,14 @@ import 'package:gena/core/platform/app_capabilities.dart';
 
 void main() {
   group('AppCapabilities.forPlatform', () {
-    test('web supports remote models only', () {
+    test('web supports remote models and text-to-speech only', () {
       final capabilities = AppCapabilities.forPlatform(AppPlatform.web);
 
       expect(capabilities.supportsRemoteModels, isTrue);
       expect(capabilities.supportsLocalModels, isFalse);
       expect(capabilities.supportsWorkspaceRag, isFalse);
       expect(capabilities.supportsSpeechToText, isFalse);
+      expect(capabilities.supportsTextToSpeech, isTrue);
     });
 
     for (final platform in [
@@ -17,13 +18,14 @@ void main() {
       AppPlatform.iOS,
       AppPlatform.macOS,
     ]) {
-      test('$platform supports remote models, local models, RAG, and STT', () {
+      test('$platform supports remote, local, RAG, STT, and TTS', () {
         final capabilities = AppCapabilities.forPlatform(platform);
 
         expect(capabilities.supportsRemoteModels, isTrue);
         expect(capabilities.supportsLocalModels, isTrue);
         expect(capabilities.supportsWorkspaceRag, isTrue);
         expect(capabilities.supportsSpeechToText, isTrue);
+        expect(capabilities.supportsTextToSpeech, isTrue);
       });
     }
 
@@ -32,13 +34,14 @@ void main() {
       AppPlatform.linux,
       AppPlatform.fuchsia,
     ]) {
-      test('$platform remains remote-only', () {
+      test('$platform remains remote-only without text-to-speech', () {
         final capabilities = AppCapabilities.forPlatform(platform);
 
         expect(capabilities.supportsRemoteModels, isTrue);
         expect(capabilities.supportsLocalModels, isFalse);
         expect(capabilities.supportsWorkspaceRag, isFalse);
         expect(capabilities.supportsSpeechToText, isFalse);
+        expect(capabilities.supportsTextToSpeech, isFalse);
       });
     }
   });

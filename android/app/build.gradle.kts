@@ -59,9 +59,9 @@ android {
 
     packaging {
         jniLibs {
-            // Better compression for APK distributed outside Play Store.
-            // It can reduce APK size, but install may be a bit slower.
-            useLegacyPackaging = true
+            // Compress native libs inside the APK (extractNativeLibs=false) so
+            // the downloaded APK is much smaller; the AI runtimes are large.
+            useLegacyPackaging = false
 
             // mobile_rag_engine and vad (via onnxruntime-android) both ship
             // libonnxruntime.so; keep the first to avoid a merge conflict.

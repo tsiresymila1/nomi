@@ -62,6 +62,13 @@ android {
             // Better compression for APK distributed outside Play Store.
             // It can reduce APK size, but install may be a bit slower.
             useLegacyPackaging = true
+
+            // mobile_rag_engine and vad (via onnxruntime-android) both ship
+            // libonnxruntime.so; keep the first to avoid a merge conflict.
+            pickFirsts += setOf(
+                "**/libonnxruntime.so",
+                "**/libonnxruntime4j_jni.so",
+            )
         }
 
         resources {

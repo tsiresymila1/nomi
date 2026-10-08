@@ -52,6 +52,23 @@ class LocalMessageBudgetPlan {
       remainingTokensAfterMessage < 0 ? -remainingTokensAfterMessage : 0;
 }
 
+({String message, bool canRetry}) _safeGenerationFailure(Object error) {
+  final rawError = error.toString();
+  final isMissingLiteRtSymbol =
+      rawError.contains('litert_lm_conversation_optional_args_create') &&
+      rawError.contains('undefined symbol');
+  if (isMissingLiteRtSymbol) {
+    return (
+      message: 'Local runtime mismatch detected. Clean and reinstall the app.',
+      canRetry: false,
+    );
+  }
+  return (
+    message: 'Could not complete the response. Please try again.',
+    canRetry: true,
+  );
+}
+
 /// Narrow boundary used by presentation cubits that only need to trigger a
 /// send or stop on the active chat thread. Lets those cubits be unit-tested
 /// without constructing the full [ChatThreadActions] dependency graph.
@@ -64,6 +81,14 @@ abstract interface class ChatThreadActionsApi {
   });
 }
 
+typedef ChatAssistantGenerator =
+    Future<void> Function({
+      required db.GenaDatabase database,
+      required int chatId,
+      required ModelInfo activeModel,
+      required bool Function() isCancelled,
+    });
+
 class ChatThreadActions implements ChatThreadActionsApi {
   ChatThreadActions({
     required db.GenaDatabase database,
@@ -74,7 +99,9 @@ class ChatThreadActions implements ChatThreadActionsApi {
     required ChatDraftResponseCubit chatDraftResponseCubit,
     required ChatDraftThinkingCubit chatDraftThinkingCubit,
     required ChatToolWaitingCubit chatToolWaitingCubit,
+    required ChatGenerationFailureCubit chatGenerationFailureCubit,
     required ChatRuntimeDependencies runtimeDependencies,
+    ChatAssistantGenerator? assistantGenerator,
   }) : _database = database,
        _selectedChatCubit = selectedChatCubit,
        _activeModelInfoResolver = activeModelInfoResolver,
@@ -83,7 +110,9 @@ class ChatThreadActions implements ChatThreadActionsApi {
        _chatDraftResponseCubit = chatDraftResponseCubit,
        _chatDraftThinkingCubit = chatDraftThinkingCubit,
        _chatToolWaitingCubit = chatToolWaitingCubit,
-       _runtimeDependencies = runtimeDependencies;
+       _chatGenerationFailureCubit = chatGenerationFailureCubit,
+       _runtimeDependencies = runtimeDependencies,
+       _assistantGenerator = assistantGenerator;
 
   final db.GenaDatabase _database;
   final SelectedChatCubit _selectedChatCubit;
@@ -93,10 +122,13 @@ class ChatThreadActions implements ChatThreadActionsApi {
   final ChatDraftResponseCubit _chatDraftResponseCubit;
   final ChatDraftThinkingCubit _chatDraftThinkingCubit;
   final ChatToolWaitingCubit _chatToolWaitingCubit;
+  final ChatGenerationFailureCubit _chatGenerationFailureCubit;
   final ChatRuntimeDependencies _runtimeDependencies;
+  final ChatAssistantGenerator? _assistantGenerator;
 
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
+  bool _retryInFlight = false;
 
   @override
   Future<void> sendMessage(String rawText, {String? imagePath}) async {
@@ -152,64 +184,180 @@ class ChatThreadActions implements ChatThreadActionsApi {
       }
     }
 
-    final currentGeneration = ++_generationSerial;
-    _cancelGenerationSerial = null;
-
+    late final int userMessageId;
     try {
-      await storeUserMessage(
+      userMessageId = await storeUserMessage(
         database: _database,
         chatId: parsedChatId,
         text: text,
         hasImage: hasImage,
         imagePath: normalizedImagePath,
       );
-      _chatGeneratingCubit.setGenerating(true);
-      _chatDraftResponseCubit.setDraft('');
-      _chatDraftThinkingCubit.clear();
-      _chatToolWaitingCubit.clear();
+    } catch (error, stackTrace) {
+      logger.e(
+        'Failed to persist the user chat message',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      await AppToast.show(
+        'Could not save the message. Please try again.',
+        type: AppToastType.error,
+      );
+      return;
+    }
 
-      await generateAssistantResponseWithGenkit(
-        deps: _runtimeDependencies,
-        database: _database,
-        chatId: parsedChatId,
+    await _generateStoredTurn(
+      chatId: parsedChatId,
+      activeModel: activeModel,
+      userMessageId: userMessageId,
+      messageText: text,
+      hasImage: hasImage,
+    );
+  }
+
+  Future<void> retryLastFailedGeneration() async {
+    final failure = _chatGenerationFailureCubit.state;
+    if (failure == null ||
+        !failure.canRetry ||
+        _chatGeneratingCubit.state ||
+        _retryInFlight) {
+      return;
+    }
+    if (_selectedChatCubit.state != failure.chatId.toString()) return;
+    _retryInFlight = true;
+
+    try {
+      await _retryFailedGeneration(failure);
+    } finally {
+      _retryInFlight = false;
+    }
+  }
+
+  Future<void> _retryFailedGeneration(
+    ChatGenerationFailureState failure,
+  ) async {
+    final userMessage =
+        await (_database.select(_database.messages)
+              ..where(
+                (row) =>
+                    row.id.equals(failure.userMessageId) &
+                    row.chat.equals(failure.chatId) &
+                    row.role.equals('user'),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (userMessage == null) {
+      _chatGenerationFailureCubit.fail(
+        chatId: failure.chatId,
+        userMessageId: failure.userMessageId,
+        displayMessage: 'The original message is no longer available.',
+        canRetry: false,
+      );
+      return;
+    }
+
+    final activeModel = await _activeModelInfoResolver.getActiveModelInfo();
+    if (activeModel == null) {
+      _chatGenerationFailureCubit.fail(
+        chatId: failure.chatId,
+        userMessageId: failure.userMessageId,
+        displayMessage: 'Select a model before retrying.',
+        canRetry: true,
+      );
+      return;
+    }
+
+    final hasImage =
+        userMessage.mediaPath != null &&
+        userMessage.mediaPath!.trim().isNotEmpty;
+    if (isImageInputRejected(model: activeModel, hasImage: hasImage)) {
+      _chatGenerationFailureCubit.fail(
+        chatId: failure.chatId,
+        userMessageId: failure.userMessageId,
+        displayMessage: imageInputUnsupportedMessage,
+        canRetry: true,
+      );
+      return;
+    }
+
+    if (activeModel.provider == 'local') {
+      try {
+        await _localModelRuntime.prepare(activeModel);
+      } catch (error, stackTrace) {
+        logger.w(
+          'Local model is not ready for retry: $error',
+          stackTrace: stackTrace,
+        );
+        _chatGenerationFailureCubit.fail(
+          chatId: failure.chatId,
+          userMessageId: failure.userMessageId,
+          displayMessage: 'The model is not ready yet. Try again shortly.',
+          canRetry: true,
+        );
+        return;
+      }
+    }
+
+    await _generateStoredTurn(
+      chatId: failure.chatId,
+      activeModel: activeModel,
+      userMessageId: failure.userMessageId,
+      messageText: userMessage.content,
+      hasImage: hasImage,
+    );
+  }
+
+  Future<void> _generateStoredTurn({
+    required int chatId,
+    required ModelInfo activeModel,
+    required int userMessageId,
+    required String messageText,
+    required bool hasImage,
+  }) async {
+    final currentGeneration = ++_generationSerial;
+    _cancelGenerationSerial = null;
+    _chatGenerationFailureCubit.clear();
+    _chatGeneratingCubit.setGenerating(true);
+    _chatDraftResponseCubit.setDraft('');
+    _chatDraftThinkingCubit.clear();
+    _chatToolWaitingCubit.clear();
+
+    try {
+      await _generateAssistantResponse(
+        chatId: chatId,
         activeModel: activeModel,
         isCancelled: () => _cancelGenerationSerial == currentGeneration,
       );
 
       if (_cancelGenerationSerial == currentGeneration) {
-        await _persistCancelledDraftIfAny(parsedChatId);
+        await _persistCancelledDraftIfAny(chatId);
         return;
       }
 
       scheduleThreadTitleUpdate(
         localModelRuntime: _localModelRuntime,
         database: _database,
-        chatId: parsedChatId,
-        messageText: text,
+        chatId: chatId,
+        messageText: messageText,
         hasImage: hasImage,
         activeModel: activeModel,
       );
     } catch (error, stackTrace) {
-      if (_cancelGenerationSerial == currentGeneration) {
-        return;
-      }
-      final rawError = error.toString();
-      final isMissingLiteRtSymbol =
-          rawError.contains('litert_lm_conversation_optional_args_create') &&
-          rawError.contains('undefined symbol');
+      if (_cancelGenerationSerial == currentGeneration) return;
+
+      final failure = _safeGenerationFailure(error);
+      _chatGenerationFailureCubit.fail(
+        chatId: chatId,
+        userMessageId: userMessageId,
+        displayMessage: failure.message,
+        canRetry: failure.canRetry,
+      );
       logger.e(
-        'Failed to send/generate chat response',
+        'Failed to generate chat response',
         error: error,
         stackTrace: stackTrace,
       );
-      if (isMissingLiteRtSymbol) {
-        await AppToast.show(
-          'Local runtime mismatch detected. Run flutter clean and reinstall app.',
-          type: AppToastType.error,
-        );
-      } else {
-        await AppToast.show('Message failed: $error', type: AppToastType.error);
-      }
+      await AppToast.show(failure.message, type: AppToastType.error);
     } finally {
       if (_cancelGenerationSerial == currentGeneration) {
         _cancelGenerationSerial = null;
@@ -219,6 +367,29 @@ class ChatThreadActions implements ChatThreadActionsApi {
       _chatDraftThinkingCubit.clear();
       _chatToolWaitingCubit.clear();
     }
+  }
+
+  Future<void> _generateAssistantResponse({
+    required int chatId,
+    required ModelInfo activeModel,
+    required bool Function() isCancelled,
+  }) {
+    final override = _assistantGenerator;
+    if (override != null) {
+      return override(
+        database: _database,
+        chatId: chatId,
+        activeModel: activeModel,
+        isCancelled: isCancelled,
+      );
+    }
+    return generateAssistantResponseWithGenkit(
+      deps: _runtimeDependencies,
+      database: _database,
+      chatId: chatId,
+      activeModel: activeModel,
+      isCancelled: isCancelled,
+    );
   }
 
   @override

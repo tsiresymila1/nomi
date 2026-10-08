@@ -38,7 +38,7 @@ void main() {
 
     test('storeUserMessage persists a text message', () async {
       final chatId = await newThread();
-      await storeUserMessage(
+      final messageId = await storeUserMessage(
         database: database,
         chatId: chatId,
         text: 'hello',
@@ -48,6 +48,7 @@ void main() {
 
       final rows = await database.select(database.messages).get();
       expect(rows, hasLength(1));
+      expect(messageId, rows.single.id);
       expect(rows.single.role, 'user');
       expect(rows.single.kind, 'text');
       expect(rows.single.content, 'hello');
@@ -69,21 +70,25 @@ void main() {
       expect(row.mediaPath, '/tmp/p.png');
     });
 
-    test('updateThreadTitleFromFirstMessage uses the generated title', () async {
-      final chatId = await newThread();
-      await updateThreadTitleFromFirstMessage(
-        database: database,
-        chatId: chatId,
-        messageText: 'whatever',
-        hasImage: false,
-        titleGenerator: (text, {required hasImage}) async => 'Generated Title',
-      );
+    test(
+      'updateThreadTitleFromFirstMessage uses the generated title',
+      () async {
+        final chatId = await newThread();
+        await updateThreadTitleFromFirstMessage(
+          database: database,
+          chatId: chatId,
+          messageText: 'whatever',
+          hasImage: false,
+          titleGenerator: (text, {required hasImage}) async =>
+              'Generated Title',
+        );
 
-      final chat = await (database.select(
-        database.chats,
-      )..where((t) => t.id.equals(chatId))).getSingle();
-      expect(chat.title, 'Generated Title');
-    });
+        final chat = await (database.select(
+          database.chats,
+        )..where((t) => t.id.equals(chatId))).getSingle();
+        expect(chat.title, 'Generated Title');
+      },
+    );
 
     test('falls back to a derived title when generation fails', () async {
       final chatId = await newThread();

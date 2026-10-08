@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_queries_service.dart';
+import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
 const double _chatAutoFollowThreshold = 120;
@@ -31,15 +34,24 @@ class _ChatViewState extends State<ChatView> {
   String? _lastScrollSignature;
   bool _isNearBottom = true;
   bool _scrollScheduled = false;
+  StreamSubscription<ChatGenerationFailureState?>? _failureSubscription;
+  ChatGenerationFailureState? _generationFailure;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScrollPosition);
+    final failureCubit = sl<ChatGenerationFailureCubit>();
+    _generationFailure = failureCubit.state;
+    _failureSubscription = failureCubit.stream.listen((failure) {
+      if (!mounted) return;
+      setState(() => _generationFailure = failure);
+    });
   }
 
   @override
   void dispose() {
+    unawaited(_failureSubscription?.cancel());
     _scrollController.dispose();
     super.dispose();
   }
@@ -95,6 +107,10 @@ class _ChatViewState extends State<ChatView> {
 
   @override
   Widget build(BuildContext context) {
+    final parsedChatId = int.tryParse(widget.chatId);
+    final failure = _generationFailure?.chatId == parsedChatId
+        ? _generationFailure
+        : null;
     return StreamBuilder(
       stream: sl<ChatQueriesRepository>().watchChatMessages(widget.chatId),
       builder: (context, messagesSnapshot) {
@@ -129,7 +145,8 @@ class _ChatViewState extends State<ChatView> {
                             (hasToolWaitingName ? 1 : 0) +
                             (hasThinkingDraft ? 1 : 0) +
                             (hasDraft ? 1 : 0) +
-                            (hasStreamingPlaceholder ? 1 : 0);
+                            (hasStreamingPlaceholder ? 1 : 0) +
+                            (failure != null ? 1 : 0);
                         final scrollSignature = [
                           widget.chatId,
                           messages.length,
@@ -138,6 +155,8 @@ class _ChatViewState extends State<ChatView> {
                           thinkingDraft ?? '',
                           waitingToolName ?? '',
                           isGenerating,
+                          failure?.userMessageId ?? '',
+                          failure?.displayMessage ?? '',
                         ].join('|');
                         if (_lastScrollSignature != scrollSignature) {
                           _lastScrollSignature = scrollSignature;
@@ -315,6 +334,18 @@ class _ChatViewState extends State<ChatView> {
                                     );
                                   }
 
+                                  if (failure != null &&
+                                      index == totalCount - 1) {
+                                    return ChatGenerationFailureCard(
+                                      key: const ValueKey(
+                                        'chat-generation-failure',
+                                      ),
+                                      failure: failure,
+                                      onRetry: sl<ChatThreadActions>()
+                                          .retryLastFailedGeneration,
+                                    );
+                                  }
+
                                   return ChatBubble(
                                     key: const ValueKey('chat-draft-response'),
                                     message: draft ?? '',
@@ -348,6 +379,61 @@ class _ChatViewState extends State<ChatView> {
           },
         );
       },
+    );
+  }
+}
+
+class ChatGenerationFailureCard extends StatelessWidget {
+  const ChatGenerationFailureCard({
+    super.key,
+    required this.failure,
+    required this.onRetry,
+  });
+
+  final ChatGenerationFailureState failure;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(top: 8, bottom: 12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        decoration: BoxDecoration(
+          color: colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colorScheme.error.withAlpha(80)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 20,
+              color: colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                failure.displayMessage,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onErrorContainer,
+                ),
+              ),
+            ),
+            if (failure.canRetry) ...[
+              const SizedBox(width: 6),
+              TextButton(
+                key: const ValueKey('retry-generation-button'),
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

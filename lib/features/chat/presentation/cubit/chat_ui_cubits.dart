@@ -72,6 +72,44 @@ class ChatToolWaitingCubit extends Cubit<String?> {
   }
 }
 
+class ChatGenerationFailureState {
+  const ChatGenerationFailureState({
+    required this.chatId,
+    required this.userMessageId,
+    required this.displayMessage,
+    required this.canRetry,
+  });
+
+  final int chatId;
+  final int userMessageId;
+  final String displayMessage;
+  final bool canRetry;
+}
+
+class ChatGenerationFailureCubit extends Cubit<ChatGenerationFailureState?> {
+  ChatGenerationFailureCubit() : super(null);
+
+  void fail({
+    required int chatId,
+    required int userMessageId,
+    required String displayMessage,
+    required bool canRetry,
+  }) {
+    emit(
+      ChatGenerationFailureState(
+        chatId: chatId,
+        userMessageId: userMessageId,
+        displayMessage: displayMessage,
+        canRetry: canRetry,
+      ),
+    );
+  }
+
+  void clear() {
+    if (state != null) emit(null);
+  }
+}
+
 enum ChatModelSwitchPhase {
   idle,
   stoppingGeneration,

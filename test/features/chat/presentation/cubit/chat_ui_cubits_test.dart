@@ -78,6 +78,30 @@ void main() {
     });
   });
 
+  group('ChatGenerationFailureCubit', () {
+    test('tracks a retryable failed turn and clears it', () {
+      final cubit = ChatGenerationFailureCubit();
+      addTearDown(cubit.close);
+
+      expect(cubit.state, isNull);
+
+      cubit.fail(
+        chatId: 12,
+        userMessageId: 34,
+        displayMessage: 'Could not complete the response.',
+        canRetry: true,
+      );
+
+      expect(cubit.state?.chatId, 12);
+      expect(cubit.state?.userMessageId, 34);
+      expect(cubit.state?.displayMessage, 'Could not complete the response.');
+      expect(cubit.state?.canRetry, isTrue);
+
+      cubit.clear();
+      expect(cubit.state, isNull);
+    });
+  });
+
   group('ChatModelSwitchingCubit', () {
     test('tracks a typed model loading lifecycle', () {
       final cubit = ChatModelSwitchingCubit();

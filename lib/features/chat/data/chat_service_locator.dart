@@ -63,6 +63,11 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatToolWaitingCubit>()) {
     sl.registerLazySingleton<ChatToolWaitingCubit>(ChatToolWaitingCubit.new);
   }
+  if (!sl.isRegistered<ChatGenerationFailureCubit>()) {
+    sl.registerLazySingleton<ChatGenerationFailureCubit>(
+      ChatGenerationFailureCubit.new,
+    );
+  }
   if (!sl.isRegistered<ChatContextWindowCubit>()) {
     sl.registerLazySingleton<ChatContextWindowCubit>(
       ChatContextWindowCubit.new,
@@ -164,6 +169,7 @@ void registerChatDependencies() {
         chatDraftResponseCubit: sl<ChatDraftResponseCubit>(),
         chatDraftThinkingCubit: sl<ChatDraftThinkingCubit>(),
         chatToolWaitingCubit: sl<ChatToolWaitingCubit>(),
+        chatGenerationFailureCubit: sl<ChatGenerationFailureCubit>(),
         runtimeDependencies: sl<ChatRuntimeDependencies>(),
       ),
     );

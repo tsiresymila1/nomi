@@ -29,15 +29,16 @@ String buildSystemInstruction(String basePrompt) {
   return '${basePrompt.trim()}\n\n$dateContext';
 }
 
-/// Persists the latest user message (and optional image attachment).
-Future<void> storeUserMessage({
+/// Persists the latest user message (and optional image attachment), returning
+/// its exact row ID so retries never need a race-prone "latest message" query.
+Future<int> storeUserMessage({
   required db.GenaDatabase database,
   required int chatId,
   required String text,
   required bool hasImage,
   required String? imagePath,
 }) async {
-  await database
+  return database
       .into(database.messages)
       .insert(
         db.MessagesCompanion.insert(

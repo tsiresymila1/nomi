@@ -293,10 +293,10 @@ packages:
     dependency: transitive
     description:
       name: dinja
-      sha256: "34d4e569ceb3d900ab061f16cae947223968cc63d2484a8a4710d5ecfa4ae3a2"
+      sha256: "8bb2dfdb481901a0b360fec4a8ffd108d11c5441577f4ebd9309d3b667a1d0a6"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.3.0"
   dio:
     dependency: "direct main"
     description:
@@ -724,10 +724,10 @@ packages:
     dependency: "direct main"
     description:
       name: genkit_llamadart
-      sha256: f420da81f61442283b3280b7eccd2e1c5c30b2d8036e84d58a22bd45787d997a
+      sha256: "831471dcc1da68b05489ffa4b50f7427433b024dd0cfb92021ded268732e50e4"
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.3"
+    version: "1.4.0"
   genkit_openai:
     dependency: "direct main"
     description:
@@ -1044,26 +1044,34 @@ packages:
     dependency: "direct main"
     description:
       name: llamadart
-      sha256: "3306084264e9806a47ac17ab932d6048dd22bf92b723c2aaccc789dd120aa962"
+      sha256: "4827eeb7ea94cc8ad75aa23b7ffac313a5fe63013af02709c0820d6ff2002842"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.1"
+    version: "0.11.0"
   llamadart_litert_lm_flutter:
     dependency: "direct main"
     description:
       name: llamadart_litert_lm_flutter
-      sha256: e0ca353127b2c63f269fd0c5502f874f273219a8f54e13c2f6a6341f16f9c28e
+      sha256: "5edf0951d9c671671d776a1b139154ace19d4fb7db8640a7d5e1da7b014ef86d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.2"
+    version: "0.0.13"
   llamadart_llama_cpp_flutter:
     dependency: "direct main"
     description:
       name: llamadart_llama_cpp_flutter
-      sha256: "32d69b0cfe77c8e711bb1035edd3ea4f44d03d7123384a34ded8889070a5e41b"
+      sha256: bc3632c67b7db700c1829e4def40bb927324200f24cb0ccb1a67110eac9fc91a
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.1"
+    version: "0.0.21"
+  llamadart_stable_diffusion_flutter:
+    dependency: "direct main"
+    description:
+      name: llamadart_stable_diffusion_flutter
+      sha256: "7f27bf4a79d36665392f7fdb919c2359704189b04e922e57c6eae6e7dd31cf93"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   logger:
     dependency: "direct main"
     description:

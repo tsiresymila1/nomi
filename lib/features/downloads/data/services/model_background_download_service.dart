@@ -42,6 +42,11 @@ class ModelBackgroundDownloadService {
 
   static const _maxRetiredTaskIds = 256;
 
+  /// Starts the native task database and notification bridge independently of
+  /// the downloads page so Android can restore foreground downloads as soon as
+  /// the app process is available.
+  Future<void> initialize() => _ensureInitialized();
+
   Stream<List<ModelDownloadSnapshot>> watchTasks() async* {
     await _ensureInitialized();
     yield _currentSnapshots;
@@ -49,7 +54,20 @@ class ModelBackgroundDownloadService {
   }
 
   Future<void> _ensureInitialized() {
-    return _initialization ??= _initialize();
+    return _initialization ??= _initializeWithRetryReset();
+  }
+
+  Future<void> _initializeWithRetryReset() async {
+    try {
+      await _initialize();
+    } catch (_) {
+      await _updatesSubscription?.cancel();
+      await _recordsSubscription?.cancel();
+      _updatesSubscription = null;
+      _recordsSubscription = null;
+      _initialization = null;
+      rethrow;
+    }
   }
 
   Future<void> _initialize() async {

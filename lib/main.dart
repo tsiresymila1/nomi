@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,6 +10,7 @@ import 'package:gena/core/theme/app_theme.dart';
 import 'package:gena/core/theme/theme_cubit.dart';
 import 'package:gena/features/chat/data/chat_service_locator.dart';
 import 'package:gena/features/downloads/data/downloads_service_locator.dart';
+import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/home/presentation/app_introduction_gate.dart';
 import 'package:gena/features/home/presentation/cubit/home_service_locator.dart';
 import 'package:gena/features/image_generation/data/image_generation_service_locator.dart';
@@ -29,6 +32,7 @@ void main() async {
   registerMcpDependencies();
   registerChatDependencies();
   registerHomeDependencies();
+  unawaited(_initializeBackgroundDownloads());
   HydratedBloc.storage = await HydratedStorage.build(
     storageDirectory: HydratedStorageDirectory(
       (await getTemporaryDirectory()).path,
@@ -36,6 +40,15 @@ void main() async {
   );
 
   runApp(const GenaApp());
+}
+
+Future<void> _initializeBackgroundDownloads() async {
+  try {
+    await ModelBackgroundDownloadService.instance.initialize();
+  } catch (_) {
+    // A download action can retry initialization and surface a useful error.
+    // Startup itself must remain fast and available offline.
+  }
 }
 
 class GenaApp extends StatelessWidget {

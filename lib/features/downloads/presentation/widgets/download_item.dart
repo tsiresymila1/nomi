@@ -166,6 +166,16 @@ class _DownloadItemState extends State<DownloadItem> {
                           Expanded(
                             child: LinearProgressIndicator(value: progress),
                           ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 40,
+                            child: Text(
+                              '${(progress * 100).round()}%',
+                              textAlign: TextAlign.end,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
                           IconButton(
                             tooltip: 'Cancel download',
                             onPressed: widget.onCancelDownload,

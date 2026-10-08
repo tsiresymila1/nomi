@@ -16,17 +16,19 @@ on:
 jobs:
   build-apk:
     name: Validate and build APK
-    runs-on: ubuntu-latest
+    # Pin the image so an ubuntu-latest migration cannot change the Android
+    # toolchain underneath a release build.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -51,7 +53,9 @@ jobs:
           chmod u+rw,go-rwx .env
 
       - name: Analyze
-        run: flutter analyze
+        # The repository vendors smart_background_tasks as a separate package;
+        # its example has its own dependency graph and is not part of this app.
+        run: flutter analyze lib test
 
       - name: Test
         run: flutter test

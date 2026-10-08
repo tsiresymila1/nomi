@@ -19,6 +19,9 @@ void main() {
   test(
     'uses the project Flutter version and an Android arm64 release build',
     () {
+      expect(workflow, contains('runs-on: ubuntu-24.04'));
+      expect(workflow, contains('uses: actions/checkout@v5'));
+      expect(workflow, contains('uses: actions/setup-java@v5'));
       expect(workflow, contains('flutter-version: "3.41.9"'));
       expect(
         workflow,
@@ -30,5 +33,9 @@ void main() {
   test('uploads the APK without embedding the CI Hugging Face secret', () {
     expect(workflow, contains('uses: actions/upload-artifact@v4'));
     expect(workflow, isNot(contains(r'secrets.HUGGING_FACE_TOKEN')));
+  });
+
+  test('analyzes only the app sources and tests', () {
+    expect(workflow, contains('run: flutter analyze lib test'));
   });
 }

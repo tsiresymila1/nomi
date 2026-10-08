@@ -164,7 +164,9 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
 
     final mmprojPath = resolveLocalMmprojPath(model.mmprojSource);
 
-    final key = '${model.source.trim()}|${model.maxTokens}|${mmprojPath ?? ''}';
+    final key =
+        '${model.source.trim()}|${model.maxTokens}|'
+        '${model.preferredBackend}|${mmprojPath ?? ''}';
     final current = _current;
     final prepared = _prepared;
     if (current != null && prepared != null && _cacheKey == key) {

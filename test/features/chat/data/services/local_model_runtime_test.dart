@@ -4,13 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
 
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
+import 'package:gena/features/chat/data/services/llamadart_local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/unsupported_local_model_runtime.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:llamadart/llamadart.dart' show ComputeDevice;
 
 ModelInfo _model({
   required String source,
   int maxTokens = 4096,
   String? mmprojSource,
+  String preferredBackend = 'cpu',
 }) {
   return ModelInfo(
     id: 1,
@@ -28,7 +31,7 @@ ModelInfo _model({
     maxTokens: maxTokens,
     tokenBuffer: 256,
     randomSeed: 0,
-    preferredBackend: 'cpu',
+    preferredBackend: preferredBackend,
     sourceType: 'file',
     source: source,
     mmprojSource: mmprojSource,
@@ -115,6 +118,55 @@ class _ControlledLoader implements LocalRuntimeLoader {
 }
 
 void main() {
+  group('buildLocalModelParams', () {
+    test('forces the model CPU preference instead of LiteRT automatic GPU', () {
+      final request = LocalRuntimeRequest(
+        modelInfo: _model(
+          source: '/models/qwen3.litertlm',
+          preferredBackend: 'cpu',
+        ),
+        contextSize: 4096,
+        constrainedOutput: false,
+      );
+
+      final params = buildLocalModelParams(request);
+
+      expect(params.contextSize, 4096);
+      expect(params.device, ComputeDevice.cpu);
+    });
+
+    test('maps explicit GPU and NPU model preferences', () {
+      paramsFor(String backend) => buildLocalModelParams(
+        LocalRuntimeRequest(
+          modelInfo: _model(
+            source: '/models/model.litertlm',
+            preferredBackend: backend,
+          ),
+          contextSize: 2048,
+          constrainedOutput: false,
+        ),
+      );
+
+      expect(paramsFor('gpu').device, ComputeDevice.gpu);
+      expect(paramsFor('npu').device, ComputeDevice.npu);
+    });
+
+    test('keeps automatic selection for an unknown legacy preference', () {
+      final params = buildLocalModelParams(
+        LocalRuntimeRequest(
+          modelInfo: _model(
+            source: '/models/model.gguf',
+            preferredBackend: 'legacy',
+          ),
+          contextSize: 1024,
+          constrainedOutput: true,
+        ),
+      );
+
+      expect(params.device, ComputeDevice.auto);
+    });
+  });
+
   group('fallbackTokenEstimate', () {
     test('empty text is zero tokens', () {
       expect(fallbackTokenEstimate(''), 0);
@@ -395,6 +447,21 @@ void main() {
 
       await runtime.prepare(_model(source: '/models/a.gguf', maxTokens: 2048));
       await runtime.prepare(_model(source: '/models/a.gguf', maxTokens: 4096));
+
+      expect(loader.loads, 2);
+      expect(loader.disposes, 1);
+    });
+
+    test('reloads when the preferred compute backend changes', () async {
+      final loader = _FakeLoader();
+      final runtime = CachingLocalModelRuntime(loader);
+
+      await runtime.prepare(
+        _model(source: '/models/a.litertlm', preferredBackend: 'cpu'),
+      );
+      await runtime.prepare(
+        _model(source: '/models/a.litertlm', preferredBackend: 'gpu'),
+      );
 
       expect(loader.loads, 2);
       expect(loader.disposes, 1);

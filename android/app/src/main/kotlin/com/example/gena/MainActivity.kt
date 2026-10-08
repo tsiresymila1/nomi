@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
         private const val CHANNEL_NAME = "gena/native_phone_tools"
         private const val DEVICE_INFO_CHANNEL_NAME = "gena/device_system_info"
         private const val DIRECT_MODEL_FILES_CHANNEL_NAME = "gena/direct_model_files"
+        private const val DOCUMENT_PROCESSING_CHANNEL_NAME = "gena/document_processing"
         private const val CALL_PERMISSION_REQUEST_CODE = 9107
         private const val CONTACTS_PERMISSION_REQUEST_CODE = 9108
         private const val ALL_FILES_ACCESS_REQUEST_CODE = 9109
@@ -85,6 +86,47 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DOCUMENT_PROCESSING_CHANNEL_NAME
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start", "update" -> {
+                    val documentName = call.argument<String>("name").orEmpty()
+                    val phase = call.argument<String>("phase")
+                        ?: "Preparing for private search"
+                    startDocumentProcessingService(
+                        action = if (call.method == "start") {
+                            DocumentProcessingForegroundService.ACTION_START
+                        } else {
+                            DocumentProcessingForegroundService.ACTION_UPDATE
+                        },
+                        documentName = documentName,
+                        phase = phase
+                    )
+                    result.success(null)
+                }
+                "stop" -> {
+                    stopService(Intent(this, DocumentProcessingForegroundService::class.java))
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun startDocumentProcessingService(
+        action: String,
+        documentName: String,
+        phase: String
+    ) {
+        val intent = Intent(this, DocumentProcessingForegroundService::class.java).apply {
+            this.action = action
+            putExtra(DocumentProcessingForegroundService.EXTRA_DOCUMENT_NAME, documentName)
+            putExtra(DocumentProcessingForegroundService.EXTRA_PHASE, phase)
+        }
+        ContextCompat.startForegroundService(this, intent)
     }
 
     private fun hasAllFilesAccess(): Boolean {

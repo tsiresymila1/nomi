@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/core/logger.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/features/workspace/data/models/workspace_document_ingestion_status.dart';
+import 'package:gena/features/workspace/data/services/document_processing_foreground_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_vector_store.dart';
 
@@ -13,15 +15,20 @@ class WorkspaceRagIngestionQueue {
     required db.GenaDatabase database,
     required WorkspaceDocumentParser parser,
     required WorkspaceRagVectorStore vectorStore,
+    DocumentProcessingForegroundController? foregroundController,
     AppCapabilities? capabilities,
   }) : _database = database,
        _parser = parser,
        _vectorStore = vectorStore,
+       _foregroundController =
+           foregroundController ??
+           const AndroidDocumentProcessingForegroundController(),
        _capabilities = capabilities ?? AppCapabilities.current;
 
   final db.GenaDatabase _database;
   final WorkspaceDocumentParser _parser;
   final WorkspaceRagVectorStore _vectorStore;
+  final DocumentProcessingForegroundController _foregroundController;
   final AppCapabilities _capabilities;
 
   final List<int> _queue = <int>[];
@@ -92,7 +99,14 @@ class WorkspaceRagIngestionQueue {
       error: null,
     );
 
+    var foregroundStarted = false;
     try {
+      final sourceFile = File(row.sourcePath);
+      final sizeBytes = await sourceFile.length();
+      foregroundStarted = await _foregroundController.startIfNeeded(
+        documentName: row.name,
+        sizeBytes: sizeBytes,
+      );
       final parsed = await _parser.parseStoredSource(
         sourcePath: row.sourcePath,
         sourceType: row.sourceType,
@@ -104,6 +118,13 @@ class WorkspaceRagIngestionQueue {
         await _vectorStore.removeDocument(
           workspaceId: workspaceId,
           sourceId: row.ragSourceId!,
+        );
+      }
+
+      if (foregroundStarted) {
+        await _foregroundController.update(
+          documentName: row.name,
+          phase: 'Indexing for private search',
         );
       }
 
@@ -140,6 +161,10 @@ class WorkspaceRagIngestionQueue {
         WorkspaceDocumentIngestionStatus.failed,
         error: error.toString(),
       );
+    } finally {
+      if (foregroundStarted) {
+        await _foregroundController.stop();
+      }
     }
   }
 

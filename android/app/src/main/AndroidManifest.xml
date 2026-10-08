@@ -45,6 +45,10 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+        <service
+            android:name=".DocumentProcessingForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
         <uses-native-library
             android:name="libOpenCL.so"
             android:required="false"/>

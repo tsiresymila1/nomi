@@ -149,6 +149,23 @@ void main() {
       expect(chat.title.toLowerCase(), isNot(startsWith('please')));
     });
 
+    test('keeps fallback image titles within the database limit', () async {
+      final chatId = await newThread();
+      await updateThreadTitleFromFirstMessage(
+        database: database,
+        chatId: chatId,
+        messageText:
+            'Créer moi un chat qui fait une très longue image fantastique',
+        hasImage: true,
+      );
+
+      final chat = await (database.select(
+        database.chats,
+      )..where((t) => t.id.equals(chatId))).getSingle();
+      expect(chat.title, endsWith('(image)'));
+      expect(chat.title.length, lessThanOrEqualTo(32));
+    });
+
     test('does not rename a thread that already has a custom title', () async {
       final chatId = await newThread(title: 'My custom title');
       await updateThreadTitleFromFirstMessage(

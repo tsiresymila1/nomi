@@ -125,14 +125,10 @@ String _fallbackTitle(String messageText, {required bool hasImage}) {
 
   final words = candidate.split(' ');
   final firstWords = words.take(6).join(' ');
-  final clipped = firstWords.length > 32
-      ? '${firstWords.substring(0, 32).trim()}...'
-      : firstWords;
-
-  if (hasImage) {
-    return '${_capitalize(clipped)} (image)';
-  }
-  return _capitalize(clipped);
+  return _fitTitle(
+    _capitalize(firstWords),
+    suffix: hasImage ? ' (image)' : '',
+  );
 }
 
 String? _sanitizeTitle(String? raw) {
@@ -158,6 +154,26 @@ String? _sanitizeTitle(String? raw) {
       ? normalized.substring(0, 32).trim()
       : normalized;
   return _capitalize(clipped);
+}
+
+const int _maxThreadTitleLength = 32;
+
+String _fitTitle(String value, {required String suffix}) {
+  final available = _maxThreadTitleLength - suffix.length;
+  if (value.length <= available) return '$value$suffix';
+
+  const ellipsis = '...';
+  final contentLimit = available - ellipsis.length;
+  var end = contentLimit.clamp(0, value.length);
+  // Do not split a UTF-16 surrogate pair when the prompt contains emoji.
+  if (end > 0 &&
+      end < value.length &&
+      value.codeUnitAt(end - 1) >= 0xD800 &&
+      value.codeUnitAt(end - 1) <= 0xDBFF) {
+    end--;
+  }
+  final clipped = value.substring(0, end).trimRight();
+  return '$clipped$ellipsis$suffix';
 }
 
 String _capitalize(String input) {

@@ -97,12 +97,65 @@ void main() {
           previousModel: _localModel(1, 'Previous'),
         );
 
-        await actions.selectModel(_remoteModel(3, 'Remote'));
+        await actions.selectModel(
+          _remoteModel(3, 'Remote'),
+          remoteConfirmed: true,
+        );
 
         expect(events, ['stop', 'reset', 'select:3']);
         expect(runtime.preparedModelIds, isEmpty);
         expect(selectedModelCubit.state, 3);
         expect(switchingCubit.state.phase, ChatModelSwitchPhase.ready);
+      },
+    );
+
+    test('remote selection is blocked without explicit confirmation', () async {
+      final events = <String>[];
+      final switchingCubit = ChatModelSwitchingCubit();
+      addTearDown(switchingCubit.close);
+      final selectedModelCubit = _SelectedModelCubitFake(1, events);
+      final actions = _actions(
+        events: events,
+        switchingCubit: switchingCubit,
+        selectedModelCubit: selectedModelCubit,
+        runtime: _LocalModelRuntimeFake(events),
+        previousModel: _localModel(1, 'Previous'),
+      );
+
+      await expectLater(
+        actions.selectModel(_remoteModel(3, 'Remote')),
+        throwsA(isA<RemoteModelConfirmationRequired>()),
+      );
+
+      expect(events, isEmpty);
+      expect(selectedModelCubit.state, 1);
+    });
+
+    test(
+      'confirmed remote fallback switches model then retries generation',
+      () async {
+        final events = <String>[];
+        final switchingCubit = ChatModelSwitchingCubit();
+        addTearDown(switchingCubit.close);
+        final selectedModelCubit = _SelectedModelCubitFake(1, events);
+        final actions = _actions(
+          events: events,
+          switchingCubit: switchingCubit,
+          selectedModelCubit: selectedModelCubit,
+          runtime: _LocalModelRuntimeFake(events),
+          previousModel: _localModel(1, 'Previous'),
+        );
+
+        await actions.useConfirmedRemoteFallback(
+          const RemoteFallbackProposal(
+            modelId: 3,
+            modelName: 'Remote',
+            providerLabel: 'Remote server server',
+          ),
+        );
+
+        expect(events, ['stop', 'reset', 'select:3', 'retry-generation']);
+        expect(selectedModelCubit.state, 3);
       },
     );
 
@@ -209,6 +262,11 @@ class _ChatThreadActionsFake extends Fake implements ChatThreadActions {
     bool waitForLocalModelCancel = true,
   }) async {
     events.add('stop');
+  }
+
+  @override
+  Future<void> retryLastFailedGeneration() async {
+    events.add('retry-generation');
   }
 }
 

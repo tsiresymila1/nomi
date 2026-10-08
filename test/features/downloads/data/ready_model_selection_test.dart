@@ -47,6 +47,33 @@ void main() {
 
     expect(ready.map((model) => model.id), [local.id, remote.id]);
   });
+
+  test('native automatic selection never falls back to remote', () {
+    expect(
+      automaticReadyModelForPlatform(
+        readyModels: [remote],
+        supportsLocalModels: true,
+      ),
+      isNull,
+    );
+    expect(
+      automaticReadyModelForPlatform(
+        readyModels: [remote, local],
+        supportsLocalModels: true,
+      )?.id,
+      local.id,
+    );
+  });
+
+  test('remote-only platform may automatically select a remote model', () {
+    expect(
+      automaticReadyModelForPlatform(
+        readyModels: [remote],
+        supportsLocalModels: false,
+      )?.id,
+      remote.id,
+    );
+  });
 }
 
 ModelInfo _model({

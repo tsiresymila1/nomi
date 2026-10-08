@@ -7,8 +7,10 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_queries_service.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:gena/features/chat/presentation/widgets/remote_model_confirmation_dialog.dart';
 
 const double _chatAutoFollowThreshold = 120;
 
@@ -103,6 +105,16 @@ class _ChatViewState extends State<ChatView> {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  Future<void> _useRemoteFallback(RemoteFallbackProposal proposal) async {
+    final confirmed = await showRemoteDataConfirmationDialog(
+      context: context,
+      modelName: proposal.modelName,
+      providerLabel: proposal.providerLabel,
+    );
+    if (!confirmed || !mounted) return;
+    await sl<ChatPageActions>().useConfirmedRemoteFallback(proposal);
   }
 
   @override
@@ -344,6 +356,7 @@ class _ChatViewState extends State<ChatView> {
                                       failure: failure,
                                       onRetry: sl<ChatThreadActions>()
                                           .retryLastFailedGeneration,
+                                      onRemoteFallback: _useRemoteFallback,
                                     );
                                   }
 
@@ -389,10 +402,13 @@ class ChatGenerationFailureCard extends StatelessWidget {
     super.key,
     required this.failure,
     required this.onRetry,
+    this.onRemoteFallback,
   });
 
   final ChatGenerationFailureState failure;
   final VoidCallback onRetry;
+  final Future<void> Function(RemoteFallbackProposal proposal)?
+  onRemoteFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -407,31 +423,43 @@ class ChatGenerationFailureCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: colorScheme.error.withAlpha(80)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
+          runSpacing: 4,
           children: [
             Icon(
               Icons.error_outline_rounded,
               size: 20,
               color: colorScheme.onErrorContainer,
             ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                failure.displayMessage,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onErrorContainer,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  failure.displayMessage,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                  ),
                 ),
               ),
             ),
-            if (failure.canRetry) ...[
-              const SizedBox(width: 6),
+            if (failure.canRetry)
               TextButton(
                 key: const ValueKey('retry-generation-button'),
                 onPressed: onRetry,
                 child: const Text('Retry'),
               ),
-            ],
+            if (failure.remoteFallback case final proposal?)
+              TextButton.icon(
+                key: const ValueKey('remote-generation-fallback-button'),
+                onPressed: onRemoteFallback == null
+                    ? null
+                    : () => onRemoteFallback!(proposal),
+                icon: const Icon(Icons.cloud_outlined, size: 18),
+                label: Text('Try ${proposal.modelName}'),
+              ),
           ],
         ),
       ),

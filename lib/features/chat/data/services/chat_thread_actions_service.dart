@@ -15,6 +15,7 @@ import 'package:gena/features/chat/data/services/chat_title_service.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/models/chat_attachment.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 
 /// Message shown when an image is attached to a model that cannot read images.
 const imageInputUnsupportedMessage =
@@ -26,6 +27,29 @@ bool isImageInputRejected({required ModelInfo? model, required bool hasImage}) {
   if (!hasImage) return false;
   if (model == null) return false;
   return !model.supportImage;
+}
+
+RemoteFallbackProposal? resolveRemoteFallbackProposal({
+  required ModelInfo failedModel,
+  required List<ModelInfo> models,
+}) {
+  if (failedModel.provider != ModelProviderType.local) return null;
+  for (final model in models) {
+    if (model.provider != ModelProviderType.remote) continue;
+    final apiHost = Uri.tryParse(model.apiUrl ?? '')?.host.trim();
+    final source = Uri.tryParse(model.source);
+    final providerLabel = apiHost != null && apiHost.isNotEmpty
+        ? apiHost
+        : source?.scheme == 'remote-server' && source!.host.isNotEmpty
+        ? 'Remote server ${source.host}'
+        : 'Configured remote API';
+    return RemoteFallbackProposal(
+      modelId: model.id,
+      modelName: model.name,
+      providerLabel: providerLabel,
+    );
+  }
+  return null;
 }
 
 class LocalMessageBudgetPlan {
@@ -94,6 +118,9 @@ typedef ChatAssistantGenerator =
       required bool Function() isCancelled,
     });
 
+typedef RemoteFallbackResolver =
+    Future<RemoteFallbackProposal?> Function(ModelInfo failedModel);
+
 class ChatThreadActions implements ChatThreadActionsApi {
   ChatThreadActions({
     required db.GenaDatabase database,
@@ -107,6 +134,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
     required ChatGenerationFailureCubit chatGenerationFailureCubit,
     required ChatRuntimeDependencies runtimeDependencies,
     ChatAssistantGenerator? assistantGenerator,
+    RemoteFallbackResolver? remoteFallbackResolver,
   }) : _database = database,
        _selectedChatCubit = selectedChatCubit,
        _activeModelInfoResolver = activeModelInfoResolver,
@@ -117,7 +145,8 @@ class ChatThreadActions implements ChatThreadActionsApi {
        _chatToolWaitingCubit = chatToolWaitingCubit,
        _chatGenerationFailureCubit = chatGenerationFailureCubit,
        _runtimeDependencies = runtimeDependencies,
-       _assistantGenerator = assistantGenerator;
+       _assistantGenerator = assistantGenerator,
+       _remoteFallbackResolver = remoteFallbackResolver;
 
   final db.GenaDatabase _database;
   final SelectedChatCubit _selectedChatCubit;
@@ -130,6 +159,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
   final ChatGenerationFailureCubit _chatGenerationFailureCubit;
   final ChatRuntimeDependencies _runtimeDependencies;
   final ChatAssistantGenerator? _assistantGenerator;
+  final RemoteFallbackResolver? _remoteFallbackResolver;
 
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
@@ -368,11 +398,24 @@ class ChatThreadActions implements ChatThreadActionsApi {
       if (_cancelGenerationSerial == currentGeneration) return;
 
       final failure = _safeGenerationFailure(error);
+      RemoteFallbackProposal? remoteFallback;
+      final resolver = _remoteFallbackResolver;
+      if (activeModel.provider == 'local' && resolver != null) {
+        try {
+          remoteFallback = await resolver(activeModel);
+        } catch (fallbackError, fallbackStackTrace) {
+          logger.w(
+            'Could not resolve a remote fallback: $fallbackError',
+            stackTrace: fallbackStackTrace,
+          );
+        }
+      }
       _chatGenerationFailureCubit.fail(
         chatId: chatId,
         userMessageId: userMessageId,
         displayMessage: failure.message,
         canRetry: failure.canRetry,
+        remoteFallback: remoteFallback,
       );
       logger.e(
         'Failed to generate chat response',

@@ -201,6 +201,13 @@ void registerChatDependencies() {
         chatToolWaitingCubit: sl<ChatToolWaitingCubit>(),
         chatGenerationFailureCubit: sl<ChatGenerationFailureCubit>(),
         runtimeDependencies: sl<ChatRuntimeDependencies>(),
+        remoteFallbackResolver: (failedModel) async {
+          final models = await sl<ModelRepository>().watchModels().first;
+          return resolveRemoteFallbackProposal(
+            failedModel: failedModel,
+            models: models,
+          );
+        },
       ),
     );
   }

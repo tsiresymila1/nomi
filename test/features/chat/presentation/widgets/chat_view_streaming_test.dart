@@ -71,4 +71,38 @@ void main() {
     expect(find.text('Reinstall required.'), findsOneWidget);
     expect(find.byKey(const ValueKey('retry-generation-button')), findsNothing);
   });
+
+  testWidgets('generation failure card exposes an explicit remote fallback', (
+    tester,
+  ) async {
+    RemoteFallbackProposal? selectedProposal;
+    const proposal = RemoteFallbackProposal(
+      modelId: 7,
+      modelName: 'Cloud rescue',
+      providerLabel: 'api.example.com',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChatGenerationFailureCard(
+            failure: const ChatGenerationFailureState(
+              chatId: 1,
+              userMessageId: 2,
+              displayMessage: 'Local generation failed.',
+              canRetry: true,
+              remoteFallback: proposal,
+            ),
+            onRetry: () {},
+            onRemoteFallback: (value) async => selectedProposal = value,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Try Cloud rescue'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('remote-generation-fallback-button')),
+    );
+    expect(selectedProposal, same(proposal));
+  });
 }

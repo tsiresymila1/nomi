@@ -164,7 +164,12 @@ class HomeCubit extends Cubit<HomeState> {
       return;
     }
 
-    final fallbackModelId = readyModels.first.id;
+    final fallbackModel = automaticReadyModelForPlatform(
+      readyModels: readyModels,
+      supportsLocalModels: _capabilities.supportsLocalModels,
+    );
+    if (fallbackModel == null) return;
+    final fallbackModelId = fallbackModel.id;
     await _selectedModelCubit.selectModel(fallbackModelId);
     emit(
       state.copyWith(

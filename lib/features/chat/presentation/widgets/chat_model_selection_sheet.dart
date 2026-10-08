@@ -14,6 +14,7 @@ import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
+import 'package:gena/features/chat/presentation/widgets/remote_model_confirmation_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 class ChatModelSelectionSheet extends StatelessWidget {
@@ -233,6 +234,24 @@ class ChatModelSelectionSheet extends StatelessWidget {
                                             return;
                                           }
                                           final actions = sl<ChatPageActions>();
+                                          if (model.provider ==
+                                              ModelProviderType.remote) {
+                                            final confirmed =
+                                                await showRemoteModelConfirmationDialog(
+                                                  context: context,
+                                                  model: model,
+                                                );
+                                            if (!confirmed) return;
+                                            if (!context.mounted) return;
+                                            Navigator.of(context).pop();
+                                            unawaited(
+                                              actions.selectModel(
+                                                model,
+                                                remoteConfirmed: true,
+                                              ),
+                                            );
+                                            return;
+                                          }
                                           Navigator.of(context).pop();
                                           unawaited(actions.selectModel(model));
                                         },

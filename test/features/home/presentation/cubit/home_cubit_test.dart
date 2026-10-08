@@ -408,8 +408,8 @@ void main() {
   });
 
   group('prepareChatEntry', () {
-    test('falls back to the first ready model when none selected', () async {
-      final remoteId = await insertRemoteModel();
+    test('does not silently select a remote model on Android', () async {
+      await insertRemoteModel();
       final modelCubit = SelectedModelCubit();
       final cubit = buildCubit(selectedModelCubit: modelCubit);
       addTearDown(cubit.close);
@@ -417,8 +417,8 @@ void main() {
       await _settle();
 
       await cubit.prepareChatEntry();
-      expect(modelCubit.state, remoteId);
-      expect(cubit.state.selectedModelId, remoteId);
+      expect(modelCubit.state, isNull);
+      expect(cubit.state.selectedModelId, isNull);
     });
   });
 }

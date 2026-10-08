@@ -78,12 +78,26 @@ class ChatGenerationFailureState {
     required this.userMessageId,
     required this.displayMessage,
     required this.canRetry,
+    this.remoteFallback,
   });
 
   final int chatId;
   final int userMessageId;
   final String displayMessage;
   final bool canRetry;
+  final RemoteFallbackProposal? remoteFallback;
+}
+
+class RemoteFallbackProposal {
+  const RemoteFallbackProposal({
+    required this.modelId,
+    required this.modelName,
+    required this.providerLabel,
+  });
+
+  final int modelId;
+  final String modelName;
+  final String providerLabel;
 }
 
 class ChatGenerationFailureCubit extends Cubit<ChatGenerationFailureState?> {
@@ -94,6 +108,7 @@ class ChatGenerationFailureCubit extends Cubit<ChatGenerationFailureState?> {
     required int userMessageId,
     required String displayMessage,
     required bool canRetry,
+    RemoteFallbackProposal? remoteFallback,
   }) {
     emit(
       ChatGenerationFailureState(
@@ -101,6 +116,7 @@ class ChatGenerationFailureCubit extends Cubit<ChatGenerationFailureState?> {
         userMessageId: userMessageId,
         displayMessage: displayMessage,
         canRetry: canRetry,
+        remoteFallback: remoteFallback,
       ),
     );
   }

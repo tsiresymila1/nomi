@@ -115,8 +115,14 @@ class ChatPageActions {
     }
   }
 
-  Future<void> selectModel(ModelInfo model) async {
+  Future<void> selectModel(
+    ModelInfo model, {
+    bool remoteConfirmed = false,
+  }) async {
     if (await _rejectUnsupportedLocalModel(model)) return;
+    if (model.provider == ModelProviderType.remote && !remoteConfirmed) {
+      throw RemoteModelConfirmationRequired(model);
+    }
 
     final switchState = _chatModelSwitchingCubit.state;
     if (switchState.isBusy &&
@@ -166,7 +172,30 @@ class ChatPageActions {
       );
       return;
     }
+    if (target.provider == ModelProviderType.remote) {
+      await AppToast.show(
+        'Select the remote model again to review and confirm data sharing.',
+        type: AppToastType.info,
+      );
+      return;
+    }
     await selectModel(target);
+  }
+
+  Future<void> useConfirmedRemoteFallback(
+    RemoteFallbackProposal proposal,
+  ) async {
+    final target = await _modelById(proposal.modelId);
+    if (target == null || target.provider != ModelProviderType.remote) {
+      await AppToast.show(
+        'The remote model is no longer available.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    await selectModel(target, remoteConfirmed: true);
+    await _chatThreadActions.retryLastFailedGeneration();
   }
 
   Future<bool> _ensureModelSelectedIfNeeded() async {
@@ -193,8 +222,14 @@ class ChatPageActions {
       }
     }
 
+    final automaticModel = automaticReadyModelForPlatform(
+      readyModels: readyModels,
+      supportsLocalModels: _capabilities.supportsLocalModels,
+    );
+    if (automaticModel == null) return false;
+
     await _switchToModel(
-      readyModels.first,
+      automaticModel,
       origin: ChatModelSwitchOrigin.automaticSelection,
     );
     return true;
@@ -344,4 +379,14 @@ class ChatPageActions {
     );
     return true;
   }
+}
+
+class RemoteModelConfirmationRequired implements Exception {
+  const RemoteModelConfirmationRequired(this.model);
+
+  final ModelInfo model;
+
+  @override
+  String toString() =>
+      'Remote model ${model.name} requires explicit confirmation.';
 }

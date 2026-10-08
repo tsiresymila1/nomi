@@ -27,3 +27,15 @@ List<ModelInfo> readyModelsForCapabilities({
       )
       .toList(growable: false);
 }
+
+/// Never chooses a remote fallback automatically on a local-capable device.
+/// Remote-only platforms may still select their first usable model.
+ModelInfo? automaticReadyModelForPlatform({
+  required List<ModelInfo> readyModels,
+  required bool supportsLocalModels,
+}) {
+  if (!supportsLocalModels) return readyModels.firstOrNull;
+  return readyModels
+      .where((model) => model.provider == ModelProviderType.local)
+      .firstOrNull;
+}

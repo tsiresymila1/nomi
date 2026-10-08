@@ -19,6 +19,10 @@ import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview
 import 'package:gena/features/chat/presentation/widgets/chat_input_send_button.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_voice_button.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/image_generation/presentation/cubit/chat_composer_mode_cubit.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
+import 'package:gena/features/image_generation/presentation/widgets/chat_composer_mode_selector.dart';
+import 'package:gena/features/image_generation/presentation/widgets/image_generation_status_panel.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:go_router/go_router.dart';
@@ -104,6 +108,37 @@ class _ChatInputState extends State<ChatInput> {
 
   Future<void> _stopGeneration() async {
     await sl<ChatInputCubit>().stopGeneration();
+  }
+
+  Future<void> _generateImage() async {
+    final artifact = await sl<ImageGenerationCubit>().generate(
+      _controller.text,
+    );
+    if (artifact != null && mounted) _controller.clear();
+  }
+
+  Future<void> _confirmRemoveImageModel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove SDXS-512?'),
+        content: const Text(
+          'This frees about 683 MB. You can download the local image model '
+          'again later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await sl<ImageGenerationCubit>().removeModel();
   }
 
   Future<void> _addAttachmentToWorkspace(
@@ -313,17 +348,32 @@ class _ChatInputState extends State<ChatInput> {
                       });
                     }
 
-                    return _buildInputField(
-                      context: context,
-                      colorScheme: colorScheme,
-                      activeModel: activeModel,
-                      isGenerating: isGenerating,
-                      inputState: inputState,
-                      canAttachImage: canAttachImage,
-                      hasSelectedImage: hasSelectedImage,
-                      hasSendableContent: hasSendableContent,
-                      attachmentDrafts: _attachmentDrafts,
-                      isPreparingAttachment: isPreparingAttachment,
+                    return BlocBuilder<ChatComposerModeCubit, ChatComposerMode>(
+                      bloc: sl<ChatComposerModeCubit>(),
+                      builder: (context, composerMode) {
+                        return BlocBuilder<
+                          ImageGenerationCubit,
+                          ImageGenerationState
+                        >(
+                          bloc: sl<ImageGenerationCubit>(),
+                          builder: (context, imageState) {
+                            return _buildInputField(
+                              context: context,
+                              colorScheme: colorScheme,
+                              activeModel: activeModel,
+                              isGenerating: isGenerating,
+                              inputState: inputState,
+                              canAttachImage: canAttachImage,
+                              hasSelectedImage: hasSelectedImage,
+                              hasSendableContent: hasSendableContent,
+                              attachmentDrafts: _attachmentDrafts,
+                              isPreparingAttachment: isPreparingAttachment,
+                              composerMode: composerMode,
+                              imageState: imageState,
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 );
@@ -346,7 +396,17 @@ class _ChatInputState extends State<ChatInput> {
     required bool hasSendableContent,
     required List<ChatAttachmentDraft> attachmentDrafts,
     required bool isPreparingAttachment,
+    required ChatComposerMode composerMode,
+    required ImageGenerationState imageState,
   }) {
+    final isImageMode = composerMode == ChatComposerMode.image;
+    final imageIsGenerating =
+        imageState.phase == ImageGenerationUiPhase.loadingModel ||
+        imageState.phase == ImageGenerationUiPhase.generating;
+    final effectiveGenerating = isImageMode ? imageIsGenerating : isGenerating;
+    final effectiveSendable = isImageMode
+        ? _hasTypedContent && imageState.isInstalled && !imageState.isBusy
+        : activeModel != null && hasSendableContent;
     Widget suffixActionButton({
       required dynamic icon,
       required VoidCallback? onPressed,
@@ -371,30 +431,57 @@ class _ChatInputState extends State<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
         children: [
-          _buildVisionPromptChips(
-            context: context,
-            colorScheme: colorScheme,
-            activeModel: activeModel,
-            hasSelectedImage: hasSelectedImage,
-            isGenerating: isGenerating,
+          ChatComposerModeSelector(
+            mode: composerMode,
+            enabled: !isGenerating && !imageState.isBusy,
+            onSelected: (mode) {
+              sl<ChatComposerModeCubit>().select(mode);
+              if (mode == ChatComposerMode.image &&
+                  (imageState.phase == ImageGenerationUiPhase.initial ||
+                      imageState.phase == ImageGenerationUiPhase.failed)) {
+                unawaited(sl<ImageGenerationCubit>().initialize());
+              }
+            },
           ),
-          _buildTokenBudgetIndicator(
-            context: context,
-            colorScheme: colorScheme,
-            activeModel: activeModel,
-            hasDraftContent: hasSendableContent,
-          ),
+          if (isImageMode)
+            ImageGenerationStatusPanel(
+              state: imageState,
+              onInstall: () =>
+                  unawaited(sl<ImageGenerationCubit>().installModel()),
+              onCancelInstall: () =>
+                  unawaited(sl<ImageGenerationCubit>().cancelInstall()),
+              onCancelGeneration: () =>
+                  sl<ImageGenerationCubit>().cancelGeneration(),
+              onRetry: () => unawaited(sl<ImageGenerationCubit>().initialize()),
+              onRemove: () => unawaited(_confirmRemoveImageModel()),
+            )
+          else ...[
+            _buildVisionPromptChips(
+              context: context,
+              colorScheme: colorScheme,
+              activeModel: activeModel,
+              hasSelectedImage: hasSelectedImage,
+              isGenerating: isGenerating,
+            ),
+            _buildTokenBudgetIndicator(
+              context: context,
+              colorScheme: colorScheme,
+              activeModel: activeModel,
+              hasDraftContent: hasSendableContent,
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (!_hasFocus ||
-                    hasSelectedImage ||
-                    attachmentDrafts.isNotEmpty)
+                if (!isImageMode &&
+                    (!_hasFocus ||
+                        hasSelectedImage ||
+                        attachmentDrafts.isNotEmpty))
                   ChatInputAttachmentButton(
-                    isGenerating: isGenerating,
+                    isGenerating: effectiveGenerating,
                     hasSelectedImage:
                         hasSelectedImage || attachmentDrafts.isNotEmpty,
                     onPressed: () => _openAttachmentMenu(
@@ -411,14 +498,17 @@ class _ChatInputState extends State<ChatInput> {
                     ),
                     child: Column(
                       children: [
-                        ChatInputAttachmentPreviewList(
-                          attachments: attachmentDrafts,
-                          onRemove: (id) =>
-                              unawaited(sl<ChatAttachmentsCubit>().remove(id)),
-                          onAddToWorkspace: (attachment) =>
-                              unawaited(_addAttachmentToWorkspace(attachment)),
-                        ),
-                        if (hasSelectedImage)
+                        if (!isImageMode)
+                          ChatInputAttachmentPreviewList(
+                            attachments: attachmentDrafts,
+                            onRemove: (id) => unawaited(
+                              sl<ChatAttachmentsCubit>().remove(id),
+                            ),
+                            onAddToWorkspace: (attachment) => unawaited(
+                              _addAttachmentToWorkspace(attachment),
+                            ),
+                          ),
+                        if (!isImageMode && hasSelectedImage)
                           ChatInputImagePreview(
                             imagePath: inputState.selectedImagePath!,
                             onRemove: () {
@@ -432,7 +522,9 @@ class _ChatInputState extends State<ChatInput> {
                           onTapOutside: (_) => _focusNode.unfocus(),
                           decoration: InputDecoration(
                             hintStyle: TextStyle(fontSize: 14),
-                            hintText: 'Type a message...',
+                            hintText: isImageMode
+                                ? 'Describe the image to create…'
+                                : 'Type a message...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,
@@ -449,7 +541,8 @@ class _ChatInputState extends State<ChatInput> {
                               minWidth: 0,
                               minHeight: 0,
                             ),
-                            prefixIcon: _hasFocus && !hasSelectedImage
+                            prefixIcon:
+                                !isImageMode && _hasFocus && !hasSelectedImage
                                 ? Padding(
                                     padding: const EdgeInsets.only(left: 6),
                                     child: Row(
@@ -460,7 +553,7 @@ class _ChatInputState extends State<ChatInput> {
                                           color: hasSelectedImage
                                               ? colorScheme.primary
                                               : null,
-                                          onPressed: isGenerating
+                                          onPressed: effectiveGenerating
                                               ? null
                                               : () => _openAttachmentMenu(
                                                   context: context,
@@ -480,7 +573,8 @@ class _ChatInputState extends State<ChatInput> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (!isGenerating &&
+                                  if (!isImageMode &&
+                                      !isGenerating &&
                                       !hasSendableContent &&
                                       AppCapabilities
                                           .current
@@ -498,7 +592,7 @@ class _ChatInputState extends State<ChatInput> {
                                       ),
                                     ),
                                   ],
-                                  if (isPreparingAttachment)
+                                  if (!isImageMode && isPreparingAttachment)
                                     const Padding(
                                       padding: EdgeInsets.all(5),
                                       child: SizedBox.square(
@@ -508,13 +602,22 @@ class _ChatInputState extends State<ChatInput> {
                                         ),
                                       ),
                                     )
-                                  else if (isGenerating || hasSendableContent)
+                                  else if (effectiveGenerating ||
+                                      effectiveSendable)
                                     ChatInputSendButton(
-                                      isGenerating: isGenerating,
-                                      hasSendableContent: hasSendableContent,
-                                      isSending: inputState.isSending,
-                                      onPressed: isGenerating
-                                          ? _stopGeneration
+                                      isGenerating: effectiveGenerating,
+                                      hasSendableContent: effectiveSendable,
+                                      isSending: isImageMode
+                                          ? imageState.isBusy
+                                          : inputState.isSending,
+                                      onPressed: effectiveGenerating
+                                          ? isImageMode
+                                                ? () =>
+                                                      sl<ImageGenerationCubit>()
+                                                          .cancelGeneration()
+                                                : _stopGeneration
+                                          : isImageMode
+                                          ? _generateImage
                                           : _sendMessage,
                                     ),
                                 ],

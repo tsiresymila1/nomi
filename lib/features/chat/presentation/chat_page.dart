@@ -108,36 +108,27 @@ class _ChatPageState extends State<ChatPage> {
       builder: (context, switchState) {
         return BlocBuilder<SelectedChatCubit, String?>(
           builder: (context, selectedChat) {
-            return StreamBuilder<ModelInfo?>(
-              stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
-              builder: (context, activeModelSnapshot) {
-                final activeModel = activeModelSnapshot.data;
-                final canShowInput =
-                    selectedChat != null && activeModel != null;
-
-                final bottomBar = !canShowInput
-                    ? const SizedBox.shrink()
-                    : IgnorePointer(
-                        ignoring: switchState.isBusy,
-                        child: AnimatedOpacity(
-                          opacity: switchState.isBusy ? 0.55 : 1,
-                          duration: const Duration(milliseconds: 180),
-                          child: AnimatedPadding(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            padding: EdgeInsets.only(
-                              bottom: MediaQuery.viewInsetsOf(context).bottom,
-                            ),
-                            child: SafeArea(child: ChatInput()),
-                          ),
+            final bottomBar = selectedChat == null
+                ? const SizedBox.shrink()
+                : IgnorePointer(
+                    ignoring: switchState.isBusy,
+                    child: AnimatedOpacity(
+                      opacity: switchState.isBusy ? 0.55 : 1,
+                      duration: const Duration(milliseconds: 180),
+                      child: AnimatedPadding(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.viewInsetsOf(context).bottom,
                         ),
-                      );
+                        child: SafeArea(child: ChatInput()),
+                      ),
+                    ),
+                  );
 
-                return bottomBar is SizedBox
-                    ? bottomBar
-                    : reveal(bottomBar, delayMs: 60);
-              },
-            );
+            return bottomBar is SizedBox
+                ? bottomBar
+                : reveal(bottomBar, delayMs: 60);
           },
         );
       },
@@ -200,8 +191,6 @@ class _ChatPageState extends State<ChatPage> {
   }) {
     final body = selectedChat == null
         ? reveal(const Center(child: Text('Select or create a chat')))
-        : activeModel == null
-        ? reveal(const Center(child: Text('No active model')))
         : ChatView(
             chatId: selectedChat,
           ).animate().fadeIn(duration: Duration(milliseconds: 1200));

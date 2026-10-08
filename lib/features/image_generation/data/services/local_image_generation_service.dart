@@ -10,8 +10,36 @@ abstract interface class GeneratedImageStore {
   Future<String> savePng(Uint8List bytes, {required int seed});
 }
 
+abstract interface class ImageGenerationServiceApi {
+  Future<ImageRuntimeSupport> checkSupport();
+
+  Future<InstalledImageModel?> resolveModel();
+
+  Future<InstalledImageModel> installModel({
+    required void Function(double progress) onProgress,
+    required void Function() onVerifying,
+  });
+
+  Future<void> cancelInstall();
+
+  Future<GeneratedImageArtifact> generate({
+    required String prompt,
+    String negativePrompt = '',
+    int width = 512,
+    int height = 512,
+    int? seed,
+    void Function(LocalImageGenerationProgress progress)? onProgress,
+  });
+
+  void cancelGeneration();
+
+  Future<void> removeModel();
+
+  Future<void> releaseEngine();
+}
+
 /// Owns the resident diffusion engine and its shared heavyweight-runtime lease.
-class LocalImageGenerationService {
+class LocalImageGenerationService implements ImageGenerationServiceApi {
   LocalImageGenerationService({
     required LocalAiRuntimeCoordinator coordinator,
     required ImageModelStore modelStore,
@@ -36,6 +64,7 @@ class LocalImageGenerationService {
   Future<void> _operationTail = Future<void>.value();
   bool _cancelRequested = false;
 
+  @override
   Future<ImageRuntimeSupport> checkSupport() async {
     if (!_modelStore.isSupported) {
       return const ImageRuntimeSupport(
@@ -46,8 +75,10 @@ class LocalImageGenerationService {
     return _backend.checkRuntime();
   }
 
+  @override
   Future<InstalledImageModel?> resolveModel() => _modelStore.resolve(profile);
 
+  @override
   Future<InstalledImageModel> installModel({
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
@@ -57,8 +88,10 @@ class LocalImageGenerationService {
     onVerifying: onVerifying,
   );
 
+  @override
   Future<void> cancelInstall() => _modelStore.cancelInstall(profile);
 
+  @override
   Future<GeneratedImageArtifact> generate({
     required String prompt,
     String negativePrompt = '',
@@ -129,11 +162,13 @@ class LocalImageGenerationService {
     );
   }
 
+  @override
   void cancelGeneration() {
     _cancelRequested = true;
     _activeRun?.cancel();
   }
 
+  @override
   Future<void> removeModel() async {
     await releaseEngine();
     await _modelStore.delete(profile);
@@ -180,6 +215,7 @@ class LocalImageGenerationService {
     await generator?.dispose();
   }
 
+  @override
   Future<void> releaseEngine() async {
     final lease = _lease;
     await _evict();

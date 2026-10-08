@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/native_tool_execution_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
@@ -73,7 +73,6 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final coloScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final gradColor = isDark ? Colors.black : Colors.white70;
 
@@ -98,15 +97,15 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Stack(
         children: [
-          Column(children: [Expanded(child: _buildBody(coloScheme))]),
+          Column(children: [Expanded(child: _buildBody())]),
         ],
       ),
     );
   }
 
   Widget _buildBottomBar(Color gradColor) {
-    return BlocBuilder<ChatModelSwitchingCubit, bool>(
-      builder: (context, isSwitchingModel) {
+    return BlocBuilder<ChatModelSwitchingCubit, ChatModelSwitchState>(
+      builder: (context, switchState) {
         return BlocBuilder<SelectedChatCubit, String?>(
           builder: (context, selectedChat) {
             return StreamBuilder<ModelInfo?>(
@@ -114,19 +113,24 @@ class _ChatPageState extends State<ChatPage> {
               builder: (context, activeModelSnapshot) {
                 final activeModel = activeModelSnapshot.data;
                 final canShowInput =
-                    !isSwitchingModel &&
-                    selectedChat != null &&
-                    activeModel != null;
+                    selectedChat != null && activeModel != null;
 
                 final bottomBar = !canShowInput
                     ? const SizedBox.shrink()
-                    : AnimatedPadding(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        padding: EdgeInsets.only(
-                          bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    : IgnorePointer(
+                        ignoring: switchState.isBusy,
+                        child: AnimatedOpacity(
+                          opacity: switchState.isBusy ? 0.55 : 1,
+                          duration: const Duration(milliseconds: 180),
+                          child: AnimatedPadding(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.viewInsetsOf(context).bottom,
+                            ),
+                            child: SafeArea(child: ChatInput()),
+                          ),
                         ),
-                        child: SafeArea(child: ChatInput()),
                       );
 
                 return bottomBar is SizedBox
@@ -140,9 +144,9 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildBody(ColorScheme coloScheme) {
-    return BlocBuilder<ChatModelSwitchingCubit, bool>(
-      builder: (context, isSwitchingModel) {
+  Widget _buildBody() {
+    return BlocBuilder<ChatModelSwitchingCubit, ChatModelSwitchState>(
+      builder: (context, switchState) {
         return BlocBuilder<SelectedChatCubit, String?>(
           builder: (context, selectedChat) {
             return StreamBuilder<ModelInfo?>(
@@ -152,10 +156,9 @@ class _ChatPageState extends State<ChatPage> {
 
                 return _buildChatContent(
                   context: context,
-                  coloScheme: coloScheme,
                   selectedChat: selectedChat,
                   activeModel: activeModel,
-                  isSwitchingModel: isSwitchingModel,
+                  switchState: switchState,
                 );
               },
             );
@@ -167,10 +170,9 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildChatContent({
     required BuildContext context,
-    required ColorScheme coloScheme,
     required String? selectedChat,
     required ModelInfo? activeModel,
-    required bool isSwitchingModel,
+    required ChatModelSwitchState switchState,
   }) {
     return BlocListener<NativeToolExecutionCubit, NativeToolExecutionState>(
       listener: (context, state) {
@@ -183,20 +185,18 @@ class _ChatPageState extends State<ChatPage> {
       },
       child: _buildChatBody(
         context: context,
-        coloScheme: coloScheme,
         selectedChat: selectedChat,
         activeModel: activeModel,
-        isSwitchingModel: isSwitchingModel,
+        switchState: switchState,
       ),
     );
   }
 
   Widget _buildChatBody({
     required BuildContext context,
-    required ColorScheme coloScheme,
     required String? selectedChat,
     required ModelInfo? activeModel,
-    required bool isSwitchingModel,
+    required ChatModelSwitchState switchState,
   }) {
     final body = selectedChat == null
         ? reveal(const Center(child: Text('Select or create a chat')))
@@ -206,55 +206,94 @@ class _ChatPageState extends State<ChatPage> {
             chatId: selectedChat,
           ).animate().fadeIn(duration: Duration(milliseconds: 1200));
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.02),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
+    final showStatus =
+        switchState.isBusy || switchState.phase == ChatModelSwitchPhase.failed;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: KeyedSubtree(
+            key: ValueKey(selectedChat ?? 'none'),
+            child: body,
           ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey(
-          '${isSwitchingModel}_${selectedChat ?? "none"}_${activeModel?.id ?? "nomodel"}',
         ),
-        child: Visibility(
-          visible:
-              isSwitchingModel && selectedChat != null && activeModel != null,
-          replacement: body,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: 4,
+        if (showStatus)
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + kToolbarHeight + 8,
+            left: 16,
+            right: 16,
+            child: ChatModelSwitchStatusBanner(
+              state: switchState,
+              onRetry: sl<ChatPageActions>().retryLastModelSwitch,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class ChatModelSwitchStatusBanner extends StatelessWidget {
+  const ChatModelSwitchStatusBanner({
+    super.key,
+    required this.state,
+    required this.onRetry,
+  });
+
+  final ChatModelSwitchState state;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFailed = state.phase == ChatModelSwitchPhase.failed;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 2,
+      color: isFailed
+          ? colorScheme.errorContainer
+          : colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
               children: [
-                SizedBox(
-                  width: 24,
-                  height: 12,
-                  child: SpinKitThreeBounce(
-                    size: 10,
-                    color: coloScheme.primary,
+                Icon(
+                  isFailed ? Icons.error_outline_rounded : Icons.memory_rounded,
+                  size: 18,
+                  color: isFailed ? colorScheme.error : colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  isSwitchingModel ? 'Loading model...' : 'No active chat',
-                  style: TextStyle(fontSize: 12),
-                ),
+                if (isFailed)
+                  TextButton(onPressed: onRetry, child: const Text('Retry')),
               ],
             ),
           ),
-        ),
+          if (state.isBusy) const LinearProgressIndicator(minHeight: 2),
+        ],
       ),
     );
+  }
+
+  String get _label {
+    final modelName = state.modelName ?? 'model';
+    return switch (state.phase) {
+      ChatModelSwitchPhase.stoppingGeneration =>
+        'Stopping the current response…',
+      ChatModelSwitchPhase.unloading => 'Releasing the current model…',
+      ChatModelSwitchPhase.loading => 'Loading $modelName…',
+      ChatModelSwitchPhase.failed =>
+        state.errorMessage ?? 'Could not load $modelName.',
+      ChatModelSwitchPhase.idle || ChatModelSwitchPhase.ready => modelName,
+    };
   }
 }

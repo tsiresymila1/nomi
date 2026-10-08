@@ -79,47 +79,88 @@ void main() {
   });
 
   group('ChatModelSwitchingCubit', () {
-    test('emits true on first start and false only when balanced stops occur',
-        () async {
+    test('tracks a typed model loading lifecycle', () {
       final cubit = ChatModelSwitchingCubit();
       addTearDown(cubit.close);
-      final emitted = <bool>[];
-      final sub = cubit.stream.listen(emitted.add);
-      addTearDown(sub.cancel);
 
-      expect(cubit.state, isFalse);
+      expect(cubit.state.phase, ChatModelSwitchPhase.idle);
+      expect(cubit.state.isBusy, isFalse);
 
-      cubit.start();
-      expect(cubit.state, isTrue);
+      final operationId = cubit.begin(
+        modelId: 42,
+        modelName: 'Tiny local model',
+        origin: ChatModelSwitchOrigin.selection,
+      );
 
-      // Nested start must not re-emit true.
-      cubit.start();
-      expect(cubit.state, isTrue);
+      expect(cubit.state.phase, ChatModelSwitchPhase.stoppingGeneration);
+      expect(cubit.state.operationId, operationId);
+      expect(cubit.state.modelId, 42);
+      expect(cubit.state.modelName, 'Tiny local model');
+      expect(cubit.state.origin, ChatModelSwitchOrigin.selection);
+      expect(cubit.state.isBusy, isTrue);
 
-      // First stop only decrements; still switching.
-      cubit.stop();
-      expect(cubit.state, isTrue);
+      cubit.advance(operationId, ChatModelSwitchPhase.unloading);
+      expect(cubit.state.phase, ChatModelSwitchPhase.unloading);
 
-      // Second stop balances the two starts -> false.
-      cubit.stop();
-      expect(cubit.state, isFalse);
+      cubit.advance(operationId, ChatModelSwitchPhase.loading);
+      expect(cubit.state.phase, ChatModelSwitchPhase.loading);
 
-      // Stream delivery is asynchronous; let it flush.
-      await Future<void>.delayed(Duration.zero);
-      expect(emitted, [true, false]);
+      cubit.complete(operationId);
+      expect(cubit.state.phase, ChatModelSwitchPhase.ready);
+      expect(cubit.state.isBusy, isFalse);
     });
 
-    test('extra stop calls do not underflow or re-emit', () {
+    test(
+      'stale operations cannot advance, fail, or complete a newer switch',
+      () {
+        final cubit = ChatModelSwitchingCubit();
+        addTearDown(cubit.close);
+
+        final staleId = cubit.begin(
+          modelId: 1,
+          modelName: 'Old',
+          origin: ChatModelSwitchOrigin.backgroundWarmup,
+          initialPhase: ChatModelSwitchPhase.loading,
+        );
+        final currentId = cubit.begin(
+          modelId: 2,
+          modelName: 'New',
+          origin: ChatModelSwitchOrigin.selection,
+        );
+
+        cubit.advance(staleId, ChatModelSwitchPhase.unloading);
+        cubit.fail(staleId, 'old failure');
+        cubit.complete(staleId);
+
+        expect(cubit.state.operationId, currentId);
+        expect(cubit.state.modelId, 2);
+        expect(cubit.state.phase, ChatModelSwitchPhase.stoppingGeneration);
+        expect(cubit.state.errorMessage, isNull);
+      },
+    );
+
+    test('failure is recoverable and a new operation clears it', () {
       final cubit = ChatModelSwitchingCubit();
       addTearDown(cubit.close);
 
-      cubit.stop();
-      expect(cubit.state, isFalse);
+      final failedId = cubit.begin(
+        modelId: 7,
+        modelName: 'Broken',
+        origin: ChatModelSwitchOrigin.selection,
+      );
+      cubit.fail(failedId, 'Could not load model');
 
-      cubit.start();
-      cubit.stop();
-      cubit.stop(); // extra stop, no pending operations
-      expect(cubit.state, isFalse);
+      expect(cubit.state.phase, ChatModelSwitchPhase.failed);
+      expect(cubit.state.errorMessage, 'Could not load model');
+      expect(cubit.state.isBusy, isFalse);
+
+      cubit.begin(
+        modelId: 8,
+        modelName: 'Retry target',
+        origin: ChatModelSwitchOrigin.selection,
+      );
+      expect(cubit.state.errorMessage, isNull);
+      expect(cubit.state.phase, ChatModelSwitchPhase.stoppingGeneration);
     });
   });
 }

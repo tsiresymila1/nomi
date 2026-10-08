@@ -72,24 +72,109 @@ class ChatToolWaitingCubit extends Cubit<String?> {
   }
 }
 
-class ChatModelSwitchingCubit extends Cubit<bool> {
-  ChatModelSwitchingCubit() : super(false);
+enum ChatModelSwitchPhase {
+  idle,
+  stoppingGeneration,
+  unloading,
+  loading,
+  ready,
+  failed,
+}
 
-  int _pendingOperations = 0;
+enum ChatModelSwitchOrigin {
+  backgroundWarmup,
+  selection,
+  installation,
+  automaticSelection,
+}
 
-  void start() {
-    _pendingOperations += 1;
-    if (!state) {
-      emit(true);
-    }
+class ChatModelSwitchState {
+  const ChatModelSwitchState({
+    required this.phase,
+    required this.operationId,
+    this.modelId,
+    this.modelName,
+    this.origin,
+    this.errorMessage,
+  });
+
+  const ChatModelSwitchState.idle()
+    : phase = ChatModelSwitchPhase.idle,
+      operationId = 0,
+      modelId = null,
+      modelName = null,
+      origin = null,
+      errorMessage = null;
+
+  final ChatModelSwitchPhase phase;
+  final int operationId;
+  final int? modelId;
+  final String? modelName;
+  final ChatModelSwitchOrigin? origin;
+  final String? errorMessage;
+
+  bool get isBusy => switch (phase) {
+    ChatModelSwitchPhase.stoppingGeneration ||
+    ChatModelSwitchPhase.unloading ||
+    ChatModelSwitchPhase.loading => true,
+    _ => false,
+  };
+}
+
+class ChatModelSwitchingCubit extends Cubit<ChatModelSwitchState> {
+  ChatModelSwitchingCubit() : super(const ChatModelSwitchState.idle());
+
+  int _nextOperationId = 0;
+
+  int begin({
+    required int modelId,
+    required String modelName,
+    required ChatModelSwitchOrigin origin,
+    ChatModelSwitchPhase initialPhase = ChatModelSwitchPhase.stoppingGeneration,
+  }) {
+    final operationId = ++_nextOperationId;
+    emit(
+      ChatModelSwitchState(
+        phase: initialPhase,
+        operationId: operationId,
+        modelId: modelId,
+        modelName: modelName,
+        origin: origin,
+      ),
+    );
+    return operationId;
   }
 
-  void stop() {
-    if (_pendingOperations > 0) {
-      _pendingOperations -= 1;
-    }
-    if (_pendingOperations == 0 && state) {
-      emit(false);
-    }
+  void advance(int operationId, ChatModelSwitchPhase phase) {
+    if (!_owns(operationId)) return;
+    emit(
+      ChatModelSwitchState(
+        phase: phase,
+        operationId: state.operationId,
+        modelId: state.modelId,
+        modelName: state.modelName,
+        origin: state.origin,
+      ),
+    );
   }
+
+  void complete(int operationId) {
+    advance(operationId, ChatModelSwitchPhase.ready);
+  }
+
+  void fail(int operationId, String message) {
+    if (!_owns(operationId)) return;
+    emit(
+      ChatModelSwitchState(
+        phase: ChatModelSwitchPhase.failed,
+        operationId: state.operationId,
+        modelId: state.modelId,
+        modelName: state.modelName,
+        origin: state.origin,
+        errorMessage: message,
+      ),
+    );
+  }
+
+  bool _owns(int operationId) => state.operationId == operationId;
 }

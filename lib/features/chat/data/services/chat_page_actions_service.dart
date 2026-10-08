@@ -57,38 +57,38 @@ class ChatPageActions {
   Future<void> createNewThread() async {
     _requestStopGenerationInBackground();
     await _selectedChatCubit.createNewThread();
-    await _ensureModelSelectedIfNeeded();
-    _warmupLocalSessionInBackground();
+    final preparedSelection = await _ensureModelSelectedIfNeeded();
+    if (!preparedSelection) _warmupLocalSessionInBackground();
   }
 
   Future<void> createNewThreadInWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.createNewThread(workspaceId: workspaceId);
-    await _ensureModelSelectedIfNeeded();
-    _warmupLocalSessionInBackground();
+    final preparedSelection = await _ensureModelSelectedIfNeeded();
+    if (!preparedSelection) _warmupLocalSessionInBackground();
   }
 
   Future<void> selectChat(String chatId) async {
     _requestStopGenerationInBackground();
     _selectedChatCubit.selectChat(chatId);
-    await _ensureModelSelectedIfNeeded();
-    _warmupLocalSessionInBackground();
+    final preparedSelection = await _ensureModelSelectedIfNeeded();
+    if (!preparedSelection) _warmupLocalSessionInBackground();
   }
 
   Future<void> selectWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);
     await _selectedChatCubit.ensureSelectionForWorkspace(workspaceId);
-    await _ensureModelSelectedIfNeeded();
-    _warmupLocalSessionInBackground();
+    final preparedSelection = await _ensureModelSelectedIfNeeded();
+    if (!preparedSelection) _warmupLocalSessionInBackground();
   }
 
   Future<void> installModel(ModelInfo model) async {
     if (await _rejectUnsupportedLocalModel(model)) return;
 
     final hasActiveInstall = _downloadsCubit.state.activeInstall != null;
-    final isSwitching = _chatModelSwitchingCubit.state;
+    final isSwitching = _chatModelSwitchingCubit.state.isBusy;
     if (hasActiveInstall || isSwitching) {
       await AppToast.show(
         'Model is already installing/loading. Please wait.',
@@ -97,29 +97,30 @@ class ChatPageActions {
       return;
     }
 
-    _chatModelSwitchingCubit.start();
     try {
-      await _chatThreadActions.stopGeneration();
       if (model.provider == ModelProviderType.local) {
         await _downloadsCubit.installModel(model);
       }
-      await _setModelAsActive(model.id);
+      final installedModel = await _modelById(model.id) ?? model;
+      await _switchToModel(
+        installedModel,
+        origin: ChatModelSwitchOrigin.installation,
+      );
     } catch (error) {
       await AppToast.show(
         'Failed to install model: $error',
         type: AppToastType.error,
       );
       rethrow;
-    } finally {
-      _chatModelSwitchingCubit.stop();
     }
   }
 
   Future<void> selectModel(ModelInfo model) async {
     if (await _rejectUnsupportedLocalModel(model)) return;
 
-    final isSwitching = _chatModelSwitchingCubit.state;
-    if (isSwitching) {
+    final switchState = _chatModelSwitchingCubit.state;
+    if (switchState.isBusy &&
+        switchState.origin != ChatModelSwitchOrigin.backgroundWarmup) {
       await AppToast.show(
         'Model is currently loading. Please wait.',
         type: AppToastType.info,
@@ -140,31 +141,37 @@ class ChatPageActions {
       }
     }
 
-    _chatModelSwitchingCubit.start();
     try {
-      await _chatThreadActions.stopGeneration();
-      await _setModelAsActive(model.id);
+      await _switchToModel(model, origin: ChatModelSwitchOrigin.selection);
     } catch (error) {
       await AppToast.show(
         'Failed to switch model: $error',
         type: AppToastType.error,
       );
       rethrow;
-    } finally {
-      _chatModelSwitchingCubit.stop();
     }
   }
 
-  Future<void> _setModelAsActive(int modelId) async {
-    await _selectedModelCubit.selectModel(modelId);
-    await _activeModelInfoResolver.getActiveModelInfo();
-    await _localModelRuntime.reset();
-    _warmupLocalSessionInBackground();
+  Future<void> retryLastModelSwitch() async {
+    final failedState = _chatModelSwitchingCubit.state;
+    if (failedState.phase != ChatModelSwitchPhase.failed ||
+        failedState.modelId == null) {
+      return;
+    }
+    final target = await _modelById(failedState.modelId!);
+    if (target == null) {
+      await AppToast.show(
+        'The model is no longer available.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+    await selectModel(target);
   }
 
-  Future<void> _ensureModelSelectedIfNeeded() async {
+  Future<bool> _ensureModelSelectedIfNeeded() async {
     final models = await _modelRepository.watchModels().first;
-    if (models.isEmpty) return;
+    if (models.isEmpty) return false;
 
     final installedModels = await loadInstalledModelsIfSupported(
       capabilities: _capabilities,
@@ -175,18 +182,98 @@ class ChatPageActions {
       installedModels: installedModels,
       capabilities: _capabilities,
     );
-    if (readyModels.isEmpty) return;
+    if (readyModels.isEmpty) return false;
 
     final selectedId = _selectedModelCubit.state;
     if (selectedId != null) {
       for (final model in readyModels) {
         if (model.id == selectedId) {
-          return;
+          return false;
         }
       }
     }
 
-    await _setModelAsActive(readyModels.first.id);
+    await _switchToModel(
+      readyModels.first,
+      origin: ChatModelSwitchOrigin.automaticSelection,
+    );
+    return true;
+  }
+
+  Future<void> _switchToModel(
+    ModelInfo target, {
+    required ChatModelSwitchOrigin origin,
+  }) async {
+    final previous = await _activeModelInfoResolver.getActiveModelInfo();
+    final operationId = _chatModelSwitchingCubit.begin(
+      modelId: target.id,
+      modelName: target.name,
+      origin: origin,
+    );
+
+    try {
+      await _chatThreadActions.stopGeneration();
+      _chatModelSwitchingCubit.advance(
+        operationId,
+        ChatModelSwitchPhase.unloading,
+      );
+
+      if (previous?.provider == ModelProviderType.local) {
+        await _localModelRuntime.reset();
+      }
+
+      if (target.provider == ModelProviderType.local) {
+        _chatModelSwitchingCubit.advance(
+          operationId,
+          ChatModelSwitchPhase.loading,
+        );
+        await _localModelRuntime.prepare(target);
+      }
+
+      await _selectedModelCubit.selectModel(target.id);
+      _chatModelSwitchingCubit.complete(operationId);
+    } catch (error, stackTrace) {
+      logger.e(
+        'Failed to switch model to ${target.name}',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      await _restorePreviousModel(previous, targetId: target.id);
+      _chatModelSwitchingCubit.fail(
+        operationId,
+        'Could not load ${target.name}. Try again or choose another model.',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _restorePreviousModel(
+    ModelInfo? previous, {
+    required int targetId,
+  }) async {
+    if (previous == null) return;
+    try {
+      if (_selectedModelCubit.state == targetId) {
+        await _selectedModelCubit.selectModel(previous.id);
+      }
+      if (previous.provider == ModelProviderType.local) {
+        await _localModelRuntime.prepare(previous);
+      }
+    } catch (error, stackTrace) {
+      logger.e(
+        'Failed to restore previous model ${previous.name}',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<ModelInfo?> _modelById(int modelId) async {
+    final models = await _modelRepository.watchModels().first;
+    for (final model in models) {
+      if (model.id == modelId) return model;
+    }
+    return null;
   }
 
   void _warmupLocalSessionInBackground() {
@@ -199,16 +286,29 @@ class ChatPageActions {
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
 
-    _chatModelSwitchingCubit.start();
+    final currentState = _chatModelSwitchingCubit.state;
+    if (currentState.isBusy &&
+        currentState.origin != ChatModelSwitchOrigin.backgroundWarmup) {
+      return;
+    }
+    final operationId = _chatModelSwitchingCubit.begin(
+      modelId: model.id,
+      modelName: model.name,
+      origin: ChatModelSwitchOrigin.backgroundWarmup,
+      initialPhase: ChatModelSwitchPhase.loading,
+    );
     try {
       await _warmupLocalSession();
+      _chatModelSwitchingCubit.complete(operationId);
     } catch (error, stackTrace) {
       logger.w(
         'Local model warm-up skipped/failed: $error',
         stackTrace: stackTrace,
       );
-    } finally {
-      _chatModelSwitchingCubit.stop();
+      _chatModelSwitchingCubit.fail(
+        operationId,
+        'Could not load ${model.name}. Try again or choose another model.',
+      );
     }
   }
 
@@ -217,14 +317,7 @@ class ChatPageActions {
     if (_downloadsCubit.state.activeInstall != null) return;
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
-    try {
-      await _localModelRuntime.prepare(model);
-    } catch (error, stackTrace) {
-      logger.w(
-        'Local model warm-up prepare failed: $error',
-        stackTrace: stackTrace,
-      );
-    }
+    await _localModelRuntime.prepare(model);
   }
 
   void _requestStopGenerationInBackground() {

@@ -19,12 +19,14 @@ void main() {
     'remote-only chat entry selects remote model without local registry',
     () async {
       final selectedModelCubit = _SelectedModelCubitFake();
+      final switchingCubit = ChatModelSwitchingCubit();
+      addTearDown(switchingCubit.close);
       final actions = ChatPageActions(
         selectedChatCubit: _SelectedChatCubitFake(),
         selectedWorkspaceCubit: _SelectedWorkspaceCubitFake(),
         chatThreadActions: _ChatThreadActionsFake(),
         downloadsCubit: _DownloadsCubitFake(),
-        chatModelSwitchingCubit: _ChatModelSwitchingCubitFake(),
+        chatModelSwitchingCubit: switchingCubit,
         selectedModelCubit: selectedModelCubit,
         activeModelInfoResolver: _ActiveModelInfoResolverFake(),
         modelRepository: _ModelRepositoryFake([_remoteModel]),
@@ -109,12 +111,6 @@ class _ChatThreadActionsFake extends Fake implements ChatThreadActions {
 class _DownloadsCubitFake extends Fake implements DownloadsCubit {
   @override
   DownloadsState get state => const DownloadsState(loading: false);
-}
-
-class _ChatModelSwitchingCubitFake extends Fake
-    implements ChatModelSwitchingCubit {
-  @override
-  bool get state => false;
 }
 
 class _ActiveModelInfoResolverFake extends Fake

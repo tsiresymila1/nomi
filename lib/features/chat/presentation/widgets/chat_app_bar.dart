@@ -20,13 +20,11 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       stream: sl<ActiveModelInfoResolver>().watchActiveModelInfo(),
       builder: (context, snapshot) {
         final activeModel = snapshot.data;
-        return BlocBuilder<ChatModelSwitchingCubit, bool>(
+        return BlocBuilder<ChatModelSwitchingCubit, ChatModelSwitchState>(
           bloc: sl<ChatModelSwitchingCubit>(),
-          builder: (context, isSwitchingModel) {
-            final modelLabel = _resolveModelLabel(
-              activeModel,
-              isSwitchingModel,
-            );
+          builder: (context, switchState) {
+            final isSwitchingModel = switchState.isBusy;
+            final modelLabel = _resolveModelLabel(activeModel, switchState);
             return AppBar(
               scrolledUnderElevation: 0,
               elevation: 0,
@@ -122,9 +120,14 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
-  String _resolveModelLabel(ModelInfo? activeModel, bool isModelLoading) {
-    if (isModelLoading) {
-      return 'Model loading...';
+  String _resolveModelLabel(
+    ModelInfo? activeModel,
+    ChatModelSwitchState switchState,
+  ) {
+    if (switchState.isBusy) {
+      return switchState.modelName == null
+          ? 'Model loading...'
+          : 'Loading ${switchState.modelName}...';
     }
     if (activeModel == null) {
       return 'No active model';

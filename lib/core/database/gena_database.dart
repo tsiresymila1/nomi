@@ -65,6 +65,20 @@ class Messages extends Table with TableMixin {
   late final mediaPath = text().nullable()();
 }
 
+class MessageAttachments extends Table with TableMixin {
+  late final message = integer().references(Messages, #id)();
+  late final kind = text()();
+  late final name = text().withLength(min: 1, max: 255)();
+  late final sourceType = text()();
+  late final path = text()();
+  late final sizeBytes = integer()();
+  late final extractedText = text().nullable()();
+  late final workspaceDocument = integer().nullable().references(
+    WorkspaceDocuments,
+    #id,
+  )();
+}
+
 class Models extends Table with TableMixin {
   late final name = text().withLength(min: 1, max: 64)();
   late final description = text()();
@@ -98,6 +112,7 @@ class Models extends Table with TableMixin {
     WorkspaceMemories,
     Chats,
     Messages,
+    MessageAttachments,
     Models,
     McpServers,
   ],
@@ -106,7 +121,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -210,6 +225,9 @@ class GenaDatabase extends _$GenaDatabase {
       if (from < 16) {
         await m.createTable(workspaceMemories);
         await m.addColumn(workspaces, workspaces.memoryEnabled);
+      }
+      if (from < 17) {
+        await m.createTable(messageAttachments);
       }
     },
   );

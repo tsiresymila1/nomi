@@ -2482,6 +2482,625 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   }
 }
 
+class $MessageAttachmentsTable extends MessageAttachments
+    with TableInfo<$MessageAttachmentsTable, MessageAttachment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MessageAttachmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _messageMeta = const VerificationMeta(
+    'message',
+  );
+  @override
+  late final GeneratedColumn<int> message = GeneratedColumn<int>(
+    'message',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES messages (id)',
+    ),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 255,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
+    'sourceType',
+  );
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+    'source_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _extractedTextMeta = const VerificationMeta(
+    'extractedText',
+  );
+  @override
+  late final GeneratedColumn<String> extractedText = GeneratedColumn<String>(
+    'extracted_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _workspaceDocumentMeta = const VerificationMeta(
+    'workspaceDocument',
+  );
+  @override
+  late final GeneratedColumn<int> workspaceDocument = GeneratedColumn<int>(
+    'workspace_document',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspace_documents (id)',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    message,
+    kind,
+    name,
+    sourceType,
+    path,
+    sizeBytes,
+    extractedText,
+    workspaceDocument,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'message_attachments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MessageAttachment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('message')) {
+      context.handle(
+        _messageMeta,
+        message.isAcceptableOrUnknown(data['message']!, _messageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_messageMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+        _sourceTypeMeta,
+        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceTypeMeta);
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('extracted_text')) {
+      context.handle(
+        _extractedTextMeta,
+        extractedText.isAcceptableOrUnknown(
+          data['extracted_text']!,
+          _extractedTextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('workspace_document')) {
+      context.handle(
+        _workspaceDocumentMeta,
+        workspaceDocument.isAcceptableOrUnknown(
+          data['workspace_document']!,
+          _workspaceDocumentMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MessageAttachment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MessageAttachment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      message: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}message'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_type'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      extractedText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}extracted_text'],
+      ),
+      workspaceDocument: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}workspace_document'],
+      ),
+    );
+  }
+
+  @override
+  $MessageAttachmentsTable createAlias(String alias) {
+    return $MessageAttachmentsTable(attachedDatabase, alias);
+  }
+}
+
+class MessageAttachment extends DataClass
+    implements Insertable<MessageAttachment> {
+  final int id;
+  final DateTime createdAt;
+  final int message;
+  final String kind;
+  final String name;
+  final String sourceType;
+  final String path;
+  final int sizeBytes;
+  final String? extractedText;
+  final int? workspaceDocument;
+  const MessageAttachment({
+    required this.id,
+    required this.createdAt,
+    required this.message,
+    required this.kind,
+    required this.name,
+    required this.sourceType,
+    required this.path,
+    required this.sizeBytes,
+    this.extractedText,
+    this.workspaceDocument,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['message'] = Variable<int>(message);
+    map['kind'] = Variable<String>(kind);
+    map['name'] = Variable<String>(name);
+    map['source_type'] = Variable<String>(sourceType);
+    map['path'] = Variable<String>(path);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    if (!nullToAbsent || extractedText != null) {
+      map['extracted_text'] = Variable<String>(extractedText);
+    }
+    if (!nullToAbsent || workspaceDocument != null) {
+      map['workspace_document'] = Variable<int>(workspaceDocument);
+    }
+    return map;
+  }
+
+  MessageAttachmentsCompanion toCompanion(bool nullToAbsent) {
+    return MessageAttachmentsCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      message: Value(message),
+      kind: Value(kind),
+      name: Value(name),
+      sourceType: Value(sourceType),
+      path: Value(path),
+      sizeBytes: Value(sizeBytes),
+      extractedText: extractedText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(extractedText),
+      workspaceDocument: workspaceDocument == null && nullToAbsent
+          ? const Value.absent()
+          : Value(workspaceDocument),
+    );
+  }
+
+  factory MessageAttachment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MessageAttachment(
+      id: serializer.fromJson<int>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      message: serializer.fromJson<int>(json['message']),
+      kind: serializer.fromJson<String>(json['kind']),
+      name: serializer.fromJson<String>(json['name']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
+      path: serializer.fromJson<String>(json['path']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      extractedText: serializer.fromJson<String?>(json['extractedText']),
+      workspaceDocument: serializer.fromJson<int?>(json['workspaceDocument']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'message': serializer.toJson<int>(message),
+      'kind': serializer.toJson<String>(kind),
+      'name': serializer.toJson<String>(name),
+      'sourceType': serializer.toJson<String>(sourceType),
+      'path': serializer.toJson<String>(path),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'extractedText': serializer.toJson<String?>(extractedText),
+      'workspaceDocument': serializer.toJson<int?>(workspaceDocument),
+    };
+  }
+
+  MessageAttachment copyWith({
+    int? id,
+    DateTime? createdAt,
+    int? message,
+    String? kind,
+    String? name,
+    String? sourceType,
+    String? path,
+    int? sizeBytes,
+    Value<String?> extractedText = const Value.absent(),
+    Value<int?> workspaceDocument = const Value.absent(),
+  }) => MessageAttachment(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    message: message ?? this.message,
+    kind: kind ?? this.kind,
+    name: name ?? this.name,
+    sourceType: sourceType ?? this.sourceType,
+    path: path ?? this.path,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    extractedText: extractedText.present
+        ? extractedText.value
+        : this.extractedText,
+    workspaceDocument: workspaceDocument.present
+        ? workspaceDocument.value
+        : this.workspaceDocument,
+  );
+  MessageAttachment copyWithCompanion(MessageAttachmentsCompanion data) {
+    return MessageAttachment(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      message: data.message.present ? data.message.value : this.message,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      name: data.name.present ? data.name.value : this.name,
+      sourceType: data.sourceType.present
+          ? data.sourceType.value
+          : this.sourceType,
+      path: data.path.present ? data.path.value : this.path,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      extractedText: data.extractedText.present
+          ? data.extractedText.value
+          : this.extractedText,
+      workspaceDocument: data.workspaceDocument.present
+          ? data.workspaceDocument.value
+          : this.workspaceDocument,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessageAttachment(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('message: $message, ')
+          ..write('kind: $kind, ')
+          ..write('name: $name, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('path: $path, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('extractedText: $extractedText, ')
+          ..write('workspaceDocument: $workspaceDocument')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    createdAt,
+    message,
+    kind,
+    name,
+    sourceType,
+    path,
+    sizeBytes,
+    extractedText,
+    workspaceDocument,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MessageAttachment &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.message == this.message &&
+          other.kind == this.kind &&
+          other.name == this.name &&
+          other.sourceType == this.sourceType &&
+          other.path == this.path &&
+          other.sizeBytes == this.sizeBytes &&
+          other.extractedText == this.extractedText &&
+          other.workspaceDocument == this.workspaceDocument);
+}
+
+class MessageAttachmentsCompanion extends UpdateCompanion<MessageAttachment> {
+  final Value<int> id;
+  final Value<DateTime> createdAt;
+  final Value<int> message;
+  final Value<String> kind;
+  final Value<String> name;
+  final Value<String> sourceType;
+  final Value<String> path;
+  final Value<int> sizeBytes;
+  final Value<String?> extractedText;
+  final Value<int?> workspaceDocument;
+  const MessageAttachmentsCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.message = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.path = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.extractedText = const Value.absent(),
+    this.workspaceDocument = const Value.absent(),
+  });
+  MessageAttachmentsCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    required int message,
+    required String kind,
+    required String name,
+    required String sourceType,
+    required String path,
+    required int sizeBytes,
+    this.extractedText = const Value.absent(),
+    this.workspaceDocument = const Value.absent(),
+  }) : message = Value(message),
+       kind = Value(kind),
+       name = Value(name),
+       sourceType = Value(sourceType),
+       path = Value(path),
+       sizeBytes = Value(sizeBytes);
+  static Insertable<MessageAttachment> custom({
+    Expression<int>? id,
+    Expression<DateTime>? createdAt,
+    Expression<int>? message,
+    Expression<String>? kind,
+    Expression<String>? name,
+    Expression<String>? sourceType,
+    Expression<String>? path,
+    Expression<int>? sizeBytes,
+    Expression<String>? extractedText,
+    Expression<int>? workspaceDocument,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (message != null) 'message': message,
+      if (kind != null) 'kind': kind,
+      if (name != null) 'name': name,
+      if (sourceType != null) 'source_type': sourceType,
+      if (path != null) 'path': path,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (extractedText != null) 'extracted_text': extractedText,
+      if (workspaceDocument != null) 'workspace_document': workspaceDocument,
+    });
+  }
+
+  MessageAttachmentsCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? createdAt,
+    Value<int>? message,
+    Value<String>? kind,
+    Value<String>? name,
+    Value<String>? sourceType,
+    Value<String>? path,
+    Value<int>? sizeBytes,
+    Value<String?>? extractedText,
+    Value<int?>? workspaceDocument,
+  }) {
+    return MessageAttachmentsCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      message: message ?? this.message,
+      kind: kind ?? this.kind,
+      name: name ?? this.name,
+      sourceType: sourceType ?? this.sourceType,
+      path: path ?? this.path,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      extractedText: extractedText ?? this.extractedText,
+      workspaceDocument: workspaceDocument ?? this.workspaceDocument,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (message.present) {
+      map['message'] = Variable<int>(message.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (extractedText.present) {
+      map['extracted_text'] = Variable<String>(extractedText.value);
+    }
+    if (workspaceDocument.present) {
+      map['workspace_document'] = Variable<int>(workspaceDocument.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessageAttachmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('message: $message, ')
+          ..write('kind: $kind, ')
+          ..write('name: $name, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('path: $path, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('extractedText: $extractedText, ')
+          ..write('workspaceDocument: $workspaceDocument')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ModelsTable extends Models with TableInfo<$ModelsTable, Model> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -4151,6 +4770,8 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
       $WorkspaceMemoriesTable(this);
   late final $ChatsTable chats = $ChatsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
+  late final $MessageAttachmentsTable messageAttachments =
+      $MessageAttachmentsTable(this);
   late final $ModelsTable models = $ModelsTable(this);
   late final $McpServersTable mcpServers = $McpServersTable(this);
   @override
@@ -4163,6 +4784,7 @@ abstract class _$GenaDatabase extends GeneratedDatabase {
     workspaceMemories,
     chats,
     messages,
+    messageAttachments,
     models,
     mcpServers,
   ];
@@ -4886,6 +5508,30 @@ final class $$WorkspaceDocumentsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$MessageAttachmentsTable, List<MessageAttachment>>
+  _messageAttachmentsRefsTable(_$GenaDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.messageAttachments,
+        aliasName: $_aliasNameGenerator(
+          db.workspaceDocuments.id,
+          db.messageAttachments.workspaceDocument,
+        ),
+      );
+
+  $$MessageAttachmentsTableProcessedTableManager get messageAttachmentsRefs {
+    final manager = $$MessageAttachmentsTableTableManager(
+      $_db,
+      $_db.messageAttachments,
+    ).filter((f) => f.workspaceDocument.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _messageAttachmentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$WorkspaceDocumentsTableFilterComposer
@@ -4968,6 +5614,31 @@ class $$WorkspaceDocumentsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> messageAttachmentsRefs(
+    Expression<bool> Function($$MessageAttachmentsTableFilterComposer f) f,
+  ) {
+    final $$MessageAttachmentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.messageAttachments,
+      getReferencedColumn: (t) => t.workspaceDocument,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageAttachmentsTableFilterComposer(
+            $db: $db,
+            $table: $db.messageAttachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -5127,6 +5798,32 @@ class $$WorkspaceDocumentsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> messageAttachmentsRefs<T extends Object>(
+    Expression<T> Function($$MessageAttachmentsTableAnnotationComposer a) f,
+  ) {
+    final $$MessageAttachmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.messageAttachments,
+          getReferencedColumn: (t) => t.workspaceDocument,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$MessageAttachmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.messageAttachments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$WorkspaceDocumentsTableTableManager
@@ -5142,7 +5839,7 @@ class $$WorkspaceDocumentsTableTableManager
           $$WorkspaceDocumentsTableUpdateCompanionBuilder,
           (WorkspaceDocument, $$WorkspaceDocumentsTableReferences),
           WorkspaceDocument,
-          PrefetchHooks Function({bool workspace})
+          PrefetchHooks Function({bool workspace, bool messageAttachmentsRefs})
         > {
   $$WorkspaceDocumentsTableTableManager(
     _$GenaDatabase db,
@@ -5220,49 +5917,74 @@ class $$WorkspaceDocumentsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({workspace = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (workspace) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.workspace,
-                                referencedTable:
-                                    $$WorkspaceDocumentsTableReferences
-                                        ._workspaceTable(db),
-                                referencedColumn:
-                                    $$WorkspaceDocumentsTableReferences
-                                        ._workspaceTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({workspace = false, messageAttachmentsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (messageAttachmentsRefs) db.messageAttachments,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (workspace) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workspace,
+                                    referencedTable:
+                                        $$WorkspaceDocumentsTableReferences
+                                            ._workspaceTable(db),
+                                    referencedColumn:
+                                        $$WorkspaceDocumentsTableReferences
+                                            ._workspaceTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (messageAttachmentsRefs)
+                        await $_getPrefetchedData<
+                          WorkspaceDocument,
+                          $WorkspaceDocumentsTable,
+                          MessageAttachment
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspaceDocumentsTableReferences
+                              ._messageAttachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspaceDocumentsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).messageAttachmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workspaceDocument == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -5279,7 +6001,7 @@ typedef $$WorkspaceDocumentsTableProcessedTableManager =
       $$WorkspaceDocumentsTableUpdateCompanionBuilder,
       (WorkspaceDocument, $$WorkspaceDocumentsTableReferences),
       WorkspaceDocument,
-      PrefetchHooks Function({bool workspace})
+      PrefetchHooks Function({bool workspace, bool messageAttachmentsRefs})
     >;
 typedef $$WorkspaceMemoriesTableCreateCompanionBuilder =
     WorkspaceMemoriesCompanion Function({
@@ -6002,6 +6724,30 @@ final class $$MessagesTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$MessageAttachmentsTable, List<MessageAttachment>>
+  _messageAttachmentsRefsTable(_$GenaDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.messageAttachments,
+        aliasName: $_aliasNameGenerator(
+          db.messages.id,
+          db.messageAttachments.message,
+        ),
+      );
+
+  $$MessageAttachmentsTableProcessedTableManager get messageAttachmentsRefs {
+    final manager = $$MessageAttachmentsTableTableManager(
+      $_db,
+      $_db.messageAttachments,
+    ).filter((f) => f.message.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _messageAttachmentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$MessagesTableFilterComposer
@@ -6064,6 +6810,31 @@ class $$MessagesTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> messageAttachmentsRefs(
+    Expression<bool> Function($$MessageAttachmentsTableFilterComposer f) f,
+  ) {
+    final $$MessageAttachmentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.messageAttachments,
+      getReferencedColumn: (t) => t.message,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageAttachmentsTableFilterComposer(
+            $db: $db,
+            $table: $db.messageAttachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -6179,6 +6950,32 @@ class $$MessagesTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> messageAttachmentsRefs<T extends Object>(
+    Expression<T> Function($$MessageAttachmentsTableAnnotationComposer a) f,
+  ) {
+    final $$MessageAttachmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.messageAttachments,
+          getReferencedColumn: (t) => t.message,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$MessageAttachmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.messageAttachments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$MessagesTableTableManager
@@ -6194,7 +6991,7 @@ class $$MessagesTableTableManager
           $$MessagesTableUpdateCompanionBuilder,
           (Message, $$MessagesTableReferences),
           Message,
-          PrefetchHooks Function({bool chat})
+          PrefetchHooks Function({bool chat, bool messageAttachmentsRefs})
         > {
   $$MessagesTableTableManager(_$GenaDatabase db, $MessagesTable table)
     : super(
@@ -6251,47 +7048,72 @@ class $$MessagesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({chat = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (chat) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.chat,
-                                referencedTable: $$MessagesTableReferences
-                                    ._chatTable(db),
-                                referencedColumn: $$MessagesTableReferences
-                                    ._chatTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({chat = false, messageAttachmentsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (messageAttachmentsRefs) db.messageAttachments,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (chat) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.chat,
+                                    referencedTable: $$MessagesTableReferences
+                                        ._chatTable(db),
+                                    referencedColumn: $$MessagesTableReferences
+                                        ._chatTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (messageAttachmentsRefs)
+                        await $_getPrefetchedData<
+                          Message,
+                          $MessagesTable,
+                          MessageAttachment
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MessagesTableReferences
+                              ._messageAttachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MessagesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).messageAttachmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.message == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -6308,7 +7130,530 @@ typedef $$MessagesTableProcessedTableManager =
       $$MessagesTableUpdateCompanionBuilder,
       (Message, $$MessagesTableReferences),
       Message,
-      PrefetchHooks Function({bool chat})
+      PrefetchHooks Function({bool chat, bool messageAttachmentsRefs})
+    >;
+typedef $$MessageAttachmentsTableCreateCompanionBuilder =
+    MessageAttachmentsCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      required int message,
+      required String kind,
+      required String name,
+      required String sourceType,
+      required String path,
+      required int sizeBytes,
+      Value<String?> extractedText,
+      Value<int?> workspaceDocument,
+    });
+typedef $$MessageAttachmentsTableUpdateCompanionBuilder =
+    MessageAttachmentsCompanion Function({
+      Value<int> id,
+      Value<DateTime> createdAt,
+      Value<int> message,
+      Value<String> kind,
+      Value<String> name,
+      Value<String> sourceType,
+      Value<String> path,
+      Value<int> sizeBytes,
+      Value<String?> extractedText,
+      Value<int?> workspaceDocument,
+    });
+
+final class $$MessageAttachmentsTableReferences
+    extends
+        BaseReferences<
+          _$GenaDatabase,
+          $MessageAttachmentsTable,
+          MessageAttachment
+        > {
+  $$MessageAttachmentsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $MessagesTable _messageTable(_$GenaDatabase db) =>
+      db.messages.createAlias(
+        $_aliasNameGenerator(db.messageAttachments.message, db.messages.id),
+      );
+
+  $$MessagesTableProcessedTableManager get message {
+    final $_column = $_itemColumn<int>('message')!;
+
+    final manager = $$MessagesTableTableManager(
+      $_db,
+      $_db.messages,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_messageTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $WorkspaceDocumentsTable _workspaceDocumentTable(_$GenaDatabase db) =>
+      db.workspaceDocuments.createAlias(
+        $_aliasNameGenerator(
+          db.messageAttachments.workspaceDocument,
+          db.workspaceDocuments.id,
+        ),
+      );
+
+  $$WorkspaceDocumentsTableProcessedTableManager? get workspaceDocument {
+    final $_column = $_itemColumn<int>('workspace_document');
+    if ($_column == null) return null;
+    final manager = $$WorkspaceDocumentsTableTableManager(
+      $_db,
+      $_db.workspaceDocuments,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceDocumentTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MessageAttachmentsTableFilterComposer
+    extends Composer<_$GenaDatabase, $MessageAttachmentsTable> {
+  $$MessageAttachmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get extractedText => $composableBuilder(
+    column: $table.extractedText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$MessagesTableFilterComposer get message {
+    final $$MessagesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.message,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessagesTableFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkspaceDocumentsTableFilterComposer get workspaceDocument {
+    final $$WorkspaceDocumentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceDocument,
+      referencedTable: $db.workspaceDocuments,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspaceDocumentsTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaceDocuments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MessageAttachmentsTableOrderingComposer
+    extends Composer<_$GenaDatabase, $MessageAttachmentsTable> {
+  $$MessageAttachmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get extractedText => $composableBuilder(
+    column: $table.extractedText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$MessagesTableOrderingComposer get message {
+    final $$MessagesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.message,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessagesTableOrderingComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkspaceDocumentsTableOrderingComposer get workspaceDocument {
+    final $$WorkspaceDocumentsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceDocument,
+      referencedTable: $db.workspaceDocuments,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspaceDocumentsTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaceDocuments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MessageAttachmentsTableAnnotationComposer
+    extends Composer<_$GenaDatabase, $MessageAttachmentsTable> {
+  $$MessageAttachmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<String> get extractedText => $composableBuilder(
+    column: $table.extractedText,
+    builder: (column) => column,
+  );
+
+  $$MessagesTableAnnotationComposer get message {
+    final $$MessagesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.message,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessagesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkspaceDocumentsTableAnnotationComposer get workspaceDocument {
+    final $$WorkspaceDocumentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.workspaceDocument,
+          referencedTable: $db.workspaceDocuments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$WorkspaceDocumentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.workspaceDocuments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$MessageAttachmentsTableTableManager
+    extends
+        RootTableManager<
+          _$GenaDatabase,
+          $MessageAttachmentsTable,
+          MessageAttachment,
+          $$MessageAttachmentsTableFilterComposer,
+          $$MessageAttachmentsTableOrderingComposer,
+          $$MessageAttachmentsTableAnnotationComposer,
+          $$MessageAttachmentsTableCreateCompanionBuilder,
+          $$MessageAttachmentsTableUpdateCompanionBuilder,
+          (MessageAttachment, $$MessageAttachmentsTableReferences),
+          MessageAttachment,
+          PrefetchHooks Function({bool message, bool workspaceDocument})
+        > {
+  $$MessageAttachmentsTableTableManager(
+    _$GenaDatabase db,
+    $MessageAttachmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MessageAttachmentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MessageAttachmentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MessageAttachmentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> message = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> sourceType = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<String?> extractedText = const Value.absent(),
+                Value<int?> workspaceDocument = const Value.absent(),
+              }) => MessageAttachmentsCompanion(
+                id: id,
+                createdAt: createdAt,
+                message: message,
+                kind: kind,
+                name: name,
+                sourceType: sourceType,
+                path: path,
+                sizeBytes: sizeBytes,
+                extractedText: extractedText,
+                workspaceDocument: workspaceDocument,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                required int message,
+                required String kind,
+                required String name,
+                required String sourceType,
+                required String path,
+                required int sizeBytes,
+                Value<String?> extractedText = const Value.absent(),
+                Value<int?> workspaceDocument = const Value.absent(),
+              }) => MessageAttachmentsCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                message: message,
+                kind: kind,
+                name: name,
+                sourceType: sourceType,
+                path: path,
+                sizeBytes: sizeBytes,
+                extractedText: extractedText,
+                workspaceDocument: workspaceDocument,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MessageAttachmentsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({message = false, workspaceDocument = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (message) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.message,
+                                    referencedTable:
+                                        $$MessageAttachmentsTableReferences
+                                            ._messageTable(db),
+                                    referencedColumn:
+                                        $$MessageAttachmentsTableReferences
+                                            ._messageTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (workspaceDocument) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workspaceDocument,
+                                    referencedTable:
+                                        $$MessageAttachmentsTableReferences
+                                            ._workspaceDocumentTable(db),
+                                    referencedColumn:
+                                        $$MessageAttachmentsTableReferences
+                                            ._workspaceDocumentTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$MessageAttachmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GenaDatabase,
+      $MessageAttachmentsTable,
+      MessageAttachment,
+      $$MessageAttachmentsTableFilterComposer,
+      $$MessageAttachmentsTableOrderingComposer,
+      $$MessageAttachmentsTableAnnotationComposer,
+      $$MessageAttachmentsTableCreateCompanionBuilder,
+      $$MessageAttachmentsTableUpdateCompanionBuilder,
+      (MessageAttachment, $$MessageAttachmentsTableReferences),
+      MessageAttachment,
+      PrefetchHooks Function({bool message, bool workspaceDocument})
     >;
 typedef $$ModelsTableCreateCompanionBuilder =
     ModelsCompanion Function({
@@ -7088,6 +8433,8 @@ class $GenaDatabaseManager {
       $$ChatsTableTableManager(_db, _db.chats);
   $$MessagesTableTableManager get messages =>
       $$MessagesTableTableManager(_db, _db.messages);
+  $$MessageAttachmentsTableTableManager get messageAttachments =>
+      $$MessageAttachmentsTableTableManager(_db, _db.messageAttachments);
   $$ModelsTableTableManager get models =>
       $$ModelsTableTableManager(_db, _db.models);
   $$McpServersTableTableManager get mcpServers =>

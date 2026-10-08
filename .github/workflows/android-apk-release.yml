@@ -5,14 +5,19 @@ on:
   pull_request:
     branches:
       - main
+  # A merged pull request produces a push on main, so both direct pushes and
+  # merges publish a downloadable APK artifact through this branch trigger.
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
 jobs:
   build-apk:
-    name: Build APK
+    name: Validate and build APK
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
 
@@ -30,27 +35,39 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: "3.41.9"
           channel: stable
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate .env from GitHub Secrets
+      # Never package a shared CI credential in a client APK. Public models can
+      # be downloaded without a token; gated-model authentication belongs in a
+      # future per-user secure-storage flow.
+      - name: Create release environment
         run: |
-          if [ -z "${{ secrets.HUGGING_FACE_TOKEN }}" ]; then
-            echo "Missing required secret: HUGGING_FACE_TOKEN"
-            exit 1
-          fi
-          printf "HUGGING_FACE_TOKEN=%s\n" "${{ secrets.HUGGING_FACE_TOKEN }}" > .env
+          printf "HUGGING_FACE_TOKEN=\n" > .env
           chmod u+rw,go-rwx .env
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
       - name: Build release APK
-        run: flutter build apk --release
+        env:
+          CARGO_BUILD_JOBS: "1"
+          CARGO_INCREMENTAL: "0"
+          CARGO_PROFILE_RELEASE_DEBUG: "0"
+        run: flutter build apk --release --target-platform android-arm64
 
       - name: Prepare APK filename
         id: meta
         run: |
-          APK_NAME="nomi.apk"
+          REF_SLUG="${GITHUB_REF_NAME//\//-}"
+          APK_NAME="nomi-${REF_SLUG}-${GITHUB_SHA::7}.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "build/app/outputs/flutter-apk/${APK_NAME}"
           echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
           echo "apk_path=build/app/outputs/flutter-apk/${APK_NAME}" >> "$GITHUB_OUTPUT"
@@ -58,10 +75,11 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.meta.outputs.apk_name }}
+          name: nomi-android-${{ github.run_number }}-${{ github.run_attempt }}
           path: ${{ steps.meta.outputs.apk_path }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
+          compression-level: 0
 
       - name: Publish GitHub Release (tags only)
         if: github.ref_type == 'tag'

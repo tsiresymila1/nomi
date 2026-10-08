@@ -1,11 +1,13 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_attachments_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/native_tool_execution_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_model_cubit.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
+import 'package:gena/features/chat/data/services/chat_attachment_preparation_service.dart';
 import 'package:gena/features/chat/data/services/chat_history_actions_service.dart';
 import 'package:gena/features/chat/data/services/chat_page_actions_service.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
@@ -34,6 +36,7 @@ import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cu
 import 'package:gena/features/workspace/data/services/workspace_memory_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
 import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
+import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 
 void registerChatDependencies() {
   // Cubits (no deps)
@@ -71,6 +74,20 @@ void registerChatDependencies() {
   if (!sl.isRegistered<ChatContextWindowCubit>()) {
     sl.registerLazySingleton<ChatContextWindowCubit>(
       ChatContextWindowCubit.new,
+    );
+  }
+  if (!sl.isRegistered<ChatAttachmentPreparationService>()) {
+    sl.registerLazySingleton<ChatAttachmentPreparationService>(
+      () => ChatAttachmentPreparationService(
+        parser: sl<WorkspaceDocumentParser>(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<ChatAttachmentsCubit>()) {
+    sl.registerLazySingleton<ChatAttachmentsCubit>(
+      () => ChatAttachmentsCubit(
+        preparer: sl<ChatAttachmentPreparationService>(),
+      ),
     );
   }
   if (!sl.isRegistered<SelectedModelCubit>()) {

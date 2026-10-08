@@ -34,6 +34,7 @@ Future<StoredContextWindowPlan> planStoredMessagesWindow({
   required List<db.Message> storedMessages,
   required int settingsMaxTokens,
   required int requestedOutputReserve,
+  Map<int, List<db.MessageAttachment>> storedAttachmentsByMessageId = const {},
   int minMessagesToKeep = 1,
   int extraPromptTokens = 0,
 }) async {
@@ -49,7 +50,11 @@ Future<StoredContextWindowPlan> planStoredMessagesWindow({
     entries.add(
       _StoredEntry(
         row: row,
-        tokens: await _estimateRowTokens(row, countTokens),
+        tokens: await _estimateRowTokens(
+          row,
+          countTokens,
+          storedAttachmentsByMessageId[row.id] ?? const [],
+        ),
       ),
     );
   }
@@ -86,6 +91,7 @@ Future<StoredContextWindowPlan> planStoredMessagesWindow({
 Future<int> _estimateRowTokens(
   db.Message row,
   Future<int> Function(String text) countTokens,
+  List<db.MessageAttachment> attachments,
 ) async {
   var total = 0;
   final text = row.content.trim();
@@ -97,6 +103,16 @@ Future<int> _estimateRowTokens(
   }
   if (row.kind == 'audio') {
     total += 512;
+  }
+  for (final attachment in attachments) {
+    if (attachment.kind == 'image') {
+      total += 257;
+      continue;
+    }
+    if (attachment.kind == 'document') {
+      final text = attachment.extractedText?.trim() ?? '';
+      if (text.isNotEmpty) total += await countTokens(text);
+    }
   }
   return total;
 }

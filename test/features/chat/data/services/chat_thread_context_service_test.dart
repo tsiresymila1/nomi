@@ -27,6 +27,25 @@ db.Message _message({
   );
 }
 
+db.MessageAttachment _attachment({
+  required int id,
+  required int messageId,
+  required String kind,
+  String? extractedText,
+}) {
+  return db.MessageAttachment(
+    id: id,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(id * 1000),
+    message: messageId,
+    kind: kind,
+    name: kind == 'image' ? 'photo.png' : 'notes.txt',
+    sourceType: kind == 'image' ? 'png' : 'text',
+    path: '/tmp/$id',
+    sizeBytes: 10,
+    extractedText: extractedText,
+  );
+}
+
 void main() {
   group('planStoredMessagesWindow', () {
     test('respects output reserve and keeps everything under budget', () async {
@@ -113,6 +132,30 @@ void main() {
       // 1 word + 257 image tokens.
       expect(plan.promptTokens, 1 + 257);
       expect(plan.keptMessages.length, 1);
+    });
+
+    test('counts persisted image and document attachments', () async {
+      final message = _message(id: 1, role: 'user', content: 'hello');
+
+      final plan = await planStoredMessagesWindow(
+        countTokens: _wordCount,
+        storedMessages: [message],
+        storedAttachmentsByMessageId: {
+          1: [
+            _attachment(id: 1, messageId: 1, kind: 'image'),
+            _attachment(
+              id: 2,
+              messageId: 1,
+              kind: 'document',
+              extractedText: 'one two three',
+            ),
+          ],
+        },
+        settingsMaxTokens: 5000,
+        requestedOutputReserve: 100,
+      );
+
+      expect(plan.promptTokens, 1 + 257 + 3);
     });
 
     test('extraPromptTokens count toward the prompt budget', () async {

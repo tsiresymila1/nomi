@@ -67,6 +67,28 @@ db.Message buildMessage({
   );
 }
 
+db.MessageAttachment buildAttachment({
+  required int messageId,
+  required String kind,
+  required String name,
+  required String sourceType,
+  required String path,
+  String? extractedText,
+  int id = 1,
+}) {
+  return db.MessageAttachment(
+    id: id,
+    createdAt: DateTime.utc(2026, 1, 1),
+    message: messageId,
+    kind: kind,
+    name: name,
+    sourceType: sourceType,
+    path: path,
+    sizeBytes: 12,
+    extractedText: extractedText,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -138,6 +160,57 @@ void main() {
       expect(messages.first.content, hasLength(1));
       expect(messages.first.content.single.text, 'No media');
     });
+
+    test(
+      'maps multiple persisted images and a document into one user turn',
+      () {
+        final message = buildMessage(
+          id: 9,
+          role: 'user',
+          kind: 'text',
+          content: 'Compare these files',
+        );
+        final messages = buildGenkitMessages(
+          systemInstruction: '',
+          storedMessages: [message],
+          storedAttachmentsByMessageId: {
+            9: [
+              buildAttachment(
+                messageId: 9,
+                kind: 'image',
+                name: 'one.png',
+                sourceType: 'png',
+                path: '/tmp/one.png',
+              ),
+              buildAttachment(
+                id: 2,
+                messageId: 9,
+                kind: 'image',
+                name: 'two.jpg',
+                sourceType: 'jpg',
+                path: '/tmp/two.jpg',
+              ),
+              buildAttachment(
+                id: 3,
+                messageId: 9,
+                kind: 'document',
+                name: 'notes.txt',
+                sourceType: 'text',
+                path: '/tmp/notes.txt',
+                extractedText: 'Important document body',
+              ),
+            ],
+          },
+        );
+
+        final content = messages.single.content;
+        expect(content, hasLength(4));
+        expect(content.first.text, 'Compare these files');
+        expect(content.where((part) => part.isMedia), hasLength(2));
+        expect(content.last.text, contains('BEGIN ATTACHMENT: notes.txt'));
+        expect(content.last.text, contains('Important document body'));
+      },
+    );
 
     test('maps an assistant text row to a model Message', () {
       final messages = buildGenkitMessages(

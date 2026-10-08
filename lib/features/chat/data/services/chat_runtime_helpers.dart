@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
+import 'package:gena/features/chat/data/models/chat_attachment.dart';
 
 /// Provider-neutral helpers shared by the chat runtime. These are independent
 /// of any specific local inference engine.
@@ -37,20 +38,39 @@ Future<int> storeUserMessage({
   required String text,
   required bool hasImage,
   required String? imagePath,
+  List<PreparedChatAttachment> attachments = const [],
 }) async {
-  return database
-      .into(database.messages)
-      .insert(
-        db.MessagesCompanion.insert(
-          chat: chatId,
-          role: 'user',
-          content: text,
-          kind: Value(hasImage ? 'image' : 'text'),
-          mediaPath: hasImage
-              ? Value<String?>(imagePath)
-              : const Value.absent(),
-        ),
-      );
+  return database.transaction(() async {
+    final messageId = await database
+        .into(database.messages)
+        .insert(
+          db.MessagesCompanion.insert(
+            chat: chatId,
+            role: 'user',
+            content: text,
+            kind: Value(hasImage ? 'image' : 'text'),
+            mediaPath: hasImage
+                ? Value<String?>(imagePath)
+                : const Value.absent(),
+          ),
+        );
+    for (final attachment in attachments) {
+      await database
+          .into(database.messageAttachments)
+          .insert(
+            db.MessageAttachmentsCompanion.insert(
+              message: messageId,
+              kind: attachment.kind.name,
+              name: attachment.name,
+              sourceType: attachment.sourceType,
+              path: attachment.appPath,
+              sizeBytes: attachment.sizeBytes,
+              extractedText: Value(attachment.extractedText),
+            ),
+          );
+    }
+    return messageId;
+  });
 }
 
 /// Generates and stores an AI/fallback title for a brand-new thread.

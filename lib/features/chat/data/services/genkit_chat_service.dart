@@ -99,6 +99,21 @@ Future<void> generateAssistantResponseWithGenkit({
             ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
           .get();
 
+  final attachmentsByMessageId = <int, List<db.MessageAttachment>>{};
+  final messageIds = storedMessages.map((message) => message.id).toList();
+  if (messageIds.isNotEmpty) {
+    final storedAttachments =
+        await (database.select(database.messageAttachments)
+              ..where((row) => row.message.isIn(messageIds))
+              ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
+            .get();
+    for (final attachment in storedAttachments) {
+      attachmentsByMessageId
+          .putIfAbsent(attachment.message, () => <db.MessageAttachment>[])
+          .add(attachment);
+    }
+  }
+
   if (isCancelled()) return;
 
   PreparedLocalModel? prepared;
@@ -110,11 +125,13 @@ Future<void> generateAssistantResponseWithGenkit({
     deps: deps,
     activeModel: activeModel,
     storedMessages: storedMessages,
+    storedAttachmentsByMessageId: attachmentsByMessageId,
     systemInstruction: systemInstruction,
   );
   final messages = buildGenkitMessages(
     systemInstruction: systemInstruction,
     storedMessages: messageWindow.keptMessages,
+    storedAttachmentsByMessageId: attachmentsByMessageId,
   );
   final ai = prepared?.ai ?? _buildRemoteGenkit(activeModel);
   final toolResultCollector = ToolResultCollector();
@@ -235,6 +252,7 @@ Future<StoredContextWindowPlan> _resolveMessageWindow({
   required ChatRuntimeDependencies deps,
   required ModelInfo activeModel,
   required List<db.Message> storedMessages,
+  required Map<int, List<db.MessageAttachment>> storedAttachmentsByMessageId,
   required String systemInstruction,
 }) async {
   if (activeModel.provider != ModelProviderType.local) {
@@ -254,6 +272,7 @@ Future<StoredContextWindowPlan> _resolveMessageWindow({
   return planStoredMessagesWindow(
     countTokens: countTokens,
     storedMessages: storedMessages,
+    storedAttachmentsByMessageId: storedAttachmentsByMessageId,
     settingsMaxTokens: activeModel.maxTokens,
     requestedOutputReserve: activeModel.tokenBuffer,
     minMessagesToKeep: 1,

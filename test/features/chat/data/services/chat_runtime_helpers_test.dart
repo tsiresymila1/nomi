@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart';
+import 'package:gena/features/chat/data/models/chat_attachment.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 
 void main() {
@@ -69,6 +70,46 @@ void main() {
       expect(row.kind, 'image');
       expect(row.mediaPath, '/tmp/p.png');
     });
+
+    test(
+      'storeUserMessage persists multiple typed attachments atomically',
+      () async {
+        final chatId = await newThread();
+        final messageId = await storeUserMessage(
+          database: database,
+          chatId: chatId,
+          text: 'review these',
+          hasImage: true,
+          imagePath: '/app/one.png',
+          attachments: const [
+            PreparedChatAttachment(
+              id: 'image-1',
+              name: 'one.png',
+              kind: ChatAttachmentKind.image,
+              sourceType: 'png',
+              appPath: '/app/one.png',
+              sizeBytes: 4,
+            ),
+            PreparedChatAttachment(
+              id: 'doc-1',
+              name: 'notes.txt',
+              kind: ChatAttachmentKind.document,
+              sourceType: 'text',
+              appPath: '/app/notes.txt',
+              sizeBytes: 12,
+              extractedText: 'document body',
+            ),
+          ],
+        );
+
+        final rows = await (database.select(
+          database.messageAttachments,
+        )..where((row) => row.message.equals(messageId))).get();
+        expect(rows, hasLength(2));
+        expect(rows.map((row) => row.kind), containsAll(['image', 'document']));
+        expect(rows.last.extractedText, 'document body');
+      },
+    );
 
     test(
       'updateThreadTitleFromFirstMessage uses the generated title',

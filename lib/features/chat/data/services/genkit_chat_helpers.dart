@@ -19,6 +19,7 @@ import 'package:genkit_openai/genkit_openai.dart';
 List<Message> buildGenkitMessages({
   required String systemInstruction,
   required List<db.Message> storedMessages,
+  Map<int, List<db.MessageAttachment>> storedAttachmentsByMessageId = const {},
 }) {
   final messages = <Message>[];
 
@@ -37,18 +38,50 @@ List<Message> buildGenkitMessages({
 
     if (message.role == 'user') {
       final content = <Part>[];
+      final attachments = storedAttachmentsByMessageId[message.id] ?? const [];
       final text = message.content.trim();
       if (text.isNotEmpty) {
         content.add(TextPart(text: text));
       }
 
-      if (message.kind == 'image') {
+      final hasPersistedImage = attachments.any(
+        (attachment) => attachment.kind == 'image',
+      );
+      if (message.kind == 'image' && !hasPersistedImage) {
         final mediaPath = (message.mediaPath ?? '').trim();
         if (mediaPath.isNotEmpty) {
           final mediaUri = Uri.file(mediaPath).toString();
           content.add(
             MediaPart(
               media: Media(contentType: 'image/*', url: mediaUri),
+            ),
+          );
+        }
+      }
+
+      for (final attachment in attachments) {
+        final path = attachment.path.trim();
+        if (attachment.kind == 'image' && path.isNotEmpty) {
+          content.add(
+            MediaPart(
+              media: Media(
+                contentType: _imageContentType(attachment.sourceType),
+                url: Uri.file(path).toString(),
+              ),
+            ),
+          );
+          continue;
+        }
+
+        if (attachment.kind == 'document') {
+          final documentText = attachment.extractedText?.trim() ?? '';
+          if (documentText.isEmpty) continue;
+          content.add(
+            TextPart(
+              text:
+                  '--- BEGIN ATTACHMENT: ${attachment.name} ---\n'
+                  '$documentText\n'
+                  '--- END ATTACHMENT: ${attachment.name} ---',
             ),
           );
         }
@@ -72,6 +105,18 @@ List<Message> buildGenkitMessages({
   }
 
   return messages;
+}
+
+String _imageContentType(String sourceType) {
+  final normalized = sourceType.trim().toLowerCase();
+  return switch (normalized) {
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'heic' => 'image/heic',
+    'heif' => 'image/heif',
+    _ => 'image/*',
+  };
 }
 
 /// Whether a stored row is part of the user/model conversation (text or image),

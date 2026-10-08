@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MessageEntity {
 
- String get id; String get chatId; String get role; String get kind; String get content; String? get mediaPath; DateTime get createdAt;
+ String get id; String get chatId; String get role; String get kind; String get content; String? get mediaPath; List<MessageAttachmentEntity> get attachments; DateTime get createdAt;
 /// Create a copy of MessageEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $MessageEntityCopyWith<MessageEntity> get copyWith => _$MessageEntityCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MessageEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.role, role) || other.role == role)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.content, content) || other.content == content)&&(identical(other.mediaPath, mediaPath) || other.mediaPath == mediaPath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MessageEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.role, role) || other.role == role)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.content, content) || other.content == content)&&(identical(other.mediaPath, mediaPath) || other.mediaPath == mediaPath)&&const DeepCollectionEquality().equals(other.attachments, attachments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,chatId,role,kind,content,mediaPath,createdAt);
+int get hashCode => Object.hash(runtimeType,id,chatId,role,kind,content,mediaPath,const DeepCollectionEquality().hash(attachments),createdAt);
 
 @override
 String toString() {
-  return 'MessageEntity(id: $id, chatId: $chatId, role: $role, kind: $kind, content: $content, mediaPath: $mediaPath, createdAt: $createdAt)';
+  return 'MessageEntity(id: $id, chatId: $chatId, role: $role, kind: $kind, content: $content, mediaPath: $mediaPath, attachments: $attachments, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $MessageEntityCopyWith<$Res>  {
   factory $MessageEntityCopyWith(MessageEntity value, $Res Function(MessageEntity) _then) = _$MessageEntityCopyWithImpl;
 @useResult
 $Res call({
- String id, String chatId, String role, String kind, String content, String? mediaPath, DateTime createdAt
+ String id, String chatId, String role, String kind, String content, String? mediaPath, List<MessageAttachmentEntity> attachments, DateTime createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$MessageEntityCopyWithImpl<$Res>
 
 /// Create a copy of MessageEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? chatId = null,Object? role = null,Object? kind = null,Object? content = null,Object? mediaPath = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? chatId = null,Object? role = null,Object? kind = null,Object? content = null,Object? mediaPath = freezed,Object? attachments = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,8 @@ as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
 as String,mediaPath: freezed == mediaPath ? _self.mediaPath : mediaPath // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,attachments: null == attachments ? _self.attachments : attachments // ignore: cast_nullable_to_non_nullable
+as List<MessageAttachmentEntity>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }
@@ -159,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  List<MessageAttachmentEntity> attachments,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MessageEntity() when $default != null:
-return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.createdAt);case _:
+return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.attachments,_that.createdAt);case _:
   return orElse();
 
 }
@@ -180,10 +181,10 @@ return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  List<MessageAttachmentEntity> attachments,  DateTime createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MessageEntity():
-return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.createdAt);case _:
+return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.attachments,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +201,10 @@ return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String chatId,  String role,  String kind,  String content,  String? mediaPath,  List<MessageAttachmentEntity> attachments,  DateTime createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MessageEntity() when $default != null:
-return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.createdAt);case _:
+return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.mediaPath,_that.attachments,_that.createdAt);case _:
   return null;
 
 }
@@ -215,7 +216,7 @@ return $default(_that.id,_that.chatId,_that.role,_that.kind,_that.content,_that.
 @JsonSerializable()
 
 class _MessageEntity implements MessageEntity {
-  const _MessageEntity({required this.id, required this.chatId, required this.role, required this.kind, required this.content, this.mediaPath, required this.createdAt});
+  const _MessageEntity({required this.id, required this.chatId, required this.role, required this.kind, required this.content, this.mediaPath, final  List<MessageAttachmentEntity> attachments = const <MessageAttachmentEntity>[], required this.createdAt}): _attachments = attachments;
   factory _MessageEntity.fromJson(Map<String, dynamic> json) => _$MessageEntityFromJson(json);
 
 @override final  String id;
@@ -224,6 +225,13 @@ class _MessageEntity implements MessageEntity {
 @override final  String kind;
 @override final  String content;
 @override final  String? mediaPath;
+ final  List<MessageAttachmentEntity> _attachments;
+@override@JsonKey() List<MessageAttachmentEntity> get attachments {
+  if (_attachments is EqualUnmodifiableListView) return _attachments;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_attachments);
+}
+
 @override final  DateTime createdAt;
 
 /// Create a copy of MessageEntity
@@ -239,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MessageEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.role, role) || other.role == role)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.content, content) || other.content == content)&&(identical(other.mediaPath, mediaPath) || other.mediaPath == mediaPath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MessageEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.role, role) || other.role == role)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.content, content) || other.content == content)&&(identical(other.mediaPath, mediaPath) || other.mediaPath == mediaPath)&&const DeepCollectionEquality().equals(other._attachments, _attachments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,chatId,role,kind,content,mediaPath,createdAt);
+int get hashCode => Object.hash(runtimeType,id,chatId,role,kind,content,mediaPath,const DeepCollectionEquality().hash(_attachments),createdAt);
 
 @override
 String toString() {
-  return 'MessageEntity(id: $id, chatId: $chatId, role: $role, kind: $kind, content: $content, mediaPath: $mediaPath, createdAt: $createdAt)';
+  return 'MessageEntity(id: $id, chatId: $chatId, role: $role, kind: $kind, content: $content, mediaPath: $mediaPath, attachments: $attachments, createdAt: $createdAt)';
 }
 
 
@@ -259,7 +267,7 @@ abstract mixin class _$MessageEntityCopyWith<$Res> implements $MessageEntityCopy
   factory _$MessageEntityCopyWith(_MessageEntity value, $Res Function(_MessageEntity) _then) = __$MessageEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String chatId, String role, String kind, String content, String? mediaPath, DateTime createdAt
+ String id, String chatId, String role, String kind, String content, String? mediaPath, List<MessageAttachmentEntity> attachments, DateTime createdAt
 });
 
 
@@ -276,7 +284,7 @@ class __$MessageEntityCopyWithImpl<$Res>
 
 /// Create a copy of MessageEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? chatId = null,Object? role = null,Object? kind = null,Object? content = null,Object? mediaPath = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? chatId = null,Object? role = null,Object? kind = null,Object? content = null,Object? mediaPath = freezed,Object? attachments = null,Object? createdAt = null,}) {
   return _then(_MessageEntity(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
@@ -284,7 +292,8 @@ as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
 as String,mediaPath: freezed == mediaPath ? _self.mediaPath : mediaPath // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,attachments: null == attachments ? _self._attachments : attachments // ignore: cast_nullable_to_non_nullable
+as List<MessageAttachmentEntity>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }

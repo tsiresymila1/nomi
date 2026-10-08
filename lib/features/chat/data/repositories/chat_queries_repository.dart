@@ -49,25 +49,64 @@ class ChatQueriesRepository {
       return Stream<List<MessageEntity>>.value(const <MessageEntity>[]);
     }
 
-    final query = _database.select(_database.messages)
-      ..where((t) => t.chat.equals(parsedChatId))
-      ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
+    final query =
+        _database.select(_database.messages).join([
+            leftOuterJoin(
+              _database.messageAttachments,
+              _database.messageAttachments.message.equalsExp(
+                _database.messages.id,
+              ),
+            ),
+          ])
+          ..where(_database.messages.chat.equals(parsedChatId))
+          ..orderBy([
+            OrderingTerm.asc(_database.messages.createdAt),
+            OrderingTerm.asc(_database.messageAttachments.createdAt),
+            OrderingTerm.asc(_database.messageAttachments.id),
+          ]);
 
-    return query.watch().map(
-      (rows) => rows
+    return query.watch().map((rows) {
+      final messages = <int, MessageEntity>{};
+      final attachments = <int, List<MessageAttachmentEntity>>{};
+      for (final result in rows) {
+        final row = result.readTable(_database.messages);
+        final attachment = result.readTableOrNull(_database.messageAttachments);
+        messages.putIfAbsent(
+          row.id,
+          () => MessageEntity(
+            id: row.id.toString(),
+            chatId: row.chat.toString(),
+            role: row.role,
+            kind: row.kind,
+            content: row.content,
+            mediaPath: row.mediaPath,
+            createdAt: row.createdAt,
+          ),
+        );
+        if (attachment != null) {
+          attachments
+              .putIfAbsent(row.id, () => [])
+              .add(
+                MessageAttachmentEntity(
+                  id: attachment.id.toString(),
+                  kind: attachment.kind,
+                  name: attachment.name,
+                  sourceType: attachment.sourceType,
+                  path: attachment.path,
+                  sizeBytes: attachment.sizeBytes,
+                  workspaceDocumentId: attachment.workspaceDocument,
+                ),
+              );
+        }
+      }
+      return messages.entries
           .map(
-            (row) => MessageEntity(
-              id: row.id.toString(),
-              chatId: row.chat.toString(),
-              role: row.role,
-              kind: row.kind,
-              content: row.content,
-              mediaPath: row.mediaPath,
-              createdAt: row.createdAt,
+            (entry) => entry.value.copyWith(
+              attachments: attachments[entry.key] ?? const [],
             ),
           )
-          .toList(growable: false),
-    );
+          .toList(growable: false);
+    });
   }
 }
 

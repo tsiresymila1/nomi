@@ -290,6 +290,7 @@ class _ChatViewState extends State<ChatView> {
                                       isUser: message.role == 'user',
                                       kind: message.kind,
                                       mediaPath: message.mediaPath,
+                                      attachments: message.attachments,
                                       isStreaming: false,
                                     );
                                   }

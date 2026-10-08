@@ -205,7 +205,10 @@ void registerChatDependencies() {
 
   if (!sl.isRegistered<ChatInputCubit>()) {
     sl.registerLazySingleton<ChatInputCubit>(
-      () => ChatInputCubit(chatThreadActions: sl<ChatThreadActions>()),
+      () => ChatInputCubit(
+        chatThreadActions: sl<ChatThreadActions>(),
+        attachmentsCubit: sl<ChatAttachmentsCubit>(),
+      ),
     );
   }
 

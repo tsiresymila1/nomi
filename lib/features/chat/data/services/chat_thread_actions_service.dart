@@ -13,6 +13,7 @@ import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
 import 'package:gena/features/chat/data/services/chat_thread_context_service.dart';
 import 'package:gena/features/chat/data/services/chat_title_service.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
+import 'package:gena/features/chat/data/models/chat_attachment.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 
 /// Message shown when an image is attached to a model that cannot read images.
@@ -73,7 +74,11 @@ class LocalMessageBudgetPlan {
 /// send or stop on the active chat thread. Lets those cubits be unit-tested
 /// without constructing the full [ChatThreadActions] dependency graph.
 abstract interface class ChatThreadActionsApi {
-  Future<void> sendMessage(String rawText, {String? imagePath});
+  Future<void> sendMessage(
+    String rawText, {
+    String? imagePath,
+    List<PreparedChatAttachment> attachments = const [],
+  });
 
   Future<void> stopGeneration({
     bool triggerLocalModelCancel = true,
@@ -131,12 +136,19 @@ class ChatThreadActions implements ChatThreadActionsApi {
   bool _retryInFlight = false;
 
   @override
-  Future<void> sendMessage(String rawText, {String? imagePath}) async {
+  Future<void> sendMessage(
+    String rawText, {
+    String? imagePath,
+    List<PreparedChatAttachment> attachments = const [],
+  }) async {
     final text = rawText.trim();
     final normalizedImagePath = imagePath?.trim();
     final hasImage =
-        normalizedImagePath != null && normalizedImagePath.isNotEmpty;
-    if (text.isEmpty && !hasImage) return;
+        (normalizedImagePath != null && normalizedImagePath.isNotEmpty) ||
+        attachments.any(
+          (attachment) => attachment.kind == ChatAttachmentKind.image,
+        );
+    if (text.isEmpty && !hasImage && attachments.isEmpty) return;
 
     var chatId = _selectedChatCubit.state;
     chatId ??= await _selectedChatCubit.createNewThread();
@@ -178,6 +190,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
       final messageFits = await _validateLocalMessageFitsContext(
         text: text,
         imagePath: normalizedImagePath,
+        attachments: attachments,
       );
       if (!messageFits) {
         return;
@@ -192,6 +205,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
         text: text,
         hasImage: hasImage,
         imagePath: normalizedImagePath,
+        attachments: attachments,
       );
     } catch (error, stackTrace) {
       logger.e(
@@ -267,9 +281,17 @@ class ChatThreadActions implements ChatThreadActionsApi {
       return;
     }
 
+    final hasTypedImage =
+        await (_database.select(_database.messageAttachments)..where(
+              (row) =>
+                  row.message.equals(userMessage.id) & row.kind.equals('image'),
+            ))
+            .get()
+            .then((rows) => rows.isNotEmpty);
     final hasImage =
-        userMessage.mediaPath != null &&
-        userMessage.mediaPath!.trim().isNotEmpty;
+        (userMessage.mediaPath != null &&
+            userMessage.mediaPath!.trim().isNotEmpty) ||
+        hasTypedImage;
     if (isImageInputRejected(model: activeModel, hasImage: hasImage)) {
       _chatGenerationFailureCubit.fail(
         chatId: failure.chatId,
@@ -444,10 +466,12 @@ class ChatThreadActions implements ChatThreadActionsApi {
   Future<bool> _validateLocalMessageFitsContext({
     required String text,
     required String? imagePath,
+    List<PreparedChatAttachment> attachments = const [],
   }) async {
     final budget = await estimateLocalMessageBudget(
       text: text,
       imagePath: imagePath,
+      attachments: attachments,
     );
     if (budget == null) return true;
 
@@ -475,6 +499,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
   Future<LocalMessageBudgetPlan?> estimateLocalMessageBudget({
     required String text,
     required String? imagePath,
+    List<PreparedChatAttachment> attachments = const [],
   }) async {
     final chatId = _selectedChatCubit.state;
     final parsedChatId = int.tryParse(chatId ?? '');
@@ -491,6 +516,16 @@ class ChatThreadActions implements ChatThreadActionsApi {
     final hasImage = imagePath != null && imagePath.trim().isNotEmpty;
     if (hasImage) {
       messageTokens += 257;
+    }
+    for (final attachment in attachments) {
+      if (attachment.kind == ChatAttachmentKind.image) {
+        messageTokens += 257;
+        continue;
+      }
+      final documentText = attachment.extractedText?.trim() ?? '';
+      if (documentText.isNotEmpty) {
+        messageTokens += await countTokens(documentText);
+      }
     }
 
     final activeWorkspace = await _runtimeDependencies.workspaceQueries

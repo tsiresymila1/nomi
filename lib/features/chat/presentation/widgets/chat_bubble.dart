@@ -8,6 +8,7 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/utils.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
+import 'package:gena/features/chat/data/models/message_entity.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -22,6 +23,7 @@ class ChatBubble extends StatelessWidget {
     this.mediaPath,
     this.isStreaming = false,
     this.messageId,
+    this.attachments = const [],
   });
 
   final String message;
@@ -33,6 +35,7 @@ class ChatBubble extends StatelessWidget {
   /// Persisted message id, used to drive the read-aloud toggle. Null for
   /// transient streaming drafts (which are not yet read-aloud targets).
   final String? messageId;
+  final List<MessageAttachmentEntity> attachments;
 
   String get _normalizedKind => kind.trim().toLowerCase();
 
@@ -97,6 +100,9 @@ class ChatBubble extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
+    if (attachments.isNotEmpty) {
+      return _buildContentWithAttachments(context);
+    }
     if (kind == 'image' && mediaPath != null) {
       return Column(
         crossAxisAlignment: isUser
@@ -157,6 +163,72 @@ class ChatBubble extends StatelessWidget {
         markdown,
         const SizedBox(height: 2),
         _buildSpeakButton(context),
+      ],
+    );
+  }
+
+  Widget _buildContentWithAttachments(BuildContext context) {
+    final images = attachments
+        .where((attachment) => attachment.kind == 'image')
+        .toList(growable: false);
+    final documents = attachments
+        .where((attachment) => attachment.kind == 'document')
+        .toList(growable: false);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: isUser
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        if (message.trim().isNotEmpty)
+          GptMarkdown(message, style: const TextStyle(fontSize: 13)),
+        if (message.trim().isNotEmpty) const SizedBox(height: 8),
+        if (images.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final image in images)
+                InkWell(
+                  onTap: () => FullscreenImageViewer.open(
+                    context: context,
+                    child: Image.file(File(image.path)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(image.path),
+                      width: 132,
+                      height: 108,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox(
+                        width: 132,
+                        height: 64,
+                        child: Center(child: Text('Image unavailable')),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        if (images.isNotEmpty && documents.isNotEmpty)
+          const SizedBox(height: 8),
+        if (documents.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final document in documents)
+                Chip(
+                  avatar: const Icon(Icons.description_outlined, size: 16),
+                  label: Text(
+                    document.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
       ],
     );
   }

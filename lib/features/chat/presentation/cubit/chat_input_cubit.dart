@@ -1,12 +1,15 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/toast/app_toast.dart';
+import 'package:gena/features/chat/data/models/chat_attachment.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_attachments_cubit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
-enum ChatAttachmentSource { camera, gallery }
+enum ChatAttachmentSource { camera, gallery, files }
 
 class ChatInputState {
   const ChatInputState({
@@ -40,11 +43,15 @@ class ChatInputState {
 }
 
 class ChatInputCubit extends Cubit<ChatInputState> {
-  ChatInputCubit({required ChatThreadActionsApi chatThreadActions})
-    : _chatThreadActions = chatThreadActions,
-      super(const ChatInputState());
+  ChatInputCubit({
+    required ChatThreadActionsApi chatThreadActions,
+    ChatAttachmentsCubit? attachmentsCubit,
+  }) : _chatThreadActions = chatThreadActions,
+       _attachmentsCubit = attachmentsCubit,
+       super(const ChatInputState());
 
   final ChatThreadActionsApi _chatThreadActions;
+  final ChatAttachmentsCubit? _attachmentsCubit;
   final ImagePicker _imagePicker = ImagePicker();
 
   Future<void> pickImage({required ChatAttachmentSource source}) async {
@@ -53,6 +60,7 @@ class ChatInputCubit extends Cubit<ChatInputState> {
         source: switch (source) {
           ChatAttachmentSource.camera => ImageSource.camera,
           ChatAttachmentSource.gallery => ImageSource.gallery,
+          ChatAttachmentSource.files => throw ArgumentError.value(source),
         },
         imageQuality: 95,
       );
@@ -69,11 +77,65 @@ class ChatInputCubit extends Cubit<ChatInputState> {
       final message = switch (source) {
         ChatAttachmentSource.camera => 'Photo captured',
         ChatAttachmentSource.gallery => 'Image selected',
+        ChatAttachmentSource.files => 'Files selected',
       };
       await AppToast.show(message, type: AppToastType.success);
     } catch (error) {
       await AppToast.show(
         'Image pick failed: $error',
+        type: AppToastType.error,
+      );
+    }
+  }
+
+  Future<void> pickFiles({required bool allowImages}) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: [
+          if (allowImages) ...['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
+          'pdf',
+          'doc',
+          'docx',
+          'md',
+          'markdown',
+          'txt',
+          'text',
+          'csv',
+          'tsv',
+          'json',
+          'yaml',
+          'yml',
+          'dart',
+          'js',
+          'ts',
+          'py',
+          'java',
+          'kt',
+          'swift',
+          'c',
+          'cpp',
+          'h',
+          'hpp',
+          'go',
+          'rs',
+          'sql',
+        ],
+      );
+      final paths =
+          result?.files
+              .map((file) => file.path)
+              .whereType<String>()
+              .toList(growable: false) ??
+          const <String>[];
+      if (paths.isEmpty) return;
+      final attachmentsCubit = _attachmentsCubit;
+      if (attachmentsCubit == null) return;
+      await Future.wait(paths.map(attachmentsCubit.addPath));
+    } catch (error) {
+      await AppToast.show(
+        'File selection failed: $error',
         type: AppToastType.error,
       );
     }
@@ -112,7 +174,10 @@ class ChatInputCubit extends Cubit<ChatInputState> {
   Future<void> sendMessage(String rawText) async {
     final text = rawText.trim();
     final imagePath = state.selectedImagePath;
-    if (text.isEmpty && imagePath == null) return;
+    final attachments =
+        _attachmentsCubit?.readyAttachments ?? const <PreparedChatAttachment>[];
+    if (text.isEmpty && imagePath == null && attachments.isEmpty) return;
+    if (_attachmentsCubit?.isPreparing ?? false) return;
     if (state.isSending) return;
 
     emit(state.copyWith(isSending: true));
@@ -124,7 +189,12 @@ class ChatInputCubit extends Cubit<ChatInputState> {
           draftText: '',
         ),
       );
-      await _chatThreadActions.sendMessage(text, imagePath: imagePath);
+      await _chatThreadActions.sendMessage(
+        text,
+        imagePath: imagePath,
+        attachments: attachments,
+      );
+      _attachmentsCubit?.consumeReadyAttachments();
     } finally {
       emit(state.copyWith(isSending: false));
     }

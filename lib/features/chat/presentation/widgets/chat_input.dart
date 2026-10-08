@@ -6,16 +6,21 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
+import 'package:gena/features/chat/data/models/chat_attachment.dart';
+import 'package:gena/features/chat/presentation/cubit/chat_attachments_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_attachment_button.dart';
+import 'package:gena/features/chat/presentation/widgets/chat_input_attachment_preview_list.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_image_preview.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_send_button.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_input_voice_button.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
+import 'package:gena/features/workspace/data/services/workspace_rag_actions.dart';
+import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -39,11 +44,20 @@ class _ChatInputState extends State<ChatInput> {
   String? _lastSelectedImagePath;
   String? _lastSelectedChatId;
   int? _lastBudgetModelId;
+  StreamSubscription<List<ChatAttachmentDraft>>? _attachmentsSubscription;
+  List<ChatAttachmentDraft> _attachmentDrafts = const [];
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onInputChanged);
+    final attachmentsCubit = sl<ChatAttachmentsCubit>();
+    _attachmentDrafts = attachmentsCubit.state;
+    _attachmentsSubscription = attachmentsCubit.stream.listen((drafts) {
+      if (!mounted) return;
+      setState(() => _attachmentDrafts = drafts);
+      _scheduleDraftBudgetRefresh();
+    });
     _focusNode.addListener(() {
       setState(() {
         _hasFocus = _focusNode.hasFocus;
@@ -75,6 +89,7 @@ class _ChatInputState extends State<ChatInput> {
   @override
   void dispose() {
     _controller.removeListener(_onInputChanged);
+    unawaited(_attachmentsSubscription?.cancel());
     _draftBudgetDebounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
@@ -91,6 +106,31 @@ class _ChatInputState extends State<ChatInput> {
     await sl<ChatInputCubit>().stopGeneration();
   }
 
+  Future<void> _addAttachmentToWorkspace(
+    PreparedChatAttachment attachment,
+  ) async {
+    final workspaceId = sl<SelectedWorkspaceCubit>().state;
+    if (workspaceId == null) {
+      await AppToast.show('Select a workspace first.', type: AppToastType.info);
+      return;
+    }
+    try {
+      await sl<WorkspaceRagActions>().importDocument(
+        workspaceId: workspaceId,
+        rawPath: attachment.appPath,
+      );
+      await AppToast.show(
+        'Document added to workspace knowledge.',
+        type: AppToastType.success,
+      );
+    } catch (error) {
+      await AppToast.show(
+        'Could not add document to workspace: $error',
+        type: AppToastType.error,
+      );
+    }
+  }
+
   void _scheduleDraftBudgetRefresh({
     Duration delay = const Duration(milliseconds: 180),
   }) {
@@ -102,16 +142,21 @@ class _ChatInputState extends State<ChatInput> {
     final requestId = ++_draftBudgetRequestId;
     final text = _controller.text.trim();
     final imagePath = sl<ChatInputCubit>().state.selectedImagePath;
+    final attachments = sl<ChatAttachmentsCubit>().readyAttachments;
     final activeModel = await sl<ActiveModelInfoResolver>()
         .getActiveModelInfo();
 
     if (!mounted) return;
 
-    final hasImage = imagePath != null && imagePath.isNotEmpty;
+    final hasImage =
+        (imagePath != null && imagePath.isNotEmpty) ||
+        attachments.any(
+          (attachment) => attachment.kind == ChatAttachmentKind.image,
+        );
     final shouldHideBudget =
         activeModel == null ||
         activeModel.provider != 'local' ||
-        (text.isEmpty && !hasImage);
+        (text.isEmpty && !hasImage && attachments.isEmpty);
     if (shouldHideBudget) {
       if (_draftBudget != null || _isEstimatingDraftBudget) {
         setState(() {
@@ -127,6 +172,7 @@ class _ChatInputState extends State<ChatInput> {
     final budget = await sl<ChatThreadActions>().estimateLocalMessageBudget(
       text: text,
       imagePath: imagePath,
+      attachments: attachments,
     );
 
     if (!mounted || requestId != _draftBudgetRequestId) return;
@@ -141,11 +187,6 @@ class _ChatInputState extends State<ChatInput> {
     required bool canAttachImage,
     required bool hasSelectedImage,
   }) async {
-    if (hasSelectedImage) {
-      sl<ChatInputCubit>().clearSelectedImage();
-      return;
-    }
-
     final options = _buildAttachmentOptions(canAttachImage: canAttachImage);
     if (options.isEmpty) {
       await AppToast.show('No attachments available for this model.');
@@ -178,13 +219,23 @@ class _ChatInputState extends State<ChatInput> {
     );
 
     if (selectedSource == null) return;
-    await sl<ChatInputCubit>().pickImage(source: selectedSource);
+    if (selectedSource == ChatAttachmentSource.files) {
+      await sl<ChatInputCubit>().pickFiles(allowImages: canAttachImage);
+    } else {
+      await sl<ChatInputCubit>().pickImage(source: selectedSource);
+    }
   }
 
   List<_AttachmentOption> _buildAttachmentOptions({
     required bool canAttachImage,
   }) {
-    final options = <_AttachmentOption>[];
+    final options = <_AttachmentOption>[
+      const _AttachmentOption(
+        source: ChatAttachmentSource.files,
+        label: 'Files and documents',
+        icon: Icons.attach_file_rounded,
+      ),
+    ];
     if (canAttachImage) {
       options.addAll(const <_AttachmentOption>[
         _AttachmentOption(
@@ -224,8 +275,19 @@ class _ChatInputState extends State<ChatInput> {
                     final canAttachImage = activeModel?.supportImage ?? false;
                     final hasSelectedImage =
                         inputState.selectedImagePath != null;
+                    final hasTypedAttachments = _attachmentDrafts.any(
+                      (draft) =>
+                          draft.status == ChatAttachmentDraftStatus.ready,
+                    );
+                    final isPreparingAttachment = _attachmentDrafts.any(
+                      (draft) =>
+                          draft.status == ChatAttachmentDraftStatus.preparing,
+                    );
                     final hasSendableContent =
-                        _hasTypedContent || hasSelectedImage;
+                        (_hasTypedContent ||
+                            hasSelectedImage ||
+                            hasTypedAttachments) &&
+                        !isPreparingAttachment;
                     final keyboardVisible =
                         MediaQuery.viewInsetsOf(context).bottom > 0;
                     if (_wasKeyboardVisible &&
@@ -260,6 +322,8 @@ class _ChatInputState extends State<ChatInput> {
                       canAttachImage: canAttachImage,
                       hasSelectedImage: hasSelectedImage,
                       hasSendableContent: hasSendableContent,
+                      attachmentDrafts: _attachmentDrafts,
+                      isPreparingAttachment: isPreparingAttachment,
                     );
                   },
                 );
@@ -280,6 +344,8 @@ class _ChatInputState extends State<ChatInput> {
     required bool canAttachImage,
     required bool hasSelectedImage,
     required bool hasSendableContent,
+    required List<ChatAttachmentDraft> attachmentDrafts,
+    required bool isPreparingAttachment,
   }) {
     Widget suffixActionButton({
       required dynamic icon,
@@ -324,10 +390,13 @@ class _ChatInputState extends State<ChatInput> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (!_hasFocus || hasSelectedImage)
+                if (!_hasFocus ||
+                    hasSelectedImage ||
+                    attachmentDrafts.isNotEmpty)
                   ChatInputAttachmentButton(
                     isGenerating: isGenerating,
-                    hasSelectedImage: hasSelectedImage,
+                    hasSelectedImage:
+                        hasSelectedImage || attachmentDrafts.isNotEmpty,
                     onPressed: () => _openAttachmentMenu(
                       context: context,
                       canAttachImage: canAttachImage,
@@ -342,6 +411,13 @@ class _ChatInputState extends State<ChatInput> {
                     ),
                     child: Column(
                       children: [
+                        ChatInputAttachmentPreviewList(
+                          attachments: attachmentDrafts,
+                          onRemove: (id) =>
+                              unawaited(sl<ChatAttachmentsCubit>().remove(id)),
+                          onAddToWorkspace: (attachment) =>
+                              unawaited(_addAttachmentToWorkspace(attachment)),
+                        ),
                         if (hasSelectedImage)
                           ChatInputImagePreview(
                             imagePath: inputState.selectedImagePath!,
@@ -373,8 +449,7 @@ class _ChatInputState extends State<ChatInput> {
                               minWidth: 0,
                               minHeight: 0,
                             ),
-                            prefixIcon:
-                                _hasFocus && canAttachImage && !hasSelectedImage
+                            prefixIcon: _hasFocus && !hasSelectedImage
                                 ? Padding(
                                     padding: const EdgeInsets.only(left: 6),
                                     child: Row(
@@ -394,9 +469,7 @@ class _ChatInputState extends State<ChatInput> {
                                                   hasSelectedImage:
                                                       hasSelectedImage,
                                                 ),
-                                          tooltip: hasSelectedImage
-                                              ? 'Remove selected image'
-                                              : 'Add image',
+                                          tooltip: 'Add files',
                                         ),
                                       ],
                                     ),
@@ -425,7 +498,17 @@ class _ChatInputState extends State<ChatInput> {
                                       ),
                                     ),
                                   ],
-                                  if (isGenerating || hasSendableContent)
+                                  if (isPreparingAttachment)
+                                    const Padding(
+                                      padding: EdgeInsets.all(5),
+                                      child: SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  else if (isGenerating || hasSendableContent)
                                     ChatInputSendButton(
                                       isGenerating: isGenerating,
                                       hasSendableContent: hasSendableContent,

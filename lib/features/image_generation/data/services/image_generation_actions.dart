@@ -69,39 +69,42 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
       throw ArgumentError.value(prompt, 'prompt', 'must not be empty');
     }
 
-    await storeUserMessage(
-      database: _database,
-      chatId: chatId,
-      text: normalizedPrompt,
-      hasImage: false,
-      imagePath: null,
-    );
-    await updateThreadTitleFromFirstMessage(
-      database: _database,
-      chatId: chatId,
-      messageText: normalizedPrompt,
-      hasImage: true,
-    );
-
     final artifact = await _service.generate(
       prompt: normalizedPrompt,
       seed: seed,
       onProgress: onProgress,
     );
     final seconds = (artifact.elapsed.inMilliseconds / 1000).toStringAsFixed(1);
-    await _database
-        .into(_database.messages)
-        .insert(
-          db.MessagesCompanion.insert(
-            chat: chatId,
-            role: 'assistant',
-            kind: const Value('image'),
-            content:
-                'Generated locally with ${ImageModelProfile.sdxs.name} '
-                '· seed ${artifact.seed} · ${seconds}s',
-            mediaPath: Value(artifact.path),
-          ),
-        );
+    await _database.transaction(() async {
+      await _database
+          .into(_database.messages)
+          .insert(
+            db.MessagesCompanion.insert(
+              chat: chatId,
+              role: 'user',
+              content: normalizedPrompt,
+            ),
+          );
+      await _database
+          .into(_database.messages)
+          .insert(
+            db.MessagesCompanion.insert(
+              chat: chatId,
+              role: 'assistant',
+              kind: const Value('image'),
+              content:
+                  'Generated locally with ${ImageModelProfile.sdxs.name} '
+                  '· seed ${artifact.seed} · ${seconds}s',
+              mediaPath: Value(artifact.path),
+            ),
+          );
+    });
+    await updateThreadTitleFromFirstMessage(
+      database: _database,
+      chatId: chatId,
+      messageText: normalizedPrompt,
+      hasImage: true,
+    );
     return artifact;
   }
 

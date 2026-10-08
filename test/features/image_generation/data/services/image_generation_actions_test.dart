@@ -54,18 +54,38 @@ void main() {
     },
   );
 
-  test('does not persist an assistant image when generation fails', () async {
-    service.error = StateError('generation failed');
+  test(
+    'does not persist an orphaned image turn when generation fails',
+    () async {
+      service.error = StateError('generation failed');
 
-    await expectLater(
-      actions.generateAndPersist(prompt: 'A storm', onProgress: (_) {}),
-      throwsA(isA<StateError>()),
-    );
+      await expectLater(
+        actions.generateAndPersist(prompt: 'A storm', onProgress: (_) {}),
+        throwsA(isA<StateError>()),
+      );
 
-    final rows = await database.select(database.messages).get();
-    expect(rows, hasLength(1));
-    expect(rows.single.role, 'user');
-  });
+      final rows = await database.select(database.messages).get();
+      expect(rows, isEmpty);
+    },
+  );
+
+  test(
+    'does not persist an orphaned image turn when generation is cancelled',
+    () async {
+      service.error = const ImageGenerationCancelledException();
+
+      await expectLater(
+        actions.generateAndPersist(
+          prompt: 'A cancelled storm',
+          onProgress: (_) {},
+        ),
+        throwsA(isA<ImageGenerationCancelledException>()),
+      );
+
+      final rows = await database.select(database.messages).get();
+      expect(rows, isEmpty);
+    },
+  );
 
   test('rejects generation when no valid chat is selected', () async {
     selectedChatCubit.selected = null;

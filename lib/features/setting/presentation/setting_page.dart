@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
+import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
 import 'package:gena/features/setting/data/services/theme_settings_service.dart';
+import 'package:gena/features/setting/presentation/widgets/whisper_model_settings_section.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -69,6 +71,11 @@ class SettingsPage extends StatelessWidget {
                     .fadeIn(duration: 220.ms, delay: 60.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
+                WhisperModelSettingsSection(cubit: sl<WhisperModelCubit>())
+                    .animate()
+                    .fadeIn(duration: 220.ms, delay: 100.ms)
+                    .slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 8),
                 ListTile(
                       title: const Text(
                         'Remote servers',
@@ -86,7 +93,7 @@ class SettingsPage extends StatelessWidget {
                       onTap: () => context.pushNamed('remote-servers'),
                     )
                     .animate()
-                    .fadeIn(duration: 220.ms, delay: 100.ms)
+                    .fadeIn(duration: 220.ms, delay: 140.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
                 ListTile(
@@ -106,7 +113,7 @@ class SettingsPage extends StatelessWidget {
                       onTap: () => context.pushNamed('mcp-servers'),
                     )
                     .animate()
-                    .fadeIn(duration: 220.ms, delay: 140.ms)
+                    .fadeIn(duration: 220.ms, delay: 180.ms)
                     .slideY(begin: 0.08, end: 0),
               ],
             ),

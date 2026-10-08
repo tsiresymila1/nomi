@@ -28,6 +28,7 @@ import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
 import 'package:gena/core/toast/app_toast.dart';
 import 'package:gena/features/chat/data/tools/native_tool_bridge_service.dart';
 import 'package:gena/features/mcp/data/mcp_repository.dart';
@@ -43,6 +44,9 @@ import 'package:gena/features/workspace/data/services/workspace_document_parser.
 
 void registerChatDependencies() {
   // Cubits (no deps)
+  if (!sl.isRegistered<WhisperModelCubit>()) {
+    sl.registerLazySingleton<WhisperModelCubit>(WhisperModelCubit.new);
+  }
   if (!sl.isRegistered<ChatModelSwitchingCubit>()) {
     sl.registerLazySingleton<ChatModelSwitchingCubit>(
       ChatModelSwitchingCubit.new,

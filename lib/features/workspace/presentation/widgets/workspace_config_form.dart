@@ -9,6 +9,7 @@ import 'package:gena/features/workspace/presentation/services/workspace_config_a
 import 'package:gena/features/workspace/presentation/widgets/workspace_documents_list.dart';
 import 'package:gena/features/workspace/presentation/widgets/workspace_embedder_status_card.dart';
 import 'package:gena/features/workspace/presentation/widgets/workspace_native_tools_list_card.dart';
+import 'package:go_router/go_router.dart';
 
 class WorkspaceConfigForm extends StatefulWidget {
   const WorkspaceConfigForm({super.key});
@@ -18,19 +19,16 @@ class WorkspaceConfigForm extends StatefulWidget {
 }
 
 class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
-  late final TextEditingController _instructionController;
   late final TextEditingController _memoryController;
 
   @override
   void initState() {
     super.initState();
-    _instructionController = TextEditingController();
     _memoryController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _instructionController.dispose();
     _memoryController.dispose();
     super.dispose();
   }
@@ -39,15 +37,6 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
   Widget build(BuildContext context) {
     return BlocBuilder<WorkspaceConfigCubit, WorkspaceConfigState>(
       builder: (context, state) {
-        if (_instructionController.text != state.instruction) {
-          _instructionController.value = TextEditingValue(
-            text: state.instruction,
-            selection: TextSelection.collapsed(
-              offset: state.instruction.length,
-            ),
-          );
-        }
-
         final cubit = context.read<WorkspaceConfigCubit>();
         final capabilities = cubit.capabilities;
         return SingleChildScrollView(
@@ -55,15 +44,47 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('General prompt'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _instructionController,
-                minLines: 8,
-                maxLines: 16,
-                style: const TextStyle(fontSize: 13),
-                decoration: const InputDecoration(hintText: 'Workspace prompt'),
-                onChanged: cubit.setInstruction,
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.edit_note_rounded),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'General prompt',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.instruction.trim().isEmpty
+                            ? 'No custom prompt. Nomi will use the default instructions.'
+                            : state.instruction.trim(),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _openPromptEditor(
+                          context,
+                          cubit,
+                          state.instruction,
+                        ),
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        label: const Text('Edit Markdown prompt'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               SwitchListTile(
@@ -251,6 +272,19 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
         );
       },
     );
+  }
+
+  Future<void> _openPromptEditor(
+    BuildContext context,
+    WorkspaceConfigCubit cubit,
+    String instruction,
+  ) async {
+    final result = await context.pushNamed<String>(
+      'workspace-prompt-editor',
+      extra: instruction,
+    );
+    if (!mounted || result == null) return;
+    cubit.setInstruction(result);
   }
 }
 

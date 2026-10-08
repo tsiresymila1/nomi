@@ -17,6 +17,7 @@ import 'package:gena/features/downloads/presentation/download_page.dart';
 import 'package:gena/features/home/presentation/home_page.dart';
 import 'package:gena/features/mcp/presentation/mcp_servers_page.dart';
 import 'package:gena/features/remote_servers/presentation/remote_servers_page.dart';
+import 'package:gena/features/workspace/presentation/workspace_prompt_editor_page.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/setting/presentation/setting_page.dart';
@@ -101,6 +102,16 @@ final router = GoRouter(
       name: 'mcp-servers',
       pageBuilder: (context, state) =>
           _buildTransitionPage(state: state, child: const McpServersPage()),
+    ),
+    GoRoute(
+      path: '/settings/workspace/prompt-editor',
+      name: 'workspace-prompt-editor',
+      pageBuilder: (context, state) => _buildTransitionPage(
+        state: state,
+        child: WorkspacePromptEditorPage(
+          initialPrompt: state.extra is String ? state.extra as String : '',
+        ),
+      ),
     ),
     GoRoute(
       path: '/settings/workspace/:workspaceId/config',

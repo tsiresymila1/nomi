@@ -1,5 +1,6 @@
 import 'package:gena/core/database/gena_database.dart';
 import 'package:gena/core/di/service_locator.dart';
+import 'package:gena/core/local_ai/local_ai_runtime_coordinator.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_attachments_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
@@ -16,6 +17,8 @@ import 'package:gena/features/chat/data/repositories/chat_queries_repository.dar
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime_factory.dart';
+import 'package:gena/features/chat/data/services/coordinated_local_model_runtime.dart';
+import 'package:gena/features/chat/data/services/coordinated_speech_to_text.dart';
 import 'package:gena/features/chat/data/services/audio_recorder_factory.dart';
 import 'package:gena/features/chat/data/services/chat_generation_signal_service.dart';
 import 'package:gena/features/chat/data/services/speech_segmenter_factory.dart';
@@ -96,12 +99,22 @@ void registerChatDependencies() {
 
   // Local model runtime (native llamadart, or unsupported on web)
   if (!sl.isRegistered<LocalModelRuntime>()) {
-    sl.registerLazySingleton<LocalModelRuntime>(createLocalModelRuntime);
+    sl.registerLazySingleton<LocalModelRuntime>(
+      () => CoordinatedLocalModelRuntime(
+        delegate: createLocalModelRuntime(),
+        coordinator: sl<LocalAiRuntimeCoordinator>(),
+      ),
+    );
   }
 
   // On-device speech-to-text (native whisper, or unsupported on web)
   if (!sl.isRegistered<SpeechToText>()) {
-    sl.registerLazySingleton<SpeechToText>(createSpeechToText);
+    sl.registerLazySingleton<SpeechToText>(
+      () => CoordinatedSpeechToText(
+        delegate: createSpeechToText(),
+        coordinator: sl<LocalAiRuntimeCoordinator>(),
+      ),
+    );
   }
   if (!sl.isRegistered<VoiceAudioRecorder>()) {
     sl.registerLazySingleton<VoiceAudioRecorder>(createVoiceAudioRecorder);

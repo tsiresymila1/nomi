@@ -7,6 +7,16 @@ import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/data/services/chat_queries_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
+const double _chatAutoFollowThreshold = 120;
+
+bool isNearChatBottom({
+  required double pixels,
+  required double maxScrollExtent,
+  double threshold = _chatAutoFollowThreshold,
+}) {
+  return maxScrollExtent - pixels <= threshold;
+}
+
 class ChatView extends StatefulWidget {
   const ChatView({super.key, required this.chatId});
 
@@ -19,6 +29,14 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final ScrollController _scrollController = ScrollController();
   String? _lastScrollSignature;
+  bool _isNearBottom = true;
+  bool _scrollScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScrollPosition);
+  }
 
   @override
   void dispose() {
@@ -39,19 +57,40 @@ class _ChatViewState extends State<ChatView> {
         );
   }
 
+  void _handleScrollPosition() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final nextIsNearBottom = isNearChatBottom(
+      pixels: position.pixels,
+      maxScrollExtent: position.maxScrollExtent,
+    );
+    if (nextIsNearBottom == _isNearBottom || !mounted) return;
+    setState(() => _isNearBottom = nextIsNearBottom);
+  }
+
   void _scheduleScrollToEnd() {
+    if (_scrollScheduled) return;
+    _scrollScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollScheduled = false;
       if (!mounted || !_scrollController.hasClients) return;
+      if (!_isNearBottom) return;
       final position = _scrollController.position;
       if (!position.hasContentDimensions) return;
       final target = position.maxScrollExtent;
       if ((position.pixels - target).abs() < 1) return;
-      _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
+      _scrollController.jumpTo(target);
     });
+  }
+
+  Future<void> _jumpToLatest() async {
+    if (!_scrollController.hasClients) return;
+    setState(() => _isNearBottom = true);
+    await _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -203,73 +242,102 @@ class _ChatViewState extends State<ChatView> {
                           );
                         }
 
-                        return ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16)
-                              .copyWith(
-                                top: MediaQuery.of(context).padding.top,
-                                bottom: MediaQuery.of(context).padding.bottom,
+                        return Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ).copyWith(
+                                      top: MediaQuery.of(context).padding.top,
+                                      bottom:
+                                          MediaQuery.of(
+                                            context,
+                                          ).padding.bottom +
+                                          56,
+                                    ),
+                                itemCount: totalCount,
+                                itemBuilder: (context, index) {
+                                  if (index < messages.length) {
+                                    final message = messages[index];
+                                    return ChatBubble(
+                                      key: ValueKey(
+                                        'chat-message-${message.id}',
+                                      ),
+                                      messageId: message.id.toString(),
+                                      message: message.content,
+                                      isUser: message.role == 'user',
+                                      kind: message.kind,
+                                      mediaPath: message.mediaPath,
+                                      isStreaming: false,
+                                    );
+                                  }
+
+                                  if (hasToolWaitingName &&
+                                      index == messages.length) {
+                                    return ChatBubble(
+                                      key: const ValueKey('chat-waiting-tool'),
+                                      message:
+                                          'Waiting for function tool: $waitingToolName',
+                                      isUser: false,
+                                      kind: 'tool_waiting',
+                                      isStreaming: true,
+                                    );
+                                  }
+
+                                  if (hasThinkingDraft &&
+                                      index ==
+                                          messages.length +
+                                              (hasToolWaitingName ? 1 : 0)) {
+                                    return ChatBubble(
+                                      key: const ValueKey(
+                                        'chat-draft-thinking',
+                                      ),
+                                      message: thinkingDraft ?? '',
+                                      isUser: false,
+                                      kind: 'thinking',
+                                      isStreaming: true,
+                                    );
+                                  }
+
+                                  if (hasStreamingPlaceholder &&
+                                      index ==
+                                          messages.length +
+                                              (hasToolWaitingName ? 1 : 0) +
+                                              (hasThinkingDraft ? 1 : 0)) {
+                                    return const ChatBubble(
+                                      key: ValueKey('chat-draft-placeholder'),
+                                      message: '',
+                                      isUser: false,
+                                      isStreaming: true,
+                                    );
+                                  }
+
+                                  return ChatBubble(
+                                    key: const ValueKey('chat-draft-response'),
+                                    message: draft ?? '',
+                                    isUser: false,
+                                    isStreaming: isGenerating,
+                                  );
+                                },
                               ),
-                          itemCount: totalCount,
-                          itemBuilder: (context, index) {
-                            if (index < messages.length) {
-                              final message = messages[index];
-                              return ChatBubble(
-                                key: ValueKey('chat-message-${message.id}'),
-                                messageId: message.id.toString(),
-                                message: message.content,
-                                isUser: message.role == 'user',
-                                kind: message.kind,
-                                mediaPath: message.mediaPath,
-                                isStreaming: false,
-                              );
-                            }
-
-                            if (hasToolWaitingName &&
-                                index == messages.length) {
-                              return ChatBubble(
-                                key: const ValueKey('chat-waiting-tool'),
-                                message:
-                                    'Waiting for function tool: $waitingToolName',
-                                isUser: false,
-                                kind: 'tool_waiting',
-                                isStreaming: true,
-                              );
-                            }
-
-                            if (hasThinkingDraft &&
-                                index ==
-                                    messages.length +
-                                        (hasToolWaitingName ? 1 : 0)) {
-                              return ChatBubble(
-                                key: const ValueKey('chat-draft-thinking'),
-                                message: thinkingDraft ?? '',
-                                isUser: false,
-                                kind: 'thinking',
-                                isStreaming: true,
-                              );
-                            }
-
-                            if (hasStreamingPlaceholder &&
-                                index ==
-                                    messages.length +
-                                        (hasToolWaitingName ? 1 : 0) +
-                                        (hasThinkingDraft ? 1 : 0)) {
-                              return const ChatBubble(
-                                key: ValueKey('chat-draft-placeholder'),
-                                message: '',
-                                isUser: false,
-                                isStreaming: true,
-                              );
-                            }
-
-                            return ChatBubble(
-                              key: const ValueKey('chat-draft-response'),
-                              message: draft ?? '',
-                              isUser: false,
-                              isStreaming: isGenerating,
-                            );
-                          },
+                            ),
+                            if (!_isNearBottom)
+                              Positioned(
+                                right: 20,
+                                bottom: 12,
+                                child: FloatingActionButton.small(
+                                  heroTag: 'chat-jump-to-latest',
+                                  tooltip: 'Jump to latest',
+                                  onPressed: _jumpToLatest,
+                                  child: const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                  ),
+                                ),
+                              ),
+                          ],
                         );
                       },
                     );

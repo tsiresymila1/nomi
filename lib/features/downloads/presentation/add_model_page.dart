@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/platform/app_capabilities.dart';
@@ -12,6 +10,7 @@ import 'package:gena/features/downloads/data/services/model_catalog_insights_ser
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/services/direct_model_file_picker.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_backend_section.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_basic_info_section.dart';
@@ -20,7 +19,6 @@ import 'package:gena/features/downloads/presentation/widgets/model_recommendatio
 import 'package:gena/features/downloads/presentation/widgets/model_remote_api_section.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_settings_section.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_source_section.dart';
-import 'package:path_provider/path_provider.dart';
 
 part 'add_model_page_state.dart';
 

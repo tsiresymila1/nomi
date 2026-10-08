@@ -146,29 +146,12 @@ class _AddModelPageState extends State<AddModelPage> {
     if (_picking) return;
     setState(() => _picking = true);
     try {
-      final picked = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
-        type: FileType.custom,
-        allowedExtensions: const ['gguf', 'litertlm'],
-        dialogTitle: 'Select model file',
-      );
-      final pickedFile = picked?.files.single;
-      if (pickedFile == null || !mounted) return;
-
-      final importedPath = await _copyPickedFileToPersistentFolder(pickedFile);
-      if (importedPath == null) {
-        if (!mounted) return;
-        AppToast.show(
-          'Could not import selected file. Please paste an absolute model path manually.',
-          type: AppToastType.error,
-        );
-        return;
-      }
-      await FilePicker.platform.clearTemporaryFiles();
-      _sourceController.text = importedPath;
-    } on PlatformException catch (_) {
+      final selectedPath = await DirectModelFilePicker.pickModelPath();
+      if (selectedPath == null || !mounted) return;
+      _sourceController.text = canonicalLocalModelPath(selectedPath);
+    } on DirectModelFilePickerException catch (error) {
       if (!mounted) return;
-      AppToast.show('File picker is already active', type: AppToastType.info);
+      AppToast.show(error.message, type: AppToastType.error);
     } catch (e) {
       if (!mounted) return;
       AppToast.show('Import failed: $e', type: AppToastType.error);
@@ -599,30 +582,5 @@ class _AddModelPageState extends State<AddModelPage> {
         ),
       ),
     );
-  }
-
-  Future<String?> _copyPickedFileToPersistentFolder(
-    PlatformFile pickedFile,
-  ) async {
-    final sourcePath = pickedFile.path;
-    if (sourcePath == null || sourcePath.isEmpty) return null;
-
-    final sourceFile = File(sourcePath);
-    if (!await sourceFile.exists()) return null;
-
-    final appSupportDir = await getApplicationSupportDirectory();
-    final modelsDir = Directory('${appSupportDir.path}/models');
-    if (!await modelsDir.exists()) {
-      await modelsDir.create(recursive: true);
-    }
-
-    final filename = pickedFile.name.trim().isEmpty
-        ? sourceFile.uri.pathSegments.last
-        : pickedFile.name;
-    final safeFilename = filename.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final targetPath =
-        '${modelsDir.path}/${DateTime.now().millisecondsSinceEpoch}_$safeFilename';
-    final copied = await sourceFile.copy(targetPath);
-    return copied.path;
   }
 }

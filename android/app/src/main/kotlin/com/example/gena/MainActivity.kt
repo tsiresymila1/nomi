@@ -5,10 +5,14 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.DocumentsContract
+import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
@@ -19,13 +23,18 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL_NAME = "gena/native_phone_tools"
         private const val DEVICE_INFO_CHANNEL_NAME = "gena/device_system_info"
+        private const val DIRECT_MODEL_FILES_CHANNEL_NAME = "gena/direct_model_files"
         private const val CALL_PERMISSION_REQUEST_CODE = 9107
         private const val CONTACTS_PERMISSION_REQUEST_CODE = 9108
+        private const val ALL_FILES_ACCESS_REQUEST_CODE = 9109
+        private const val MODEL_FILE_PICK_REQUEST_CODE = 9110
     }
 
     private var pendingCallResult: MethodChannel.Result? = null
     private var pendingPhoneNumber: String? = null
     private var pendingContactsPermissionResult: MethodChannel.Result? = null
+    private var pendingAllFilesAccessResult: MethodChannel.Result? = null
+    private var pendingModelFileResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -62,6 +71,173 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "getInfo" -> result.success(buildDeviceInfo())
                 else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DIRECT_MODEL_FILES_CHANNEL_NAME
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasAllFilesAccess" -> result.success(hasAllFilesAccess())
+                "requestAllFilesAccess" -> requestAllFilesAccess(result)
+                "pickModelFile" -> pickDirectModelFile(result)
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun hasAllFilesAccess(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+            Environment.isExternalStorageManager()
+    }
+
+    private fun requestAllFilesAccess(result: MethodChannel.Result) {
+        if (hasAllFilesAccess()) {
+            result.success(true)
+            return
+        }
+        if (pendingAllFilesAccessResult != null) {
+            result.error(
+                "permission_request_in_progress",
+                "Another file access request is already in progress.",
+                null
+            )
+            return
+        }
+
+        pendingAllFilesAccessResult = result
+        val appSettingsIntent = Intent(
+            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        try {
+            startActivityForResult(appSettingsIntent, ALL_FILES_ACCESS_REQUEST_CODE)
+        } catch (_: Exception) {
+            startActivityForResult(
+                Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                ALL_FILES_ACCESS_REQUEST_CODE
+            )
+        }
+    }
+
+    private fun pickDirectModelFile(result: MethodChannel.Result) {
+        if (!hasAllFilesAccess()) {
+            result.error(
+                "all_files_access_required",
+                "Grant file access before choosing a model.",
+                null
+            )
+            return
+        }
+        if (pendingModelFileResult != null) {
+            result.error(
+                "picker_in_progress",
+                "Another model picker is already active.",
+                null
+            )
+            return
+        }
+
+        pendingModelFileResult = result
+        val picker = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("application/octet-stream", "application/x-gguf", "*/*")
+            )
+        }
+        startActivityForResult(picker, MODEL_FILE_PICK_REQUEST_CODE)
+    }
+
+    private fun resolveDirectModelPath(uri: Uri): String? {
+        if (uri.scheme == "file") return uri.path
+        if (!DocumentsContract.isDocumentUri(this, uri)) return null
+
+        val documentId = DocumentsContract.getDocumentId(uri)
+        if (uri.authority == "com.android.externalstorage.documents") {
+            val parts = documentId.split(":", limit = 2)
+            if (parts.size != 2) return null
+            val root = if (parts[0].equals("primary", ignoreCase = true)) {
+                Environment.getExternalStorageDirectory().absolutePath
+            } else {
+                "/storage/${parts[0]}"
+            }
+            return java.io.File(root, parts[1]).canonicalPath
+        }
+
+        if (uri.authority == "com.android.providers.downloads.documents" &&
+            documentId.startsWith("raw:")) {
+            return java.io.File(documentId.removePrefix("raw:")).canonicalPath
+        }
+        return null
+    }
+
+    private fun selectedDisplayName(uri: Uri): String? {
+        var cursor: Cursor? = null
+        return try {
+            cursor = contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )
+            if (cursor?.moveToFirst() == true) cursor.getString(0) else null
+        } catch (_: Exception) {
+            null
+        } finally {
+            cursor?.close()
+        }
+    }
+
+    @Deprecated("Deprecated in Android API; retained for FlutterActivity result bridging.")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            ALL_FILES_ACCESS_REQUEST_CODE -> {
+                val result = pendingAllFilesAccessResult
+                pendingAllFilesAccessResult = null
+                result?.success(hasAllFilesAccess())
+            }
+
+            MODEL_FILE_PICK_REQUEST_CODE -> {
+                val result = pendingModelFileResult
+                pendingModelFileResult = null
+                if (result == null) return
+                if (resultCode != RESULT_OK || data?.data == null) {
+                    result.success(null)
+                    return
+                }
+
+                val uri = data.data!!
+                val directPath = try {
+                    resolveDirectModelPath(uri)
+                } catch (_: Exception) {
+                    null
+                }
+                if (directPath == null) {
+                    result.error(
+                        "direct_path_unavailable",
+                        "Choose an on-device file. Cloud providers cannot be used directly without copying.",
+                        selectedDisplayName(uri)
+                    )
+                    return
+                }
+
+                val file = java.io.File(directPath)
+                val extension = file.extension.lowercase()
+                if (!file.isFile || !file.canRead() ||
+                    (extension != "gguf" && extension != "litertlm")) {
+                    result.error(
+                        "invalid_model_file",
+                        "Choose a readable .gguf or .litertlm file.",
+                        directPath
+                    )
+                    return
+                }
+                result.success(file.canonicalPath)
             }
         }
     }

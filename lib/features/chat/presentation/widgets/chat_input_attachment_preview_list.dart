@@ -28,6 +28,7 @@ class ChatInputAttachmentPreviewList extends StatelessWidget {
           final draft = attachments[index];
           final attachment = draft.attachment;
           final isDocument = attachment?.kind == ChatAttachmentKind.document;
+          final isAudio = attachment?.kind == ChatAttachmentKind.audio;
           final isFailed = draft.status == ChatAttachmentDraftStatus.failed;
           return Container(
             constraints: const BoxConstraints(maxWidth: 220),
@@ -52,6 +53,8 @@ class ChatInputAttachmentPreviewList extends StatelessWidget {
                         ? Icons.error_outline_rounded
                         : isDocument
                         ? Icons.description_outlined
+                        : isAudio
+                        ? Icons.audio_file_outlined
                         : Icons.image_outlined,
                     size: 18,
                     color: isFailed ? colors.error : colors.primary,

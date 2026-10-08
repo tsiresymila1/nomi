@@ -4,7 +4,7 @@ import 'package:gena/features/chat/data/models/message_entity.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 
 void main() {
-  testWidgets('renders persisted image and document attachments', (
+  testWidgets('renders persisted image, document, and audio attachments', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -30,6 +30,14 @@ void main() {
                 path: '/missing/notes.txt',
                 sizeBytes: 12,
               ),
+              MessageAttachmentEntity(
+                id: '3',
+                kind: 'audio',
+                name: 'meeting.m4a',
+                sourceType: 'm4a',
+                path: '/missing/meeting.m4a',
+                sizeBytes: 42,
+              ),
             ],
           ),
         ),
@@ -41,5 +49,7 @@ void main() {
     final image = tester.widget<Image>(find.byType(Image));
     expect((image.image as FileImage).file.path, '/missing/photo.png');
     expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.text('meeting.m4a'), findsOneWidget);
+    expect(find.byIcon(Icons.audio_file_outlined), findsOneWidget);
   });
 }

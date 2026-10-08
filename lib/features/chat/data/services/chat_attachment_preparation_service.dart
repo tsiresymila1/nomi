@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:gena/features/chat/data/models/chat_attachment.dart';
+import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/workspace/data/services/workspace_document_parser.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -13,8 +14,10 @@ abstract interface class ChatAttachmentPreparer {
 class ChatAttachmentPreparationService implements ChatAttachmentPreparer {
   ChatAttachmentPreparationService({
     required WorkspaceDocumentParser parser,
+    required SpeechToText speechToText,
     Future<Directory> Function()? storageDirectoryProvider,
   }) : _parser = parser,
+       _speechToText = speechToText,
        _storageDirectoryProvider =
            storageDirectoryProvider ?? getApplicationSupportDirectory;
 
@@ -28,8 +31,18 @@ class ChatAttachmentPreparationService implements ChatAttachmentPreparer {
     'heic',
     'heif',
   };
+  static const Set<String> audioExtensions = {
+    'wav',
+    'mp3',
+    'm4a',
+    'aac',
+    'flac',
+    'ogg',
+    'opus',
+  };
 
   final WorkspaceDocumentParser _parser;
+  final SpeechToText _speechToText;
   final Future<Directory> Function() _storageDirectoryProvider;
   int _nextId = 0;
 
@@ -58,10 +71,12 @@ class ChatAttachmentPreparationService implements ChatAttachmentPreparer {
     final extension = _extensionOf(name);
     final kind = _imageExtensions.contains(extension)
         ? ChatAttachmentKind.image
+        : audioExtensions.contains(extension)
+        ? ChatAttachmentKind.audio
         : ChatAttachmentKind.document;
 
     late final String sourceType;
-    if (kind == ChatAttachmentKind.image) {
+    if (kind == ChatAttachmentKind.image || kind == ChatAttachmentKind.audio) {
       sourceType = extension;
     } else {
       try {
@@ -90,6 +105,24 @@ class ChatAttachmentPreparationService implements ChatAttachmentPreparer {
         throw const ChatAttachmentException(
           code: ChatAttachmentFailureCode.extractionFailed,
           userMessage: 'The document text could not be extracted.',
+        );
+      }
+    }
+    if (kind == ChatAttachmentKind.audio) {
+      try {
+        final transcription = await _speechToText.transcribe(copied.path);
+        final text = transcription.text.trim();
+        if (text.isEmpty) {
+          throw const SpeechToTextException(
+            'No speech was detected in this audio file.',
+          );
+        }
+        extractedText = _capTurnText(text);
+      } catch (_) {
+        await _deleteIfPresent(copied);
+        throw const ChatAttachmentException(
+          code: ChatAttachmentFailureCode.transcriptionFailed,
+          userMessage: 'The audio file could not be transcribed.',
         );
       }
     }
@@ -163,12 +196,15 @@ String buildTurnDocumentContext(
   final buffer = StringBuffer();
 
   for (final attachment in attachments) {
-    if (attachment.kind != ChatAttachmentKind.document) continue;
+    if (attachment.kind == ChatAttachmentKind.image) continue;
     final text = attachment.extractedText?.trim() ?? '';
     if (text.isEmpty) continue;
 
-    final opening = '--- BEGIN ATTACHMENT: ${attachment.name} ---\n';
-    final closing = '\n--- END ATTACHMENT: ${attachment.name} ---';
+    final label = attachment.kind == ChatAttachmentKind.audio
+        ? 'AUDIO TRANSCRIPT'
+        : 'ATTACHMENT';
+    final opening = '--- BEGIN $label: ${attachment.name} ---\n';
+    final closing = '\n--- END $label: ${attachment.name} ---';
     final separator = buffer.isEmpty ? '' : '\n\n';
     final remaining = maxCharacters - buffer.length - separator.length;
     if (remaining <= opening.length + closing.length) break;

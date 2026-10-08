@@ -109,7 +109,7 @@ Future<int> _estimateRowTokens(
       total += 257;
       continue;
     }
-    if (attachment.kind == 'document') {
+    if (attachment.kind == 'document' || attachment.kind == 'audio') {
       final text = attachment.extractedText?.trim() ?? '';
       if (text.isNotEmpty) total += await countTokens(text);
     }

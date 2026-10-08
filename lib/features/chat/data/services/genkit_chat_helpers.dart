@@ -84,6 +84,20 @@ List<Message> buildGenkitMessages({
                   '--- END ATTACHMENT: ${attachment.name} ---',
             ),
           );
+          continue;
+        }
+
+        if (attachment.kind == 'audio') {
+          final transcript = attachment.extractedText?.trim() ?? '';
+          if (transcript.isEmpty) continue;
+          content.add(
+            TextPart(
+              text:
+                  '--- BEGIN AUDIO TRANSCRIPT: ${attachment.name} ---\n'
+                  '$transcript\n'
+                  '--- END AUDIO TRANSCRIPT: ${attachment.name} ---',
+            ),
+          );
         }
       }
 

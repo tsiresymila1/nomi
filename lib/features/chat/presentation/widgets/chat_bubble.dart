@@ -174,6 +174,9 @@ class ChatBubble extends StatelessWidget {
     final documents = attachments
         .where((attachment) => attachment.kind == 'document')
         .toList(growable: false);
+    final audioFiles = attachments
+        .where((attachment) => attachment.kind == 'audio')
+        .toList(growable: false);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: isUser
@@ -211,7 +214,8 @@ class ChatBubble extends StatelessWidget {
                 ),
             ],
           ),
-        if (images.isNotEmpty && documents.isNotEmpty)
+        if (images.isNotEmpty &&
+            (documents.isNotEmpty || audioFiles.isNotEmpty))
           const SizedBox(height: 8),
         if (documents.isNotEmpty)
           Wrap(
@@ -223,6 +227,24 @@ class ChatBubble extends StatelessWidget {
                   avatar: const Icon(Icons.description_outlined, size: 16),
                   label: Text(
                     document.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        if (documents.isNotEmpty && audioFiles.isNotEmpty)
+          const SizedBox(height: 8),
+        if (audioFiles.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final audio in audioFiles)
+                Chip(
+                  avatar: const Icon(Icons.audio_file_outlined, size: 16),
+                  label: Text(
+                    audio.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

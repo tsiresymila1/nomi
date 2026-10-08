@@ -9,6 +9,7 @@ import 'package:gena/core/router.dart';
 import 'package:gena/core/theme/app_theme.dart';
 import 'package:gena/core/theme/theme_cubit.dart';
 import 'package:gena/features/chat/data/chat_service_locator.dart';
+import 'package:gena/features/chat/data/services/whisper_audio_converter.dart';
 import 'package:gena/features/downloads/data/downloads_service_locator.dart';
 import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:gena/features/home/presentation/app_introduction_gate.dart';
@@ -24,6 +25,7 @@ import 'package:path_provider/path_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  registerWhisperAudioConverter();
   await setupServiceLocator();
   registerDownloadsDependencies();
   registerImageGenerationDependencies();

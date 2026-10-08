@@ -1,10 +1,11 @@
-enum ChatAttachmentKind { image, document }
+enum ChatAttachmentKind { image, document, audio }
 
 enum ChatAttachmentFailureCode {
   missingFile,
   unsupportedType,
   tooLarge,
   extractionFailed,
+  transcriptionFailed,
 }
 
 class ChatAttachmentException implements Exception {

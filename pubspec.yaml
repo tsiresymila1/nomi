@@ -60,6 +60,7 @@ dependencies:
   flutter_rust_bridge: 2.11.1
   crypto: ^3.0.6
   whisper_ggml_plus: ^1.5.2
+  whisper_ggml_plus_ffmpeg: ^1.0.0
   record: ^6.2.1
   flutter_tts: ^4.2.5
   mcp_dart: ^2.2.1

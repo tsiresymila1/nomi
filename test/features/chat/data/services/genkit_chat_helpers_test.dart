@@ -212,6 +212,39 @@ void main() {
       },
     );
 
+    test('maps an audio attachment transcript as text, not media', () {
+      final message = buildMessage(
+        id: 12,
+        role: 'user',
+        kind: 'text',
+        content: 'Summarize this recording',
+      );
+      final messages = buildGenkitMessages(
+        systemInstruction: '',
+        storedMessages: [message],
+        storedAttachmentsByMessageId: {
+          12: [
+            buildAttachment(
+              messageId: 12,
+              kind: 'audio',
+              name: 'meeting.m4a',
+              sourceType: 'm4a',
+              path: '/tmp/meeting.m4a',
+              extractedText: 'Budget approved for the next quarter.',
+            ),
+          ],
+        },
+      );
+
+      expect(messages, hasLength(1));
+      expect(messages.single.content, hasLength(2));
+      final transcriptPart = messages.single.content.last;
+      expect(transcriptPart.isMedia, isFalse);
+      expect(transcriptPart.text, contains('BEGIN AUDIO TRANSCRIPT'));
+      expect(transcriptPart.text, contains('Budget approved'));
+      expect(transcriptPart.text, contains('END AUDIO TRANSCRIPT'));
+    });
+
     test('maps an assistant text row to a model Message', () {
       final messages = buildGenkitMessages(
         systemInstruction: '',

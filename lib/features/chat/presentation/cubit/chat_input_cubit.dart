@@ -95,6 +95,13 @@ class ChatInputCubit extends Cubit<ChatInputState> {
         type: FileType.custom,
         allowedExtensions: [
           if (allowImages) ...['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
+          'wav',
+          'mp3',
+          'm4a',
+          'aac',
+          'flac',
+          'ogg',
+          'opus',
           'pdf',
           'doc',
           'docx',

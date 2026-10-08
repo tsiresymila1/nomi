@@ -95,6 +95,7 @@ void registerChatDependencies() {
     sl.registerLazySingleton<ChatAttachmentPreparationService>(
       () => ChatAttachmentPreparationService(
         parser: sl<WorkspaceDocumentParser>(),
+        speechToText: sl<SpeechToText>(),
       ),
     );
   }

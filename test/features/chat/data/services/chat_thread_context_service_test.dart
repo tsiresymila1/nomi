@@ -158,6 +158,29 @@ void main() {
       expect(plan.promptTokens, 1 + 257 + 3);
     });
 
+    test('counts an audio attachment transcript as text tokens', () async {
+      final message = _message(id: 1, role: 'user', content: 'summarize');
+
+      final plan = await planStoredMessagesWindow(
+        countTokens: _wordCount,
+        storedMessages: [message],
+        storedAttachmentsByMessageId: {
+          1: [
+            _attachment(
+              id: 3,
+              messageId: 1,
+              kind: 'audio',
+              extractedText: 'one two three four',
+            ),
+          ],
+        },
+        settingsMaxTokens: 5000,
+        requestedOutputReserve: 100,
+      );
+
+      expect(plan.promptTokens, 1 + 4);
+    });
+
     test('extraPromptTokens count toward the prompt budget', () async {
       final messages = [
         _message(id: 1, role: 'user', content: 'one two'), // 2

@@ -144,10 +144,17 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
   final LocalRuntimeLoader _loader;
 
   LoadedLocalRuntime? _current;
+  PreparedLocalModel? _prepared;
   String? _cacheKey;
+  ({Object error, StackTrace stackTrace})? _disposeFailure;
+  Future<void> _operationTail = Future<void>.value();
 
   @override
-  Future<PreparedLocalModel> prepare(ModelInfo model) async {
+  Future<PreparedLocalModel> prepare(ModelInfo model) {
+    return _serialize(() => _prepare(model));
+  }
+
+  Future<PreparedLocalModel> _prepare(ModelInfo model) async {
     if (!isLocalModelRuntimeSource(model.source)) {
       throw LocalModelRuntimeException(
         'Unsupported local model source: ${model.source}. '
@@ -159,16 +166,13 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
 
     final key = '${model.source.trim()}|${model.maxTokens}|${mmprojPath ?? ''}';
     final current = _current;
-    if (current != null && _cacheKey == key) {
-      return PreparedLocalModel(
-        ai: current.ai,
-        modelRef: current.modelRef,
-        modelId: current.modelId,
-      );
+    final prepared = _prepared;
+    if (current != null && prepared != null && _cacheKey == key) {
+      return prepared;
     }
 
     // Switching models, context windows, or projectors: dispose first.
-    await reset();
+    await _resetCurrent();
 
     final loaded = await _loader.load(
       LocalRuntimeRequest(
@@ -178,13 +182,15 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
         mmprojPath: mmprojPath,
       ),
     );
-    _current = loaded;
-    _cacheKey = key;
-    return PreparedLocalModel(
+    final nextPrepared = PreparedLocalModel(
       ai: loaded.ai,
       modelRef: loaded.modelRef,
       modelId: loaded.modelId,
     );
+    _current = loaded;
+    _prepared = nextPrepared;
+    _cacheKey = key;
+    return nextPrepared;
   }
 
   @override
@@ -196,12 +202,38 @@ class CachingLocalModelRuntime implements LocalModelRuntime {
   }
 
   @override
-  Future<void> reset() async {
+  Future<void> reset() => _serialize(_resetCurrent);
+
+  Future<void> _resetCurrent() async {
     final current = _current;
-    _current = null;
+    _prepared = null;
     _cacheKey = null;
-    if (current != null) {
-      await current.dispose();
+    final disposeFailure = _disposeFailure;
+    if (disposeFailure != null) {
+      Error.throwWithStackTrace(
+        disposeFailure.error,
+        disposeFailure.stackTrace,
+      );
     }
+    if (current != null) {
+      try {
+        await current.dispose();
+      } catch (error, stackTrace) {
+        _disposeFailure = (error: error, stackTrace: stackTrace);
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+      if (identical(_current, current)) {
+        _current = null;
+      }
+    }
+  }
+
+  Future<T> _serialize<T>(Future<T> Function() operation) {
+    final result = _operationTail.then<T>((_) => operation());
+    _operationTail = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return result;
   }
 }

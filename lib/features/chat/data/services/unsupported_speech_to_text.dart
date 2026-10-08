@@ -1,7 +1,13 @@
+import 'package:gena/features/chat/data/models/whisper_model_profile.dart';
+
 import 'speech_to_text.dart';
+import 'whisper_model_provisioner.dart';
 
 /// Builds the unsupported-platform speech-to-text driver (e.g. web).
-SpeechToText createSpeechToText() => UnsupportedSpeechToText();
+SpeechToText createSpeechToText({
+  required WhisperProvisioner provisioner,
+  required WhisperModelProfile Function() selectedProfile,
+}) => UnsupportedSpeechToText();
 
 /// Rejects all speech-to-text requests. Used on platforms without native
 /// whisper support, such as web. Imports neither whisper_ggml_plus nor record

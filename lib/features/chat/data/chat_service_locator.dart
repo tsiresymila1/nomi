@@ -25,6 +25,7 @@ import 'package:gena/features/chat/data/services/speech_segmenter_factory.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
 import 'package:gena/features/chat/data/services/speech_to_text_factory.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
+import 'package:gena/features/chat/data/services/whisper_model_provisioner.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
@@ -44,8 +45,15 @@ import 'package:gena/features/workspace/data/services/workspace_document_parser.
 
 void registerChatDependencies() {
   // Cubits (no deps)
+  if (!sl.isRegistered<WhisperModelProvisioner>()) {
+    sl.registerLazySingleton<WhisperModelProvisioner>(
+      WhisperModelProvisioner.new,
+    );
+  }
   if (!sl.isRegistered<WhisperModelCubit>()) {
-    sl.registerLazySingleton<WhisperModelCubit>(WhisperModelCubit.new);
+    sl.registerLazySingleton<WhisperModelCubit>(
+      () => WhisperModelCubit(modelManager: sl<WhisperModelProvisioner>()),
+    );
   }
   if (!sl.isRegistered<ChatModelSwitchingCubit>()) {
     sl.registerLazySingleton<ChatModelSwitchingCubit>(
@@ -115,7 +123,10 @@ void registerChatDependencies() {
   if (!sl.isRegistered<SpeechToText>()) {
     sl.registerLazySingleton<SpeechToText>(
       () => CoordinatedSpeechToText(
-        delegate: createSpeechToText(),
+        delegate: createSpeechToText(
+          provisioner: sl<WhisperModelCubit>(),
+          selectedProfile: () => sl<WhisperModelCubit>().state.profile,
+        ),
         coordinator: sl<LocalAiRuntimeCoordinator>(),
       ),
     );

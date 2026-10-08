@@ -71,6 +71,64 @@ class WhisperModelSettingsSection extends StatelessWidget {
                   subtitle: 'Better accuracy · about 142 MB',
                   onTap: () => _select(context, WhisperModelProfile.base),
                 ),
+                if (state.status == WhisperModelStatus.downloading ||
+                    state.status == WhisperModelStatus.queued ||
+                    state.status == WhisperModelStatus.checking) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: LinearProgressIndicator(
+                      value: state.status == WhisperModelStatus.downloading
+                          ? state.progress
+                          : null,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      state.status == WhisperModelStatus.downloading
+                          ? '${(state.progress * 100).round()}% · ${state.message ?? 'Downloading'}'
+                          : state.message ?? 'Preparing download…',
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: cubit.cancelDownload,
+                      child: const Text('Cancel download'),
+                    ),
+                  ),
+                ] else ...[
+                  if (state.message != null || state.errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Text(
+                        state.errorMessage ?? state.message!,
+                        style: state.errorMessage == null
+                            ? null
+                            : TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: OutlinedButton.icon(
+                      onPressed: state.status == WhisperModelStatus.ready
+                          ? null
+                          : () => cubit.ensureReady(state.profile),
+                      icon: Icon(
+                        state.status == WhisperModelStatus.ready
+                            ? Icons.check_circle_outline
+                            : Icons.download_outlined,
+                      ),
+                      label: Text(
+                        state.status == WhisperModelStatus.ready
+                            ? 'Installed'
+                            : 'Download ${state.profile.label}',
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

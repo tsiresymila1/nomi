@@ -1,9 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/features/chat/data/models/whisper_model_profile.dart';
+import 'package:gena/features/chat/data/services/whisper_model_provisioner.dart';
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 
 import '../../../../support/in_memory_hydrated_storage.dart';
+
+class _FakeModelManager implements WhisperModelManager {
+  bool installed = false;
+  bool cancelled = false;
+
+  @override
+  Future<String> ensureReady(
+    WhisperModelProfile profile, {
+    void Function(double progress, String message)? onProgress,
+  }) async {
+    onProgress?.call(0.35, 'Downloading ${profile.label} 35%');
+    installed = true;
+    onProgress?.call(1, '${profile.label} is ready');
+    return '/models/${profile.fileName}';
+  }
+
+  @override
+  Future<bool> isInstalled(WhisperModelProfile profile) async => installed;
+
+  @override
+  Future<bool> cancel(WhisperModelProfile profile) async {
+    cancelled = true;
+    return true;
+  }
+}
 
 void main() {
   setUp(() {
@@ -39,5 +65,39 @@ void main() {
     });
 
     expect(restored?.profile, WhisperModelProfile.tiny);
+  });
+
+  test('reports foreground download progress and ready state', () async {
+    final manager = _FakeModelManager();
+    final cubit = WhisperModelCubit(modelManager: manager);
+    addTearDown(cubit.close);
+    final emitted = <WhisperModelState>[];
+    final subscription = cubit.stream.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
+    await cubit.ensureReady(WhisperModelProfile.tiny);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      emitted.any(
+        (state) =>
+            state.status == WhisperModelStatus.downloading &&
+            state.progress == 0.35,
+      ),
+      isTrue,
+    );
+    expect(cubit.state.status, WhisperModelStatus.ready);
+    expect(cubit.state.progress, 1);
+  });
+
+  test('cancels the selected model download', () async {
+    final manager = _FakeModelManager();
+    final cubit = WhisperModelCubit(modelManager: manager);
+    addTearDown(cubit.close);
+
+    await cubit.cancelDownload();
+
+    expect(manager.cancelled, isTrue);
+    expect(cubit.state.status, WhisperModelStatus.cancelled);
   });
 }

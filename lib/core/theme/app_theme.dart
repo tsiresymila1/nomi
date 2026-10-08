@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const double _defaultFontSize = 13;
@@ -13,15 +12,13 @@ class AppTheme {
   static const _darkPanel = Color(0xFF161A18);
   static const _darkPanelSoft = Color(0xFF1D2320);
   static const _pureGreen = Color(0xFF419E7E);
+  static const _lightPrimary = Color(0xFF006B55);
 
   static TextTheme _scaledTextTheme(TextTheme source) {
     TextStyle? scale(TextStyle? style) {
       final size = style?.fontSize;
       if (size == null) return style;
-      return style!.copyWith(
-        fontSize: size * _fontScale,
-        fontWeight: FontWeight.w400,
-      );
+      return style!.copyWith(fontSize: size * _fontScale);
     }
 
     return source.copyWith(
@@ -43,14 +40,23 @@ class AppTheme {
     );
   }
 
-  static InputDecorationTheme _inputDecorationTheme() {
+  static InputDecorationTheme _inputDecorationTheme(ColorScheme scheme) {
     return InputDecorationTheme(
       filled: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      hintStyle: TextStyle(fontSize: 13),
+      fillColor: scheme.surfaceContainerHigh,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      hintStyle: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: scheme.primary, width: 1.5),
       ),
     );
   }
@@ -61,7 +67,10 @@ class AppTheme {
     );
   }
 
-  static ListTileThemeData _listTileTheme({required TextTheme textTheme}) {
+  static ListTileThemeData _listTileTheme({
+    required TextTheme textTheme,
+    required ColorScheme scheme,
+  }) {
     return ListTileThemeData(
       dense: true,
       minVerticalPadding: 0,
@@ -70,13 +79,15 @@ class AppTheme {
       titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
+        color: scheme.onSurface,
         fontFamily: textTheme.bodyMedium?.fontFamily,
       ),
       subtitleTextStyle: TextStyle(
         fontSize: 12,
-        color: Colors.grey,
+        color: scheme.onSurfaceVariant,
         fontFamily: textTheme.bodyMedium?.fontFamily,
       ),
+      iconColor: scheme.onSurfaceVariant,
     );
   }
 
@@ -92,7 +103,6 @@ class AppTheme {
     return FilledButtonThemeData(
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: TextStyle(color: Colors.white),
       ),
     );
   }
@@ -135,7 +145,14 @@ class AppTheme {
       ),
     );
     final scheme = base.colorScheme.copyWith(
-      primary: _pureGreen,
+      primary: _lightPrimary,
+      onPrimary: Colors.white,
+      primaryContainer: const Color(0xFFA4F2D4),
+      onPrimaryContainer: const Color(0xFF002118),
+      onSurface: const Color(0xFF171D1A),
+      onSurfaceVariant: const Color(0xFF3F4944),
+      outline: const Color(0xFF6F7973),
+      outlineVariant: const Color(0xFFBFC9C3),
       surface: _lightSurface,
       surfaceDim: _lightPanelSoft,
       surfaceBright: _lightPanel,
@@ -146,12 +163,12 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFFE4E8E1),
       surfaceTint: Colors.transparent,
     );
-    final plusJakartaSansTextTheme = GoogleFonts.plusJakartaSansTextTheme(
-      _scaledTextTheme(base.textTheme),
-    );
-    final plusJakartaSansPrimaryTextTheme = GoogleFonts.plusJakartaSansTextTheme(
-      _scaledTextTheme(base.primaryTextTheme),
-    );
+    final appTextTheme = _scaledTextTheme(
+      base.textTheme,
+    ).apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
+    final appPrimaryTextTheme = _scaledTextTheme(
+      base.primaryTextTheme,
+    ).apply(bodyColor: scheme.onPrimary, displayColor: scheme.onPrimary);
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -160,14 +177,16 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: plusJakartaSansTextTheme,
-      primaryTextTheme: plusJakartaSansPrimaryTextTheme,
-      inputDecorationTheme: _inputDecorationTheme(),
+      textTheme: appTextTheme,
+      primaryTextTheme: appPrimaryTextTheme,
+      iconTheme: IconThemeData(color: scheme.onSurfaceVariant),
+      dividerColor: scheme.outlineVariant,
+      inputDecorationTheme: _inputDecorationTheme(scheme),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.light),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
-      listTileTheme: _listTileTheme(textTheme: plusJakartaSansTextTheme),
+      listTileTheme: _listTileTheme(textTheme: appTextTheme, scheme: scheme),
       switchTheme: _switchTheme(),
     );
   }
@@ -198,12 +217,12 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFF252C28),
       surfaceTint: Colors.transparent,
     );
-    final plusJakartaSansTextTheme = GoogleFonts.plusJakartaSansTextTheme(
-      _scaledTextTheme(base.textTheme),
-    );
-    final spaceGroteskPrimaryTextTheme = GoogleFonts.plusJakartaSansTextTheme(
-      _scaledTextTheme(base.primaryTextTheme),
-    );
+    final appTextTheme = _scaledTextTheme(
+      base.textTheme,
+    ).apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
+    final appPrimaryTextTheme = _scaledTextTheme(
+      base.primaryTextTheme,
+    ).apply(bodyColor: scheme.onPrimary, displayColor: scheme.onPrimary);
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -212,14 +231,16 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
       ),
-      textTheme: plusJakartaSansTextTheme,
-      primaryTextTheme: spaceGroteskPrimaryTextTheme,
-      inputDecorationTheme: _inputDecorationTheme(),
+      textTheme: appTextTheme,
+      primaryTextTheme: appPrimaryTextTheme,
+      iconTheme: IconThemeData(color: scheme.onSurfaceVariant),
+      dividerColor: scheme.outlineVariant,
+      inputDecorationTheme: _inputDecorationTheme(scheme),
       outlinedButtonTheme: _outlinedButtonTheme(),
       filledButtonTheme: _filledButtonTheme(),
       appBarTheme: _appBarTheme(Brightness.dark),
       drawerTheme: _drawerTheme(scheme.surfaceContainerLow),
-      listTileTheme: _listTileTheme(textTheme: plusJakartaSansTextTheme),
+      listTileTheme: _listTileTheme(textTheme: appTextTheme, scheme: scheme),
       switchTheme: _switchTheme(),
     );
   }

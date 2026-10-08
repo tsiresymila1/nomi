@@ -74,35 +74,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    child: Text(
-                      _phaseLabel(state.phase),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 64),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        state.partialTranscript,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                  VoiceConversationStatus(
+                    state: state,
+                    onCancelTurn: () => context
+                        .read<VoiceConversationCubit>()
+                        .cancelCurrentTurn(),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 32, top: 8),
@@ -129,15 +105,85 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       ),
     );
   }
-
-  String _phaseLabel(VoiceConversationPhase phase) => switch (phase) {
-    VoiceConversationPhase.idle => 'Starting…',
-    VoiceConversationPhase.listening => 'Listening…',
-    VoiceConversationPhase.transcribing => 'Transcribing…',
-    VoiceConversationPhase.thinking => 'Thinking…',
-    VoiceConversationPhase.speaking => 'Speaking… (tap to interrupt)',
-  };
 }
+
+class VoiceConversationStatus extends StatelessWidget {
+  const VoiceConversationStatus({
+    super.key,
+    required this.state,
+    required this.onCancelTurn,
+  });
+
+  final VoiceConversationState state;
+  final Future<void> Function() onCancelTurn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Text(
+            _voicePhaseLabel(state.phase),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        if (state.errorMessage case final error?)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Material(
+              color: colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colorScheme.onErrorContainer),
+                ),
+              ),
+            ),
+          ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+            child: Text(
+              state.partialTranscript,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+        if (state.canCancelTurn)
+          TextButton.icon(
+            onPressed: onCancelTurn,
+            icon: const Icon(Icons.close_rounded),
+            label: const Text('Cancel current turn'),
+          ),
+      ],
+    );
+  }
+}
+
+String _voicePhaseLabel(VoiceConversationPhase phase) => switch (phase) {
+  VoiceConversationPhase.idle => 'Starting…',
+  VoiceConversationPhase.listening => 'Listening…',
+  VoiceConversationPhase.transcribing => 'Transcribing… (tap to cancel)',
+  VoiceConversationPhase.thinking => 'Thinking… (tap to cancel)',
+  VoiceConversationPhase.speaking => 'Speaking… (tap to interrupt)',
+};
 
 /// Animated orb that pulses/scales differently per phase. While listening it
 /// also reacts to the live mic level for an immediate sense of feedback.

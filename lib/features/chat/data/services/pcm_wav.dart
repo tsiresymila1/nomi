@@ -75,3 +75,13 @@ Future<String> writePcm16Wav(
   await file.writeAsBytes(bytes, flush: true);
   return path;
 }
+
+/// Best-effort cleanup for private temporary audio captured for Whisper.
+Future<void> deleteTemporaryAudioFile(String path) async {
+  try {
+    final file = File(path);
+    if (await file.exists()) await file.delete();
+  } catch (_) {
+    // A failed temp cleanup must not break the voice conversation loop.
+  }
+}

@@ -66,12 +66,17 @@ class _FakeSegmenter implements SpeechSegmenter {
 class _FakeSpeechToText implements SpeechToText {
   String text = 'hello there';
   Object? error;
+  int ensureReadyCalls = 0;
+  Completer<void>? ensureReadyGate;
 
   @override
   bool get isAvailable => true;
 
   @override
-  Future<void> ensureModelReady() async {}
+  Future<void> ensureModelReady() {
+    ensureReadyCalls++;
+    return ensureReadyGate?.future ?? Future<void>.value();
+  }
 
   @override
   Future<SttResult> transcribe(String wavPath, {String lang = 'auto'}) async {
@@ -181,6 +186,7 @@ class _FakeGenerationSignal implements GenerationSignal {
   List<String>? draftChunks;
   Object? error;
   int runCount = 0;
+  Completer<String?>? resultGate;
 
   @override
   Future<String?> run(
@@ -190,6 +196,8 @@ class _FakeGenerationSignal implements GenerationSignal {
     runCount++;
     await send();
     if (error != null) throw error!;
+    final gate = resultGate;
+    if (gate != null) return gate.future;
 
     final chunks = draftChunks;
     if (chunks != null) {
@@ -226,7 +234,11 @@ void main() {
   late _FakeGenerationSignal gen;
   late List<String> sent;
 
-  VoiceConversationCubit build({List<String>? errors}) {
+  VoiceConversationCubit build({
+    List<String>? errors,
+    List<String>? cleanedWavs,
+    Future<void> Function()? cancelGeneration,
+  }) {
     sent = <String>[];
     seg = _FakeSegmenter();
     return VoiceConversationCubit(
@@ -237,9 +249,11 @@ void main() {
         sent.add(text);
       },
       generationSignal: gen,
+      cancelGeneration: cancelGeneration,
       onError: errors?.add,
       // Avoid touching the filesystem in unit tests.
       writeWav: (segment) async => 'segment.wav',
+      deleteWav: (path) async => cleanedWavs?.add(path),
     );
   }
 
@@ -282,6 +296,23 @@ void main() {
     await cubit.exit();
     await cubit.close();
   });
+
+  test(
+    'enter prewarms Whisper without delaying microphone readiness',
+    () async {
+      stt.ensureReadyGate = Completer<void>();
+      final cubit = build();
+
+      await cubit.enter();
+
+      expect(cubit.state.phase, VoiceConversationPhase.listening);
+      expect(stt.ensureReadyCalls, 1);
+      stt.ensureReadyGate!.complete();
+      await _settle();
+
+      await cubit.close();
+    },
+  );
 
   test('streams completed sentences into TTS as the reply grows', () async {
     // The reply arrives as growing draft snapshots; each completed sentence is
@@ -396,6 +427,29 @@ void main() {
     },
   );
 
+  test(
+    'cancel during generation stops the turn and resumes listening',
+    () async {
+      gen.resultGate = Completer<String?>();
+      var cancelCalls = 0;
+      final cubit = build(cancelGeneration: () async => cancelCalls++);
+
+      await cubit.enter();
+      await _speak(cubit, seg);
+      expect(cubit.state.phase, VoiceConversationPhase.thinking);
+
+      await cubit.cancelCurrentTurn();
+
+      expect(cancelCalls, 1);
+      expect(cubit.state.phase, VoiceConversationPhase.listening);
+      gen.resultGate!.complete('late reply.');
+      await _settle();
+      expect(tts.allEnqueued, isEmpty);
+
+      await cubit.close();
+    },
+  );
+
   test('exit stops segmenter + TTS and returns to idle', () async {
     final cubit = build();
 
@@ -430,6 +484,20 @@ void main() {
     expect(sent, isEmpty);
     expect(errors, contains('whisper failed'));
     expect(cubit.state.phase, VoiceConversationPhase.listening);
+    expect(cubit.state.errorMessage, 'whisper failed');
+
+    await cubit.exit();
+    await cubit.close();
+  });
+
+  test('temporary WAV is removed after successful transcription', () async {
+    final cleanedWavs = <String>[];
+    final cubit = build(cleanedWavs: cleanedWavs);
+
+    await cubit.enter();
+    await _speak(cubit, seg);
+
+    expect(cleanedWavs, ['segment.wav']);
 
     await cubit.exit();
     await cubit.close();

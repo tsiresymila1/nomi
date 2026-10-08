@@ -33,6 +33,7 @@ class VoiceConversationState {
     this.phase = VoiceConversationPhase.idle,
     this.partialTranscript = '',
     this.micLevel = 0.0,
+    this.errorMessage,
   });
 
   /// Current loop phase.
@@ -44,21 +45,28 @@ class VoiceConversationState {
   /// Normalised 0..1 speech probability, for animating the orb while listening.
   final double micLevel;
 
+  /// Last recoverable failure, kept visible while the loop resumes listening.
+  final String? errorMessage;
+
   bool get isListening => phase == VoiceConversationPhase.listening;
   bool get isSpeaking => phase == VoiceConversationPhase.speaking;
   bool get isThinking => phase == VoiceConversationPhase.thinking;
   bool get isTranscribing => phase == VoiceConversationPhase.transcribing;
   bool get isActive => phase != VoiceConversationPhase.idle;
+  bool get canCancelTurn => isTranscribing || isThinking || isSpeaking;
 
   VoiceConversationState copyWith({
     VoiceConversationPhase? phase,
     String? partialTranscript,
     double? micLevel,
+    String? errorMessage,
+    bool clearError = false,
   }) {
     return VoiceConversationState(
       phase: phase ?? this.phase,
       partialTranscript: partialTranscript ?? this.partialTranscript,
       micLevel: micLevel ?? this.micLevel,
+      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
 }
@@ -89,18 +97,22 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     required TextToSpeech textToSpeech,
     required Future<void> Function(String text) sendMessage,
     required GenerationSignal generationSignal,
+    Future<void> Function()? cancelGeneration,
     void Function(String message)? onError,
     Future<String> Function(SpeechSegment segment)? writeWav,
+    Future<void> Function(String path)? deleteWav,
   }) : _segmenter = segmenter,
        _speechToText = speechToText,
        _textToSpeech = textToSpeech,
        _sendMessage = sendMessage,
        _generationSignal = generationSignal,
+       _cancelGeneration = cancelGeneration,
        _onError = onError,
        _writeWav =
            writeWav ??
            ((segment) =>
                writePcm16Wav(segment.pcm16, sampleRate: segment.sampleRate)),
+       _deleteWav = deleteWav ?? deleteTemporaryAudioFile,
        super(const VoiceConversationState());
 
   final SpeechSegmenter _segmenter;
@@ -108,11 +120,13 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   final TextToSpeech _textToSpeech;
   final Future<void> Function(String text) _sendMessage;
   final GenerationSignal _generationSignal;
+  final Future<void> Function()? _cancelGeneration;
   final void Function(String message)? _onError;
 
   /// Writes a captured segment to a temporary WAV and returns its path.
   /// Injectable so the loop is testable without touching the filesystem.
   final Future<String> Function(SpeechSegment segment) _writeWav;
+  final Future<void> Function(String path) _deleteWav;
 
   /// Splits the streaming reply into sentences so TTS can start speaking the
   /// first sentence before the whole reply is generated. Reset per reply.
@@ -136,8 +150,18 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   Future<void> enter() async {
     if (state.isActive) return;
     _runToken++;
+    final token = _runToken;
     _wireSegmenter();
-    await _startListening(_runToken);
+    unawaited(_prewarmSpeechToText(token));
+    await _startListening(token);
+  }
+
+  Future<void> _prewarmSpeechToText(int token) async {
+    try {
+      await _speechToText.ensureModelReady();
+    } catch (error) {
+      if (_running(token)) _reportError(error);
+    }
   }
 
   /// Handles a tap on the orb: end-the-turn-now during listening, or barge-in
@@ -148,10 +172,10 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
         await _endTurnEarly(_runToken);
       case VoiceConversationPhase.speaking:
         await _bargeIn(_runToken);
-      case VoiceConversationPhase.idle:
       case VoiceConversationPhase.transcribing:
       case VoiceConversationPhase.thinking:
-        // Nothing actionable mid-transcribe/think.
+        await cancelCurrentTurn();
+      case VoiceConversationPhase.idle:
         break;
     }
   }
@@ -252,16 +276,24 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
 
   Future<void> _transcribeAndSend(int token, String wavPath) async {
     if (!_running(token)) return;
-    emit(state.copyWith(phase: VoiceConversationPhase.transcribing));
+    emit(
+      state.copyWith(
+        phase: VoiceConversationPhase.transcribing,
+        clearError: true,
+      ),
+    );
 
     String transcript;
     try {
       final result = await _speechToText.transcribe(wavPath);
       transcript = result.text.trim();
     } catch (error) {
+      if (!_running(token)) return;
       _reportError(error);
       await _restartListening(token);
       return;
+    } finally {
+      await _deleteWav(wavPath);
     }
     if (!_running(token)) return;
 
@@ -321,6 +353,7 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
         onDraft: enqueueCompleted,
       );
     } catch (error) {
+      if (!_running(token)) return;
       _reportError(error);
       await _clearSpeaking();
       await _restartListening(token);
@@ -418,6 +451,36 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     await _restartListening(token);
   }
 
+  /// Abandons the active voice turn without closing hands-free mode.
+  ///
+  /// Whisper itself has no portable cancellation API, so a transcription is
+  /// invalidated and ignored when it returns. Chat generation is actively
+  /// cancelled through the normal generation serial path.
+  Future<void> cancelCurrentTurn() async {
+    final phase = state.phase;
+    if (phase == VoiceConversationPhase.speaking) {
+      await _bargeIn(_runToken);
+      return;
+    }
+    if (phase != VoiceConversationPhase.transcribing &&
+        phase != VoiceConversationPhase.thinking) {
+      return;
+    }
+
+    final shouldCancelGeneration = phase == VoiceConversationPhase.thinking;
+    final nextToken = ++_runToken;
+    _transitioningFromListening = false;
+    if (shouldCancelGeneration) {
+      try {
+        await _cancelGeneration?.call();
+      } catch (error) {
+        _reportError(error);
+      }
+    }
+    await _clearSpeaking();
+    await _startListening(nextToken);
+  }
+
   // -- Loop helper -----------------------------------------------------------
 
   Future<void> _restartListening(int token) async {
@@ -467,6 +530,7 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
       TextToSpeechException() => error.message,
       _ => 'Voice conversation failed: $error',
     };
+    if (!isClosed) emit(state.copyWith(errorMessage: message));
     _onError?.call(message);
   }
 

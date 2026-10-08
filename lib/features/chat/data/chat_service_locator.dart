@@ -264,6 +264,7 @@ void registerChatDependencies() {
         speechToText: sl<SpeechToText>(),
         textToSpeech: sl<TextToSpeech>(),
         sendMessage: (text) => sl<ChatThreadActions>().sendMessage(text),
+        cancelGeneration: () => sl<ChatThreadActions>().stopGeneration(),
         generationSignal: sl<GenerationSignal>(),
         onError: (message) => AppToast.show(message, type: AppToastType.error),
       ),

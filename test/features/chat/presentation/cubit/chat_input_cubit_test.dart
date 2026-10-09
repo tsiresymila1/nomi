@@ -171,6 +171,41 @@ void main() {
       await cubit.stopGeneration();
       expect(actions.stopCalls, 1);
     });
+
+    test('allows a new send after stopping an in-flight send', () async {
+      final gate = _StopAwareThreadActions();
+      final gatedAttachments = ChatAttachmentsCubit(
+        preparer: _FakeAttachmentPreparer(),
+      );
+      final gatedCubit = ChatInputCubit(
+        chatThreadActions: gate,
+        attachmentsCubit: gatedAttachments,
+      );
+      addTearDown(gatedCubit.close);
+      addTearDown(gatedAttachments.close);
+
+      final first = gatedCubit.sendMessage('one');
+      expect(gatedCubit.state.isSending, isTrue);
+
+      await gatedCubit.stopGeneration();
+      expect(gatedCubit.state.isSending, isFalse);
+
+      final second = gatedCubit.sendMessage('two');
+      expect(gate.started, ['one', 'two']);
+      expect(gatedCubit.state.isSending, isTrue);
+
+      gate.releaseFirst();
+      await first;
+      expect(
+        gatedCubit.state.isSending,
+        isTrue,
+        reason: 'the stopped send must not clear the newer send state',
+      );
+
+      gate.releaseSecond();
+      await second;
+      expect(gatedCubit.state.isSending, isFalse);
+    });
   });
 }
 
@@ -190,6 +225,32 @@ class _GatedThreadActions implements ChatThreadActionsApi {
   }) async {
     await _completer.future;
     sent.add(rawText);
+  }
+
+  @override
+  Future<void> stopGeneration({
+    bool triggerLocalModelCancel = true,
+    bool waitForLocalModelCancel = true,
+  }) async {}
+}
+
+class _StopAwareThreadActions implements ChatThreadActionsApi {
+  final List<String> started = [];
+  final _first = Completer<void>();
+  final _second = Completer<void>();
+
+  void releaseFirst() => _first.complete();
+
+  void releaseSecond() => _second.complete();
+
+  @override
+  Future<void> sendMessage(
+    String rawText, {
+    String? imagePath,
+    List<PreparedChatAttachment> attachments = const [],
+  }) async {
+    started.add(rawText);
+    await (started.length == 1 ? _first.future : _second.future);
   }
 
   @override

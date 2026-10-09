@@ -164,6 +164,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
   int _generationSerial = 0;
   int? _cancelGenerationSerial;
   bool _retryInFlight = false;
+  Future<void> _generationTail = Future<void>.value();
 
   @override
   Future<void> sendMessage(
@@ -371,6 +372,29 @@ class ChatThreadActions implements ChatThreadActionsApi {
   }
 
   Future<void> _generateStoredTurn({
+    required int chatId,
+    required ModelInfo activeModel,
+    required int userMessageId,
+    required String messageText,
+    required bool hasImage,
+  }) {
+    final result = _generationTail.then(
+      (_) => _runStoredTurn(
+        chatId: chatId,
+        activeModel: activeModel,
+        userMessageId: userMessageId,
+        messageText: messageText,
+        hasImage: hasImage,
+      ),
+    );
+    _generationTail = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return result;
+  }
+
+  Future<void> _runStoredTurn({
     required int chatId,
     required ModelInfo activeModel,
     required int userMessageId,

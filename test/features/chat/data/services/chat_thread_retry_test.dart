@@ -213,6 +213,104 @@ void main() {
       expect(failureCubit.state, isNull);
     },
   );
+
+  test(
+    'a new message after stop waits for the cancelled generation to settle',
+    () async {
+      final database = db.GenaDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final workspaceId = await database
+          .into(database.workspaces)
+          .insert(db.WorkspacesCompanion.insert(name: 'Workspace'));
+      final chatId = await database
+          .into(database.chats)
+          .insert(
+            db.ChatsCompanion.insert(
+              workspace: workspaceId,
+              title: 'Existing title',
+            ),
+          );
+
+      final generatingCubit = ChatGeneratingCubit();
+      final responseCubit = ChatDraftResponseCubit();
+      final thinkingCubit = ChatDraftThinkingCubit();
+      final toolWaitingCubit = ChatToolWaitingCubit();
+      final failureCubit = ChatGenerationFailureCubit();
+      addTearDown(generatingCubit.close);
+      addTearDown(responseCubit.close);
+      addTearDown(thinkingCubit.close);
+      addTearDown(toolWaitingCubit.close);
+      addTearDown(failureCubit.close);
+
+      final firstStarted = Completer<void>();
+      final releaseFirst = Completer<void>();
+      final secondStarted = Completer<void>();
+      var generationCalls = 0;
+      final actions = ChatThreadActions(
+        database: database,
+        selectedChatCubit: _SelectedChatCubitFake(chatId.toString()),
+        activeModelInfoResolver: _ActiveModelInfoResolverFake(_remoteModel),
+        localModelRuntime: _LocalModelRuntimeFake(),
+        chatGeneratingCubit: generatingCubit,
+        chatDraftResponseCubit: responseCubit,
+        chatDraftThinkingCubit: thinkingCubit,
+        chatToolWaitingCubit: toolWaitingCubit,
+        chatGenerationFailureCubit: failureCubit,
+        runtimeDependencies: _ChatRuntimeDependenciesFake(),
+        assistantGenerator:
+            ({
+              required database,
+              required chatId,
+              required activeModel,
+              required isCancelled,
+            }) async {
+              generationCalls += 1;
+              if (generationCalls == 1) {
+                firstStarted.complete();
+                await releaseFirst.future;
+                if (isCancelled()) return;
+              } else {
+                secondStarted.complete();
+                await database
+                    .into(database.messages)
+                    .insert(
+                      db.MessagesCompanion.insert(
+                        chat: chatId,
+                        role: 'assistant',
+                        kind: const Value('text'),
+                        content: 'Second answer',
+                      ),
+                    );
+              }
+            },
+      );
+
+      final firstSend = actions.sendMessage('First message');
+      await firstStarted.future;
+      await actions.stopGeneration();
+
+      final secondSend = actions.sendMessage('Second message');
+      for (var attempt = 0; attempt < 20; attempt += 1) {
+        final rows = await database.select(database.messages).get();
+        if (rows.where((row) => row.role == 'user').length == 2) break;
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+
+      expect(generationCalls, 1);
+      releaseFirst.complete();
+      await firstSend;
+      await secondStarted.future;
+      await secondSend;
+
+      final rows = await database.select(database.messages).get();
+      expect(rows.where((row) => row.role == 'user'), hasLength(2));
+      expect(rows.where((row) => row.role == 'assistant'), hasLength(1));
+      expect(rows.last.content, 'Second answer');
+      expect(generationCalls, 2);
+      expect(generatingCubit.state, isFalse);
+      expect(failureCubit.state, isNull);
+    },
+  );
 }
 
 const _remoteModel = ModelInfo(

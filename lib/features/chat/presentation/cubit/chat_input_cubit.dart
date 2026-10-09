@@ -53,6 +53,8 @@ class ChatInputCubit extends Cubit<ChatInputState> {
   final ChatThreadActionsApi _chatThreadActions;
   final ChatAttachmentsCubit? _attachmentsCubit;
   final ImagePicker _imagePicker = ImagePicker();
+  int _sendSerial = 0;
+  int? _activeSendSerial;
 
   Future<void> pickImage({required ChatAttachmentSource source}) async {
     try {
@@ -187,6 +189,8 @@ class ChatInputCubit extends Cubit<ChatInputState> {
     if (_attachmentsCubit?.isPreparing ?? false) return;
     if (state.isSending) return;
 
+    final sendSerial = ++_sendSerial;
+    _activeSendSerial = sendSerial;
     emit(state.copyWith(isSending: true));
     try {
       emit(
@@ -203,12 +207,23 @@ class ChatInputCubit extends Cubit<ChatInputState> {
       );
       _attachmentsCubit?.consumeReadyAttachments();
     } finally {
-      emit(state.copyWith(isSending: false));
+      if (_activeSendSerial == sendSerial) {
+        _activeSendSerial = null;
+        emit(state.copyWith(isSending: false));
+      }
     }
   }
 
-  Future<void> stopGeneration() {
-    return _chatThreadActions.stopGeneration();
+  Future<void> stopGeneration() async {
+    await _chatThreadActions.stopGeneration();
+    if (!state.isSending) return;
+
+    // The native/remote stream may need a little longer to unwind after its
+    // cancellation signal. Release the composer now and invalidate the old
+    // send so its eventual `finally` cannot clear a newer send's busy state.
+    _activeSendSerial = null;
+    _sendSerial += 1;
+    emit(state.copyWith(isSending: false));
   }
 
   Future<String> _copyImageToAppSupport(String sourcePath) async {

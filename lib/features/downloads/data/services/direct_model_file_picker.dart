@@ -24,15 +24,20 @@ class DirectModelFilePicker {
     'gena/direct_model_files',
   );
 
-  static Future<String?> pickModelPath() async {
+  static Future<String?> pickModelPath({
+    List<String> allowedExtensions = const <String>['gguf', 'litertlm'],
+    String dialogTitle = 'Select model file',
+  }) async {
     if (!Platform.isAndroid) {
       final picked = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.custom,
-        allowedExtensions: const ['gguf', 'litertlm'],
-        dialogTitle: 'Select model file',
+        allowedExtensions: allowedExtensions,
+        dialogTitle: dialogTitle,
       );
-      return picked?.files.single.path;
+      final path = picked?.files.single.path;
+      if (path != null) _validateExtension(path, allowedExtensions);
+      return path;
     }
 
     try {
@@ -50,10 +55,24 @@ class DirectModelFilePicker {
         }
       }
 
-      return await _androidChannel.invokeMethod<String>('pickModelFile');
+      final path = await _androidChannel.invokeMethod<String>('pickModelFile');
+      if (path != null) _validateExtension(path, allowedExtensions);
+      return path;
     } on PlatformException catch (error) {
       throw DirectModelFilePickerException(
         error.message ?? 'The selected provider has no direct file path.',
+      );
+    }
+  }
+
+  static void _validateExtension(String path, List<String> allowedExtensions) {
+    final normalized = path.toLowerCase();
+    final allowed = allowedExtensions.any(
+      (extension) => normalized.endsWith('.${extension.toLowerCase()}'),
+    );
+    if (!allowed) {
+      throw DirectModelFilePickerException(
+        'Choose a ${allowedExtensions.map((item) => '.$item').join(' or ')} model file.',
       );
     }
   }

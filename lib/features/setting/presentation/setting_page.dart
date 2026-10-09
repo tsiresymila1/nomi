@@ -7,6 +7,9 @@ import 'package:gena/features/downloads/presentation/widgets/model_device_summar
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
 import 'package:gena/features/setting/data/services/theme_settings_service.dart';
 import 'package:gena/features/setting/presentation/widgets/whisper_model_settings_section.dart';
+import 'package:gena/features/setting/presentation/widgets/image_model_settings_section.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -74,6 +77,14 @@ class SettingsPage extends StatelessWidget {
                 WhisperModelSettingsSection(cubit: sl<WhisperModelCubit>())
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 100.ms)
+                    .slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 8),
+                ImageModelSettingsSection(
+                      selectionCubit: sl<ImageModelSelectionCubit>(),
+                      generationCubit: sl<ImageGenerationCubit>(),
+                    )
+                    .animate()
+                    .fadeIn(duration: 220.ms, delay: 120.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
                 ListTile(

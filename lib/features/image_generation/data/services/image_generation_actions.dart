@@ -20,6 +20,7 @@ abstract interface class ImageGenerationActionsApi {
   Future<GeneratedImageArtifact> generateAndPersist({
     required String prompt,
     int? seed,
+    bool persistPrompt = true,
     required void Function(LocalImageGenerationProgress progress) onProgress,
   });
 
@@ -62,6 +63,7 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
   Future<GeneratedImageArtifact> generateAndPersist({
     required String prompt,
     int? seed,
+    bool persistPrompt = true,
     required void Function(LocalImageGenerationProgress progress) onProgress,
   }) async {
     final chatId = int.tryParse(_selectedChatCubit.state ?? '');
@@ -71,13 +73,7 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
       throw ArgumentError.value(prompt, 'prompt', 'must not be empty');
     }
 
-    final artifact = await _service.generate(
-      prompt: normalizedPrompt,
-      seed: seed,
-      onProgress: onProgress,
-    );
-    final seconds = (artifact.elapsed.inMilliseconds / 1000).toStringAsFixed(1);
-    await _database.transaction(() async {
+    if (persistPrompt) {
       await _database
           .into(_database.messages)
           .insert(
@@ -87,26 +83,33 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
               content: normalizedPrompt,
             ),
           );
-      await _database
-          .into(_database.messages)
-          .insert(
-            db.MessagesCompanion.insert(
-              chat: chatId,
-              role: 'assistant',
-              kind: const Value('image'),
-              content:
-                  'Generated locally with ${artifact.profile.name} '
-                  '· seed ${artifact.seed} · ${seconds}s',
-              mediaPath: Value(artifact.path),
-            ),
-          );
-    });
-    await updateThreadTitleFromFirstMessage(
-      database: _database,
-      chatId: chatId,
-      messageText: normalizedPrompt,
-      hasImage: true,
+      await updateThreadTitleFromFirstMessage(
+        database: _database,
+        chatId: chatId,
+        messageText: normalizedPrompt,
+        hasImage: true,
+      );
+    }
+
+    final artifact = await _service.generate(
+      prompt: normalizedPrompt,
+      seed: seed,
+      onProgress: onProgress,
     );
+    final seconds = (artifact.elapsed.inMilliseconds / 1000).toStringAsFixed(1);
+    await _database
+        .into(_database.messages)
+        .insert(
+          db.MessagesCompanion.insert(
+            chat: chatId,
+            role: 'assistant',
+            kind: const Value('image'),
+            content:
+                'Generated locally with ${artifact.profile.name} '
+                '· seed ${artifact.seed} · ${seconds}s',
+            mediaPath: Value(artifact.path),
+          ),
+        );
     return artifact;
   }
 

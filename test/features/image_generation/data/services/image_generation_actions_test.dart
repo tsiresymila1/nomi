@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
@@ -55,8 +57,26 @@ void main() {
     },
   );
 
+  test('persists the prompt before image generation completes', () async {
+    service.blockGeneration = true;
+
+    final generation = actions.generateAndPersist(
+      prompt: 'A patient lighthouse',
+      onProgress: (_) {},
+    );
+    await service.generationStarted.future;
+
+    final pendingRows = await database.select(database.messages).get();
+    expect(pendingRows, hasLength(1));
+    expect(pendingRows.single.role, 'user');
+    expect(pendingRows.single.content, 'A patient lighthouse');
+
+    service.completeGeneration();
+    await generation;
+  });
+
   test(
-    'does not persist an orphaned image turn when generation fails',
+    'keeps the user prompt without an assistant image when generation fails',
     () async {
       service.error = StateError('generation failed');
 
@@ -66,12 +86,14 @@ void main() {
       );
 
       final rows = await database.select(database.messages).get();
-      expect(rows, isEmpty);
+      expect(rows, hasLength(1));
+      expect(rows.single.role, 'user');
+      expect(rows.single.content, 'A storm');
     },
   );
 
   test(
-    'does not persist an orphaned image turn when generation is cancelled',
+    'keeps the user prompt without an assistant image when cancelled',
     () async {
       service.error = const ImageGenerationCancelledException();
 
@@ -84,7 +106,9 @@ void main() {
       );
 
       final rows = await database.select(database.messages).get();
-      expect(rows, isEmpty);
+      expect(rows, hasLength(1));
+      expect(rows.single.role, 'user');
+      expect(rows.single.content, 'A cancelled storm');
     },
   );
 
@@ -109,6 +133,11 @@ class _FakeSelectedChatCubit extends Fake implements SelectedChatCubit {
 
 class _FakeImageGenerationService implements ImageGenerationServiceApi {
   Object? error;
+  bool blockGeneration = false;
+  final generationStarted = Completer<void>();
+  Completer<void>? _generationGate;
+
+  void completeGeneration() => _generationGate?.complete();
 
   @override
   Future<void> cancelInstall() async {}
@@ -129,6 +158,11 @@ class _FakeImageGenerationService implements ImageGenerationServiceApi {
     int? seed,
     void Function(LocalImageGenerationProgress progress)? onProgress,
   }) async {
+    if (!generationStarted.isCompleted) generationStarted.complete();
+    if (blockGeneration) {
+      _generationGate = Completer<void>();
+      await _generationGate!.future;
+    }
     final failure = error;
     if (failure != null) throw failure;
     return GeneratedImageArtifact(

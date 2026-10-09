@@ -215,7 +215,9 @@ class _ImageModelTile extends StatelessWidget {
         ? switch (generationState.phase) {
             ImageGenerationUiPhase.ready ||
             ImageGenerationUiPhase.completed ||
-            ImageGenerationUiPhase.cancelled => ' · Installed',
+            ImageGenerationUiPhase.cancelled => ' · Ready',
+            ImageGenerationUiPhase.loadingModel => ' · Loading…',
+            ImageGenerationUiPhase.checking => ' · Checking…',
             ImageGenerationUiPhase.downloading =>
               ' · ${(generationState.downloadProgress * 100).round()}%',
             ImageGenerationUiPhase.needsInstall =>
@@ -262,6 +264,19 @@ class _SelectedModelAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (state.phase == ImageGenerationUiPhase.loadingModel) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LinearProgressIndicator(),
+            SizedBox(height: 8),
+            Text('Loading model…', textAlign: TextAlign.center),
+          ],
+        ),
+      );
+    }
     if (state.profile.isExternal) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

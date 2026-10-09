@@ -80,6 +80,32 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
+  testWidgets('preload progress is shown before an image prompt is sent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ImageGenerationStatusPanel(
+            state: const ImageGenerationState(
+              phase: ImageGenerationUiPhase.loadingModel,
+              isInstalled: true,
+            ),
+            onInstall: () {},
+            onCancelInstall: () {},
+            onCancelGeneration: () {},
+            onRetry: () {},
+            onRemove: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Loading SDXS-512'), findsOneWidget);
+    expect(find.textContaining('before you send a prompt'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+  });
+
   testWidgets('status panel labels the selected image model', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

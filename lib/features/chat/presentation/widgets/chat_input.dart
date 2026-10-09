@@ -409,7 +409,6 @@ class _ChatInputState extends State<ChatInput> {
   }) {
     final isImageMode = composerMode == ChatComposerMode.image;
     final imageIsGenerating =
-        imageState.phase == ImageGenerationUiPhase.loadingModel ||
         imageState.phase == ImageGenerationUiPhase.generating;
     final effectiveGenerating = isImageMode ? imageIsGenerating : isGenerating;
     final effectiveSendable = isImageMode
@@ -444,9 +443,11 @@ class _ChatInputState extends State<ChatInput> {
             enabled: !isGenerating && !imageState.isBusy,
             onSelected: (mode) {
               sl<ChatComposerModeCubit>().select(mode);
-              if (mode == ChatComposerMode.image &&
-                  (imageState.phase == ImageGenerationUiPhase.initial ||
-                      imageState.phase == ImageGenerationUiPhase.failed)) {
+              final hasRetryableImageTurn =
+                  imageState.activePrompt != null &&
+                  (imageState.phase == ImageGenerationUiPhase.failed ||
+                      imageState.phase == ImageGenerationUiPhase.cancelled);
+              if (mode == ChatComposerMode.image && !hasRetryableImageTurn) {
                 unawaited(sl<ImageGenerationCubit>().initialize());
               }
             },

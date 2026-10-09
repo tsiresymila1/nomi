@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/features/image_generation/data/models/image_model_catalog.dart';
@@ -60,6 +62,23 @@ void main() {
     expect(find.text('Experimental'), findsOneWidget);
   });
 
+  testWidgets('shows loading then ready while preloading the selected model', (
+    tester,
+  ) async {
+    actions.prepareGate = Completer<void>();
+    await pumpSection(tester);
+    await tester.pump();
+
+    expect(actions.prepareCalls, 1);
+    expect(find.textContaining('Loading…'), findsOneWidget);
+    expect(find.text('Loading model…'), findsOneWidget);
+
+    actions.prepareGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ready'), findsOneWidget);
+  });
+
   testWidgets('requires confirmation before selecting a heavier model', (
     tester,
   ) async {
@@ -90,6 +109,7 @@ void main() {
       ImageModelCatalog.stableDiffusion15Q4,
     );
     expect(actions.releaseCalls, 1);
+    expect(actions.prepareCalls, 2);
   });
 
   testWidgets('registers the original custom GGUF path without copying', (
@@ -149,9 +169,19 @@ void main() {
 
 class _FakeImageActions implements ImageGenerationActionsApi {
   int releaseCalls = 0;
+  int prepareCalls = 0;
+  Completer<void>? prepareGate;
+  InstalledImageModel? installed = const InstalledImageModel(
+    profile: ImageModelProfile.sdxs,
+    modelPath: '/models/sdxs.gguf',
+  );
 
   @override
-  Future<InstalledImageModel> prepareModel() => throw UnimplementedError();
+  Future<InstalledImageModel> prepareModel() async {
+    prepareCalls++;
+    await prepareGate?.future;
+    return installed ?? (throw StateError('Model is not installed'));
+  }
 
   @override
   Future<void> cancelInstall() async {}
@@ -186,5 +216,5 @@ class _FakeImageActions implements ImageGenerationActionsApi {
   Future<void> removeModel() async {}
 
   @override
-  Future<InstalledImageModel?> resolveModel() async => null;
+  Future<InstalledImageModel?> resolveModel() async => installed;
 }

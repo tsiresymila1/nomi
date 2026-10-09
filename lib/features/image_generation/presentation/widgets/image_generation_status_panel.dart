@@ -70,6 +70,14 @@ class ImageGenerationStatusPanel extends StatelessWidget {
           subtitle: 'Checking SHA-256 before loading the model…',
           indeterminate: true,
         ),
+        ImageGenerationUiPhase.loadingModel when state.activePrompt == null =>
+          _StatusCard(
+            key: const ValueKey('image-loading-model'),
+            icon: Icons.memory_rounded,
+            title: 'Loading ${profile.name}',
+            subtitle: 'Preparing the selected model before you send a prompt…',
+            indeterminate: true,
+          ),
         ImageGenerationUiPhase.loadingModel ||
         ImageGenerationUiPhase.generating => const SizedBox.shrink(
           key: ValueKey('image-generation-managed-in-chat'),

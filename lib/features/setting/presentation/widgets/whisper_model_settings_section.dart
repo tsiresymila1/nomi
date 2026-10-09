@@ -44,6 +44,10 @@ class WhisperModelSettingsSection extends StatelessWidget {
     return BlocBuilder<WhisperModelCubit, WhisperModelState>(
       bloc: cubit,
       builder: (context, state) {
+        final isPreparing =
+            state.status == WhisperModelStatus.downloading ||
+            state.status == WhisperModelStatus.queued ||
+            state.status == WhisperModelStatus.checking;
         return Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -61,19 +65,23 @@ class WhisperModelSettingsSection extends StatelessWidget {
                   key: const ValueKey('whisper-profile-tiny'),
                   profile: WhisperModelProfile.tiny,
                   selected: state.profile == WhisperModelProfile.tiny,
-                  subtitle: 'Recommended for 4 GB · about 75 MB',
-                  onTap: () => _select(context, WhisperModelProfile.tiny),
+                  subtitle:
+                      'Recommended for 4 GB · about 75 MB${_statusSuffix(state, WhisperModelProfile.tiny)}',
+                  onTap: isPreparing
+                      ? null
+                      : () => _select(context, WhisperModelProfile.tiny),
                 ),
                 _WhisperProfileTile(
                   key: const ValueKey('whisper-profile-base'),
                   profile: WhisperModelProfile.base,
                   selected: state.profile == WhisperModelProfile.base,
-                  subtitle: 'Better accuracy · about 142 MB',
-                  onTap: () => _select(context, WhisperModelProfile.base),
+                  subtitle:
+                      'Better accuracy · about 142 MB${_statusSuffix(state, WhisperModelProfile.base)}',
+                  onTap: isPreparing
+                      ? null
+                      : () => _select(context, WhisperModelProfile.base),
                 ),
-                if (state.status == WhisperModelStatus.downloading ||
-                    state.status == WhisperModelStatus.queued ||
-                    state.status == WhisperModelStatus.checking) ...[
+                if (isPreparing) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                     child: LinearProgressIndicator(
@@ -94,7 +102,7 @@ class WhisperModelSettingsSection extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: cubit.cancelDownload,
-                      child: const Text('Cancel download'),
+                      child: const Text('Cancel preparation'),
                     ),
                   ),
                 ] else ...[
@@ -123,7 +131,7 @@ class WhisperModelSettingsSection extends StatelessWidget {
                       ),
                       label: Text(
                         state.status == WhisperModelStatus.ready
-                            ? 'Installed'
+                            ? 'Ready'
                             : 'Download ${state.profile.label}',
                       ),
                     ),
@@ -135,6 +143,20 @@ class WhisperModelSettingsSection extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _statusSuffix(WhisperModelState state, WhisperModelProfile profile) {
+    if (state.profile != profile) return '';
+    return switch (state.status) {
+      WhisperModelStatus.checking ||
+      WhisperModelStatus.queued => ' · Preparing…',
+      WhisperModelStatus.downloading =>
+        ' · Loading ${(state.progress * 100).round()}%',
+      WhisperModelStatus.ready => ' · Ready',
+      WhisperModelStatus.failed => ' · Failed',
+      WhisperModelStatus.cancelled => ' · Cancelled',
+      WhisperModelStatus.idle || WhisperModelStatus.paused => '',
+    };
   }
 }
 
@@ -150,7 +172,7 @@ class _WhisperProfileTile extends StatelessWidget {
   final WhisperModelProfile profile;
   final bool selected;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

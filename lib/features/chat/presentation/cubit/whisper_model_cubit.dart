@@ -54,12 +54,19 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
       super(const WhisperModelState());
 
   final WhisperModelManager? _modelManager;
+  int _preparationSerial = 0;
 
   Future<void> selectProfile(WhisperModelProfile profile) async {
     if (profile == state.profile) return;
     emit(
       WhisperModelState(profile: profile, message: '${profile.label} selected'),
     );
+    if (_modelManager == null) return;
+    try {
+      await ensureReady(profile);
+    } catch (_) {
+      // The preparation state already exposes the actionable failure in UI.
+    }
   }
 
   @override
@@ -71,44 +78,43 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
     if (manager == null) {
       throw StateError('Whisper model provisioning is not configured.');
     }
+    final operation = ++_preparationSerial;
 
-    emit(
+    _emitFor(
+      operation,
       state.copyWith(
+        profile: profile,
         status: WhisperModelStatus.checking,
         progress: 0,
         message: 'Checking ${profile.label}…',
         clearError: true,
       ),
     );
-    if (await manager.isInstalled(profile)) {
-      emit(
-        state.copyWith(
-          status: WhisperModelStatus.ready,
-          progress: 1,
-          message: '${profile.label} is ready',
-          clearError: true,
-        ),
-      );
-      return manager.ensureReady(profile);
-    }
-
-    emit(
-      state.copyWith(
-        status: WhisperModelStatus.queued,
-        progress: 0,
-        message: '${profile.label} queued',
-        clearError: true,
-      ),
-    );
     try {
+      final installed = await manager.isInstalled(profile);
+      if (!installed) {
+        _emitFor(
+          operation,
+          state.copyWith(
+            profile: profile,
+            status: WhisperModelStatus.queued,
+            progress: 0,
+            message: '${profile.label} queued',
+            clearError: true,
+          ),
+        );
+      }
+
       final path = await manager.ensureReady(
         profile,
         onProgress: (progress, message) {
           final status = progress >= 1
               ? WhisperModelStatus.ready
               : WhisperModelStatus.downloading;
-          emit(
+          _emitFor(
+            operation,
             state.copyWith(
+              profile: profile,
               status: status,
               progress: progress,
               message: message,
@@ -118,23 +124,25 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
           onProgress?.call(progress, message);
         },
       );
-      if (state.status != WhisperModelStatus.ready) {
-        emit(
-          state.copyWith(
-            status: WhisperModelStatus.ready,
-            progress: 1,
-            message: '${profile.label} is ready',
-            clearError: true,
-          ),
-        );
-      }
+      _emitFor(
+        operation,
+        state.copyWith(
+          profile: profile,
+          status: WhisperModelStatus.ready,
+          progress: 1,
+          message: '${profile.label} is ready',
+          clearError: true,
+        ),
+      );
       return path;
     } catch (error) {
-      emit(
+      _emitFor(
+        operation,
         state.copyWith(
+          profile: profile,
           status: WhisperModelStatus.failed,
           progress: 0,
-          errorMessage: 'Whisper download failed: $error',
+          errorMessage: 'Whisper preparation failed: $error',
         ),
       );
       rethrow;
@@ -144,8 +152,10 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
   Future<void> refreshStatus() async {
     final manager = _modelManager;
     if (manager == null) return;
+    final operation = ++_preparationSerial;
     final installed = await manager.isInstalled(state.profile);
-    emit(
+    _emitFor(
+      operation,
       state.copyWith(
         status: installed ? WhisperModelStatus.ready : WhisperModelStatus.idle,
         progress: installed ? 1 : 0,
@@ -159,8 +169,10 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
   Future<void> cancelDownload() async {
     final manager = _modelManager;
     if (manager == null) return;
+    final operation = ++_preparationSerial;
     await manager.cancel(state.profile);
-    emit(
+    _emitFor(
+      operation,
       state.copyWith(
         status: WhisperModelStatus.cancelled,
         progress: 0,
@@ -168,6 +180,10 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
         clearError: true,
       ),
     );
+  }
+
+  void _emitFor(int operation, WhisperModelState next) {
+    if (!isClosed && operation == _preparationSerial) emit(next);
   }
 
   @override

@@ -9,12 +9,14 @@ import '../../../../support/in_memory_hydrated_storage.dart';
 class _FakeModelManager implements WhisperModelManager {
   bool installed = false;
   bool cancelled = false;
+  final ensuredProfiles = <WhisperModelProfile>[];
 
   @override
   Future<String> ensureReady(
     WhisperModelProfile profile, {
     void Function(double progress, String message)? onProgress,
   }) async {
+    ensuredProfiles.add(profile);
     onProgress?.call(0.35, 'Downloading ${profile.label} 35%');
     installed = true;
     onProgress?.call(1, '${profile.label} is ready');
@@ -54,6 +56,33 @@ void main() {
     addTearDown(second.close);
 
     expect(second.state.profile, WhisperModelProfile.base);
+  });
+
+  test('selection immediately prepares the chosen model', () async {
+    final manager = _FakeModelManager();
+    final cubit = WhisperModelCubit(modelManager: manager);
+    addTearDown(cubit.close);
+    final emitted = <WhisperModelState>[];
+    final subscription = cubit.stream.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
+    await cubit.selectProfile(WhisperModelProfile.base);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(manager.ensuredProfiles, <WhisperModelProfile>[
+      WhisperModelProfile.base,
+    ]);
+    expect(
+      emitted.map((state) => state.status),
+      containsAllInOrder(<WhisperModelStatus>[
+        WhisperModelStatus.checking,
+        WhisperModelStatus.queued,
+        WhisperModelStatus.downloading,
+        WhisperModelStatus.ready,
+      ]),
+    );
+    expect(cubit.state.profile, WhisperModelProfile.base);
+    expect(cubit.state.status, WhisperModelStatus.ready);
   });
 
   test('unknown persisted profile safely falls back to tiny', () {

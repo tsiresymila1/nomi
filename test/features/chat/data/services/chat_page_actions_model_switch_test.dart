@@ -52,6 +52,28 @@ void main() {
       expect(switchingCubit.state.modelId, 2);
     });
 
+    test('prepares a local model immediately after installation', () async {
+      final events = <String>[];
+      final switchingCubit = ChatModelSwitchingCubit();
+      addTearDown(switchingCubit.close);
+      final selectedModelCubit = _SelectedModelCubitFake(1, events);
+      final runtime = _LocalModelRuntimeFake(events);
+      final actions = _actions(
+        events: events,
+        switchingCubit: switchingCubit,
+        selectedModelCubit: selectedModelCubit,
+        runtime: runtime,
+        previousModel: _localModel(1, 'Previous'),
+      );
+
+      await actions.installModel(_localModel(2, 'Target'));
+
+      expect(events, ['install:2', 'stop', 'reset', 'prepare:2', 'select:2']);
+      expect(selectedModelCubit.state, 2);
+      expect(switchingCubit.state.phase, ChatModelSwitchPhase.ready);
+      expect(switchingCubit.state.origin, ChatModelSwitchOrigin.installation);
+    });
+
     test(
       'failed local preparation keeps and restores the previous model',
       () async {
@@ -199,7 +221,7 @@ ChatPageActions _actions({
     selectedChatCubit: _SelectedChatCubitFake(),
     selectedWorkspaceCubit: _SelectedWorkspaceCubitFake(),
     chatThreadActions: _ChatThreadActionsFake(events),
-    downloadsCubit: _DownloadsCubitFake(),
+    downloadsCubit: _DownloadsCubitFake(events),
     chatModelSwitchingCubit: switchingCubit,
     selectedModelCubit: selectedModelCubit,
     activeModelInfoResolver: _ActiveModelInfoResolverFake(previousModel),
@@ -346,6 +368,15 @@ class _SelectedWorkspaceCubitFake extends Fake
     implements SelectedWorkspaceCubit {}
 
 class _DownloadsCubitFake extends Fake implements DownloadsCubit {
+  _DownloadsCubitFake(this.events);
+
+  final List<String> events;
+
   @override
   DownloadsState get state => const DownloadsState(loading: false);
+
+  @override
+  Future<void> installModel(ModelInfo model) async {
+    events.add('install:${model.id}');
+  }
 }

@@ -106,11 +106,16 @@ void main() {
       final subscription = cubit.stream.listen(states.add);
       addTearDown(subscription.cancel);
 
-      final artifact = await cubit.generate('  a paper boat  ', seed: 11);
+      final artifact = await cubit.generate(
+        '  a paper boat  ',
+        seed: 11,
+        chatId: '42',
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(actions.prompts, <String>['a paper boat']);
       expect(actions.seeds, <int?>[11]);
+      expect(actions.persistPromptValues, <bool>[true]);
       expect(artifact?.path, '/generated/image.png');
       expect(
         states.map((state) => state.phase),
@@ -121,12 +126,43 @@ void main() {
         ]),
       );
       expect(cubit.state.progress?.step, 1);
+      expect(cubit.state.activePrompt, 'a paper boat');
+      expect(cubit.state.activeChatId, '42');
     });
+
+    test('retains the active turn when generation fails', () async {
+      await cubit.initialize();
+      actions.error = StateError('generation failed');
+
+      await cubit.generate('  a stormy coast  ', chatId: '7');
+
+      expect(cubit.state.phase, ImageGenerationUiPhase.failed);
+      expect(cubit.state.activePrompt, 'a stormy coast');
+      expect(cubit.state.activeChatId, '7');
+    });
+
+    test(
+      'retries the active turn without persisting its prompt twice',
+      () async {
+        await cubit.initialize();
+        actions.error = StateError('generation failed');
+        await cubit.generate('a stormy coast', chatId: '7');
+        actions.error = null;
+
+        final artifact = await cubit.retryGeneration();
+
+        expect(artifact?.path, '/generated/image.png');
+        expect(actions.prompts, <String>['a stormy coast', 'a stormy coast']);
+        expect(actions.persistPromptValues, <bool>[true, false]);
+        expect(cubit.state.phase, ImageGenerationUiPhase.completed);
+        expect(cubit.state.activeChatId, '7');
+      },
+    );
 
     test('cancels active generation and settles into cancelled', () async {
       actions.blockGeneration = true;
       await cubit.initialize();
-      final generation = cubit.generate('cancel me');
+      final generation = cubit.generate('cancel me', chatId: '9');
       await actions.generationStarted.future;
 
       cubit.cancelGeneration();
@@ -134,6 +170,8 @@ void main() {
 
       expect(actions.cancelGenerationCalls, 1);
       expect(cubit.state.phase, ImageGenerationUiPhase.cancelled);
+      expect(cubit.state.activePrompt, 'cancel me');
+      expect(cubit.state.activeChatId, '9');
     });
 
     test('removes SDXS and returns to needsInstall', () async {
@@ -175,8 +213,10 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
   int removeCalls = 0;
   int releaseCalls = 0;
   bool blockGeneration = false;
+  Object? error;
   final prompts = <String>[];
   final seeds = <int?>[];
+  final persistPromptValues = <bool>[];
   final generationStarted = Completer<void>();
   Completer<void>? _blocked;
 
@@ -196,16 +236,20 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
   Future<GeneratedImageArtifact> generateAndPersist({
     required String prompt,
     int? seed,
+    bool persistPrompt = true,
     required void Function(LocalImageGenerationProgress progress) onProgress,
   }) async {
     prompts.add(prompt);
     seeds.add(seed);
+    persistPromptValues.add(persistPrompt);
     if (!generationStarted.isCompleted) generationStarted.complete();
     if (blockGeneration) {
       _blocked = Completer<void>();
       await _blocked!.future;
       throw const ImageGenerationCancelledException();
     }
+    final failure = error;
+    if (failure != null) throw failure;
     onProgress(
       const LocalImageGenerationProgress(
         phase: LocalImageGenerationPhase.sampling,

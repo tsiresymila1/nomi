@@ -29,6 +29,8 @@ class ImageGenerationState {
     this.artifact,
     this.errorMessage,
     this.profile = ImageModelProfile.sdxs,
+    this.activePrompt,
+    this.activeChatId,
   });
 
   final ImageGenerationUiPhase phase;
@@ -39,6 +41,8 @@ class ImageGenerationState {
   final GeneratedImageArtifact? artifact;
   final String? errorMessage;
   final ImageModelProfile profile;
+  final String? activePrompt;
+  final String? activeChatId;
 
   bool get isBusy => switch (phase) {
     ImageGenerationUiPhase.checking ||
@@ -62,6 +66,9 @@ class ImageGenerationState {
     bool clearArtifact = false,
     bool clearError = false,
     ImageModelProfile? profile,
+    String? activePrompt,
+    String? activeChatId,
+    bool updateActiveTurn = false,
   }) => ImageGenerationState(
     phase: phase ?? this.phase,
     support: support ?? this.support,
@@ -71,6 +78,8 @@ class ImageGenerationState {
     artifact: clearArtifact ? null : artifact ?? this.artifact,
     errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     profile: profile ?? this.profile,
+    activePrompt: updateActiveTurn ? activePrompt : this.activePrompt,
+    activeChatId: updateActiveTurn ? activeChatId : this.activeChatId,
   );
 }
 
@@ -175,20 +184,60 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
     }
   }
 
-  Future<GeneratedImageArtifact?> generate(String prompt, {int? seed}) async {
+  Future<GeneratedImageArtifact?> generate(
+    String prompt, {
+    int? seed,
+    String? chatId,
+  }) {
     final normalized = prompt.trim();
-    if (normalized.isEmpty || !state.isInstalled || state.isBusy) return null;
+    if (normalized.isEmpty || !state.isInstalled || state.isBusy) {
+      return Future.value();
+    }
+    return _generateTurn(
+      normalized,
+      seed: seed,
+      chatId: chatId,
+      persistPrompt: true,
+    );
+  }
+
+  Future<GeneratedImageArtifact?> retryGeneration() {
+    final prompt = state.activePrompt;
+    final canRetry =
+        state.phase == ImageGenerationUiPhase.failed ||
+        state.phase == ImageGenerationUiPhase.cancelled;
+    if (!canRetry || prompt == null || prompt.isEmpty || !state.isInstalled) {
+      return Future.value();
+    }
+    return _generateTurn(
+      prompt,
+      chatId: state.activeChatId,
+      persistPrompt: false,
+    );
+  }
+
+  Future<GeneratedImageArtifact?> _generateTurn(
+    String prompt, {
+    int? seed,
+    required String? chatId,
+    required bool persistPrompt,
+  }) async {
     emit(
       state.copyWith(
         phase: ImageGenerationUiPhase.loadingModel,
         clearProgress: true,
+        clearArtifact: true,
         clearError: true,
+        activePrompt: prompt,
+        activeChatId: chatId,
+        updateActiveTurn: true,
       ),
     );
     try {
       final artifact = await _actions.generateAndPersist(
-        prompt: normalized,
+        prompt: prompt,
         seed: seed,
+        persistPrompt: persistPrompt,
         onProgress: (progress) {
           if (isClosed) return;
           emit(

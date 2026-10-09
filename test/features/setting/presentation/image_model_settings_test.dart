@@ -164,6 +164,7 @@ class _FakeImageActions implements ImageGenerationActionsApi {
   Future<GeneratedImageArtifact> generateAndPersist({
     required String prompt,
     int? seed,
+    bool persistPrompt = true,
     required void Function(LocalImageGenerationProgress progress) onProgress,
   }) => throw UnimplementedError();
 

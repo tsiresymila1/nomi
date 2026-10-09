@@ -49,10 +49,9 @@ void main() {
     expect(find.textContaining('stays on this device'), findsOneWidget);
   });
 
-  testWidgets('generation panel exposes phase progress and stop', (
+  testWidgets('generation progress is omitted from the composer panel', (
     tester,
   ) async {
-    var stopped = false;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -68,7 +67,7 @@ void main() {
             ),
             onInstall: () {},
             onCancelInstall: () {},
-            onCancelGeneration: () => stopped = true,
+            onCancelGeneration: () {},
             onRetry: () {},
             onRemove: () {},
           ),
@@ -76,9 +75,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Drawing image · 1/4'), findsOneWidget);
-    await tester.tap(find.text('Stop'));
-    expect(stopped, isTrue);
+    expect(find.text('Drawing image · 1/4'), findsNothing);
+    expect(find.text('Stop'), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
   testWidgets('status panel labels the selected image model', (tester) async {

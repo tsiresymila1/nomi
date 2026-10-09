@@ -28,6 +28,13 @@ import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cu
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+String takeImageGenerationPrompt(TextEditingController controller) {
+  final prompt = controller.text.trim();
+  if (prompt.isEmpty) return '';
+  controller.clear();
+  return prompt;
+}
+
 class ChatInput extends StatefulWidget {
   const ChatInput({super.key});
 
@@ -111,10 +118,11 @@ class _ChatInputState extends State<ChatInput> {
   }
 
   Future<void> _generateImage() async {
-    final artifact = await sl<ImageGenerationCubit>().generate(
-      _controller.text,
-    );
-    if (artifact != null && mounted) _controller.clear();
+    final chatId = sl<SelectedChatCubit>().state;
+    if (chatId == null) return;
+    final prompt = takeImageGenerationPrompt(_controller);
+    if (prompt.isEmpty) return;
+    await sl<ImageGenerationCubit>().generate(prompt, chatId: chatId);
   }
 
   Future<void> _confirmRemoveImageModel() async {

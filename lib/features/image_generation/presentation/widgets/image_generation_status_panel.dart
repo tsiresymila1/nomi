@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
 
 class ImageGenerationStatusPanel extends StatelessWidget {
@@ -71,28 +70,9 @@ class ImageGenerationStatusPanel extends StatelessWidget {
           subtitle: 'Checking SHA-256 before loading the model…',
           indeterminate: true,
         ),
-        ImageGenerationUiPhase.loadingModel => _StatusCard(
-          key: const ValueKey('image-loading-model'),
-          icon: Icons.memory_rounded,
-          title: 'Loading ${profile.name}',
-          subtitle: 'Releasing other local AI models to protect memory.',
-          indeterminate: true,
-          action: TextButton(
-            onPressed: onCancelGeneration,
-            child: const Text('Cancel'),
-          ),
-        ),
-        ImageGenerationUiPhase.generating => _StatusCard(
-          key: const ValueKey('image-generating'),
-          icon: Icons.brush_rounded,
-          title: _generationLabel(state.progress),
-          subtitle: 'Generating privately on this device.',
-          progress: state.progress?.fraction,
-          indeterminate: state.progress == null,
-          action: TextButton(
-            onPressed: onCancelGeneration,
-            child: const Text('Stop'),
-          ),
+        ImageGenerationUiPhase.loadingModel ||
+        ImageGenerationUiPhase.generating => const SizedBox.shrink(
+          key: ValueKey('image-generation-managed-in-chat'),
         ),
         ImageGenerationUiPhase.unsupported => _StatusCard(
           key: const ValueKey('image-unsupported'),
@@ -100,6 +80,10 @@ class ImageGenerationStatusPanel extends StatelessWidget {
           title: 'Image generation unavailable',
           subtitle: state.errorMessage ?? 'This device is not supported.',
         ),
+        ImageGenerationUiPhase.failed when state.activePrompt != null =>
+          const SizedBox.shrink(
+            key: ValueKey('image-generation-error-managed-in-chat'),
+          ),
         ImageGenerationUiPhase.failed => _StatusCard(
           key: const ValueKey('image-failed'),
           icon: Icons.error_outline_rounded,
@@ -121,6 +105,10 @@ class ImageGenerationStatusPanel extends StatelessWidget {
               : 'Freeing local storage…',
           indeterminate: true,
         ),
+        ImageGenerationUiPhase.cancelled when state.activePrompt != null =>
+          const SizedBox.shrink(
+            key: ValueKey('image-generation-cancelled-managed-in-chat'),
+          ),
         ImageGenerationUiPhase.ready ||
         ImageGenerationUiPhase.completed ||
         ImageGenerationUiPhase.cancelled => _ReadyRow(
@@ -133,18 +121,6 @@ class ImageGenerationStatusPanel extends StatelessWidget {
       },
     );
   }
-}
-
-String _generationLabel(LocalImageGenerationProgress? progress) {
-  if (progress == null) return 'Generating image';
-  final phase = switch (progress.phase) {
-    LocalImageGenerationPhase.loading => 'Loading weights',
-    LocalImageGenerationPhase.encodingPrompt => 'Understanding prompt',
-    LocalImageGenerationPhase.sampling => 'Drawing image',
-    LocalImageGenerationPhase.decoding => 'Finishing image',
-  };
-  if (progress.steps <= 0) return phase;
-  return '$phase · ${progress.step}/${progress.steps}';
 }
 
 class _ReadyRow extends StatelessWidget {

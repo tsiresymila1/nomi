@@ -11,6 +11,8 @@ import 'package:gena/features/chat/data/services/chat_page_actions_service.dart'
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:gena/features/chat/presentation/widgets/remote_model_confirmation_dialog.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
+import 'package:gena/features/image_generation/presentation/widgets/image_generation_chat_activity.dart';
 
 const double _chatAutoFollowThreshold = 120;
 
@@ -37,7 +39,9 @@ class _ChatViewState extends State<ChatView> {
   bool _isNearBottom = true;
   bool _scrollScheduled = false;
   StreamSubscription<ChatGenerationFailureState?>? _failureSubscription;
+  StreamSubscription<ImageGenerationState>? _imageGenerationSubscription;
   ChatGenerationFailureState? _generationFailure;
+  late ImageGenerationState _imageGenerationState;
 
   @override
   void initState() {
@@ -49,11 +53,18 @@ class _ChatViewState extends State<ChatView> {
       if (!mounted) return;
       setState(() => _generationFailure = failure);
     });
+    final imageGenerationCubit = sl<ImageGenerationCubit>();
+    _imageGenerationState = imageGenerationCubit.state;
+    _imageGenerationSubscription = imageGenerationCubit.stream.listen((state) {
+      if (!mounted) return;
+      setState(() => _imageGenerationState = state);
+    });
   }
 
   @override
   void dispose() {
     unawaited(_failureSubscription?.cancel());
+    unawaited(_imageGenerationSubscription?.cancel());
     _scrollController.dispose();
     super.dispose();
   }
@@ -123,10 +134,15 @@ class _ChatViewState extends State<ChatView> {
     final failure = _generationFailure?.chatId == parsedChatId
         ? _generationFailure
         : null;
+    final imageState = _imageGenerationState;
     return StreamBuilder(
       stream: sl<ChatQueriesRepository>().watchChatMessages(widget.chatId),
       builder: (context, messagesSnapshot) {
         final messages = messagesSnapshot.data ?? const [];
+        final hasImageActivity = shouldShowImageGenerationActivity(
+          imageState,
+          widget.chatId,
+        );
 
         return BlocBuilder<ChatDraftResponseCubit, String?>(
           bloc: sl<ChatDraftResponseCubit>(),
@@ -158,7 +174,8 @@ class _ChatViewState extends State<ChatView> {
                             (hasThinkingDraft ? 1 : 0) +
                             (hasDraft ? 1 : 0) +
                             (hasStreamingPlaceholder ? 1 : 0) +
-                            (failure != null ? 1 : 0);
+                            (failure != null ? 1 : 0) +
+                            (hasImageActivity ? 1 : 0);
                         final scrollSignature = [
                           widget.chatId,
                           messages.length,
@@ -169,6 +186,10 @@ class _ChatViewState extends State<ChatView> {
                           isGenerating,
                           failure?.userMessageId ?? '',
                           failure?.displayMessage ?? '',
+                          imageState.activeChatId ?? '',
+                          imageState.phase,
+                          imageState.progress?.step ?? '',
+                          imageState.errorMessage ?? '',
                         ].join('|');
                         if (_lastScrollSignature != scrollSignature) {
                           _lastScrollSignature = scrollSignature;
@@ -347,8 +368,27 @@ class _ChatViewState extends State<ChatView> {
                                     );
                                   }
 
-                                  if (failure != null &&
+                                  if (hasImageActivity &&
                                       index == totalCount - 1) {
+                                    return ImageGenerationChatActivity(
+                                      key: const ValueKey(
+                                        'chat-image-generation-activity',
+                                      ),
+                                      state: imageState,
+                                      onCancel: sl<ImageGenerationCubit>()
+                                          .cancelGeneration,
+                                      onRetry: () => unawaited(
+                                        sl<ImageGenerationCubit>()
+                                            .retryGeneration(),
+                                      ),
+                                    );
+                                  }
+
+                                  if (failure != null &&
+                                      index ==
+                                          totalCount -
+                                              (hasImageActivity ? 1 : 0) -
+                                              1) {
                                     return ChatGenerationFailureCard(
                                       key: const ValueKey(
                                         'chat-generation-failure',

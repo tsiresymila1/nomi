@@ -145,7 +145,7 @@ Run: `rtk flutter build apk --release`
 
 Expected: release APK is produced successfully.
 
-- [ ] **Step 5: Push the commits**
+- [x] **Step 5: Push the commits**
 
 Run: `rtk git push origin main`
 

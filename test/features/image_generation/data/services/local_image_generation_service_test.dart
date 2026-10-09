@@ -100,6 +100,35 @@ void main() {
       expect(modelStore.installs, 1);
     });
 
+    test('preloads the selected model and generation reuses it', () async {
+      var chatEvicted = false;
+      await coordinator.acquire(
+        LocalAiWorkload.chat,
+        onEvict: () async => chatEvicted = true,
+      );
+
+      final installed = await service.prepareModel();
+
+      expect(installed.profile, ImageModelCatalog.sdxs);
+      expect(chatEvicted, isTrue);
+      expect(coordinator.state.activeWorkloads, {LocalAiWorkload.diffusion});
+      expect(backend.loadPaths, <String>['/models/sdxs.gguf']);
+
+      await service.generate(prompt: 'Already warm');
+
+      expect(backend.loadPaths, hasLength(1));
+      expect(backend.generator.requests.single.prompt, 'Already warm');
+    });
+
+    test('preload rejects a selected model that is not installed', () async {
+      modelStore.installed = null;
+
+      await expectLater(service.prepareModel(), throwsA(isA<StateError>()));
+
+      expect(backend.loadPaths, isEmpty);
+      expect(coordinator.state.activeWorkloads, isEmpty);
+    });
+
     test(
       'evicts chat, holds diffusion lease, and persists PNG output',
       () async {

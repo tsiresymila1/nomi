@@ -143,6 +143,12 @@ class _FakeImageGenerationService implements ImageGenerationServiceApi {
   Future<void> cancelInstall() async {}
 
   @override
+  Future<InstalledImageModel> prepareModel() async => const InstalledImageModel(
+    profile: ImageModelProfile.sdxs,
+    modelPath: '/models/sdxs.gguf',
+  );
+
+  @override
   void cancelGeneration() {}
 
   @override

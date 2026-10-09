@@ -10,6 +10,8 @@ abstract interface class ImageGenerationActionsApi {
 
   Future<InstalledImageModel?> resolveModel();
 
+  Future<InstalledImageModel> prepareModel();
+
   Future<InstalledImageModel> installModel({
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
@@ -49,6 +51,9 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
 
   @override
   Future<InstalledImageModel?> resolveModel() => _service.resolveModel();
+
+  @override
+  Future<InstalledImageModel> prepareModel() => _service.prepareModel();
 
   @override
   Future<InstalledImageModel> installModel({

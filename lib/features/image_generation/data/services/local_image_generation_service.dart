@@ -16,6 +16,8 @@ abstract interface class ImageGenerationServiceApi {
 
   Future<InstalledImageModel?> resolveModel();
 
+  Future<InstalledImageModel> prepareModel();
+
   Future<InstalledImageModel> installModel({
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
@@ -98,6 +100,19 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
   @override
   Future<void> cancelInstall() =>
       _modelStore.cancelInstall(_selection.state.selectedProfile);
+
+  @override
+  Future<InstalledImageModel> prepareModel() {
+    return _serialize(() async {
+      final profile = _selection.state.selectedProfile;
+      final installed = await _modelStore.resolve(profile);
+      if (installed == null) {
+        throw StateError('${profile.name} is not installed.');
+      }
+      await _ensureGenerator(installed);
+      return installed;
+    });
+  }
 
   @override
   Future<GeneratedImageArtifact> generate({

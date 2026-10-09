@@ -100,6 +100,9 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
         phase: ImageGenerationUiPhase.checking,
         profile: _selection.state.selectedProfile,
         clearError: true,
+        activePrompt: null,
+        activeChatId: null,
+        updateActiveTurn: true,
       ),
     );
     try {
@@ -116,6 +119,18 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
         return;
       }
       final installed = await _actions.resolveModel();
+      if (installed != null) {
+        emit(
+          state.copyWith(
+            phase: ImageGenerationUiPhase.loadingModel,
+            support: support,
+            isInstalled: true,
+            downloadProgress: 1,
+            clearError: true,
+          ),
+        );
+        await _actions.prepareModel();
+      }
       emit(
         state.copyWith(
           phase: installed == null
@@ -159,6 +174,15 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
           emit(state.copyWith(phase: ImageGenerationUiPhase.verifying));
         },
       );
+      emit(
+        state.copyWith(
+          phase: ImageGenerationUiPhase.loadingModel,
+          isInstalled: true,
+          downloadProgress: 1,
+          clearError: true,
+        ),
+      );
+      await _actions.prepareModel();
       emit(
         state.copyWith(
           phase: ImageGenerationUiPhase.ready,
@@ -224,7 +248,7 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
   }) async {
     emit(
       state.copyWith(
-        phase: ImageGenerationUiPhase.loadingModel,
+        phase: ImageGenerationUiPhase.generating,
         clearProgress: true,
         clearArtifact: true,
         clearError: true,

@@ -151,6 +151,9 @@ class _FakeImageActions implements ImageGenerationActionsApi {
   int releaseCalls = 0;
 
   @override
+  Future<InstalledImageModel> prepareModel() => throw UnimplementedError();
+
+  @override
   Future<void> cancelInstall() async {}
 
   @override

@@ -53,6 +53,7 @@ void main() {
 
       expect(cubit.state.phase, ImageGenerationUiPhase.needsInstall);
       expect(cubit.state.support?.isSupported, isTrue);
+      expect(actions.prepareCalls, 0);
     });
 
     test('initializes to ready when SDXS is installed', () async {
@@ -60,6 +61,18 @@ void main() {
 
       expect(cubit.state.phase, ImageGenerationUiPhase.ready);
       expect(cubit.state.isInstalled, isTrue);
+      expect(actions.prepareCalls, 1);
+    });
+
+    test('surfaces a preload failure before the model becomes ready', () async {
+      actions.prepareError = StateError('native load failed');
+
+      await cubit.initialize();
+
+      expect(cubit.state.phase, ImageGenerationUiPhase.failed);
+      expect(cubit.state.isInstalled, isTrue);
+      expect(cubit.state.errorMessage, contains('native load failed'));
+      expect(actions.prepareCalls, 1);
     });
 
     test(
@@ -93,11 +106,13 @@ void main() {
         containsAllInOrder(<ImageGenerationUiPhase>[
           ImageGenerationUiPhase.downloading,
           ImageGenerationUiPhase.verifying,
+          ImageGenerationUiPhase.loadingModel,
           ImageGenerationUiPhase.ready,
         ]),
       );
       expect(cubit.state.downloadProgress, 1);
       expect(cubit.state.isInstalled, isTrue);
+      expect(actions.prepareCalls, 1);
     });
 
     test('generates, persists, and exposes progress', () async {
@@ -120,11 +135,15 @@ void main() {
       expect(
         states.map((state) => state.phase),
         containsAllInOrder(<ImageGenerationUiPhase>[
-          ImageGenerationUiPhase.loadingModel,
           ImageGenerationUiPhase.generating,
           ImageGenerationUiPhase.completed,
         ]),
       );
+      expect(
+        states.map((state) => state.phase),
+        isNot(contains(ImageGenerationUiPhase.loadingModel)),
+      );
+      expect(actions.prepareCalls, 1);
       expect(cubit.state.progress?.step, 1);
       expect(cubit.state.activePrompt, 'a paper boat');
       expect(cubit.state.activeChatId, '42');
@@ -195,6 +214,7 @@ void main() {
       await cubit.refreshForSelectedModel();
 
       expect(actions.releaseCalls, 1);
+      expect(actions.prepareCalls, 2);
       expect(cubit.state.profile, ImageModelCatalog.stableDiffusion15Q4);
       expect(cubit.state.phase, ImageGenerationUiPhase.ready);
       expect(cubit.state.isInstalled, isTrue);
@@ -209,11 +229,13 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
     modelPath: '/models/sdxs.gguf',
   );
   int resolveCalls = 0;
+  int prepareCalls = 0;
   int cancelGenerationCalls = 0;
   int removeCalls = 0;
   int releaseCalls = 0;
   bool blockGeneration = false;
   Object? error;
+  Object? prepareError;
   final prompts = <String>[];
   final seeds = <int?>[];
   final persistPromptValues = <bool>[];
@@ -279,6 +301,14 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
       profile: ImageModelProfile.sdxs,
       modelPath: '/models/sdxs.gguf',
     );
+  }
+
+  @override
+  Future<InstalledImageModel> prepareModel() async {
+    prepareCalls++;
+    final failure = prepareError;
+    if (failure != null) throw failure;
+    return installed ?? (throw StateError('Model is not installed'));
   }
 
   @override

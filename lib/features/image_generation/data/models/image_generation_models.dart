@@ -86,10 +86,12 @@ class ImageModelProfile {
   String get displaySize {
     if (sizeBytes < 1024) return '$sizeBytes B';
     const kib = 1024;
-    const mib = kib * 1024;
-    const gib = mib * 1024;
-    if (sizeBytes < mib) return '${(sizeBytes / kib).toStringAsFixed(1)} KB';
-    if (sizeBytes < gib) return '${(sizeBytes / mib).round()} MB';
+    const decimalMb = 1000 * 1000;
+    const gib = 1024 * 1024 * 1024;
+    if (sizeBytes < decimalMb) {
+      return '${(sizeBytes / kib).toStringAsFixed(1)} KB';
+    }
+    if (sizeBytes < gib) return '${(sizeBytes / decimalMb).round()} MB';
     return '${(sizeBytes / gib).toStringAsFixed(1)} GB';
   }
 

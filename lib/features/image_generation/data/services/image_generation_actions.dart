@@ -26,6 +26,8 @@ abstract interface class ImageGenerationActionsApi {
   void cancelGeneration();
 
   Future<void> removeModel();
+
+  Future<void> releaseEngine();
 }
 
 class ImageGenerationActions implements ImageGenerationActionsApi {
@@ -113,4 +115,7 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
 
   @override
   Future<void> removeModel() => _service.removeModel();
+
+  @override
+  Future<void> releaseEngine() => _service.releaseEngine();
 }

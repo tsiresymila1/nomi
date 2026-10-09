@@ -1,10 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gena/features/image_generation/data/models/image_model_catalog.dart';
 import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/data/services/image_generation_actions.dart';
 import 'package:gena/features/image_generation/presentation/cubit/chat_composer_mode_cubit.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+
+import '../../../../support/in_memory_hydrated_storage.dart';
 
 void main() {
   group('ChatComposerModeCubit', () {
@@ -23,13 +28,23 @@ void main() {
   group('ImageGenerationCubit', () {
     late _FakeImageGenerationActions actions;
     late ImageGenerationCubit cubit;
+    late ImageModelSelectionCubit selection;
 
     setUp(() {
+      HydratedBloc.storage = InMemoryHydratedStorage();
       actions = _FakeImageGenerationActions();
-      cubit = ImageGenerationCubit(actions);
+      selection = ImageModelSelectionCubit();
+      cubit = ImageGenerationCubit(actions, selection: selection);
     });
 
-    tearDown(() => cubit.close());
+    tearDown(() async {
+      await cubit.close();
+      await selection.close();
+    });
+
+    test('starts with the globally selected profile', () {
+      expect(cubit.state.profile, ImageModelCatalog.sdxs);
+    });
 
     test('initializes to needsInstall when SDXS is absent', () async {
       actions.installed = null;
@@ -130,6 +145,22 @@ void main() {
       expect(cubit.state.phase, ImageGenerationUiPhase.needsInstall);
       expect(cubit.state.isInstalled, isFalse);
     });
+
+    test('refreshes readiness after the global model changes', () async {
+      await cubit.initialize();
+      selection.select(ImageModelCatalog.stableDiffusion15Q4.id);
+      actions.installed = const InstalledImageModel(
+        profile: ImageModelCatalog.stableDiffusion15Q4,
+        modelPath: '/models/sd15.gguf',
+      );
+
+      await cubit.refreshForSelectedModel();
+
+      expect(actions.releaseCalls, 1);
+      expect(cubit.state.profile, ImageModelCatalog.stableDiffusion15Q4);
+      expect(cubit.state.phase, ImageGenerationUiPhase.ready);
+      expect(cubit.state.isInstalled, isTrue);
+    });
   });
 }
 
@@ -142,6 +173,7 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
   int resolveCalls = 0;
   int cancelGenerationCalls = 0;
   int removeCalls = 0;
+  int releaseCalls = 0;
   bool blockGeneration = false;
   final prompts = <String>[];
   final seeds = <int?>[];
@@ -209,6 +241,11 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
   Future<void> removeModel() async {
     removeCalls++;
     installed = null;
+  }
+
+  @override
+  Future<void> releaseEngine() async {
+    releaseCalls++;
   }
 
   @override

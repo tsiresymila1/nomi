@@ -55,7 +55,10 @@ void registerImageGenerationDependencies() {
   }
   if (!sl.isRegistered<ImageGenerationCubit>()) {
     sl.registerLazySingleton<ImageGenerationCubit>(
-      () => ImageGenerationCubit(sl<ImageGenerationActions>()),
+      () => ImageGenerationCubit(
+        sl<ImageGenerationActions>(),
+        selection: sl<ImageModelSelectionCubit>(),
+      ),
     );
   }
 }

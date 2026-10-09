@@ -23,6 +23,7 @@ class ImageGenerationStatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final profile = state.profile;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
       child: switch (state.phase) {
@@ -37,19 +38,25 @@ class ImageGenerationStatusPanel extends StatelessWidget {
         ImageGenerationUiPhase.needsInstall => _StatusCard(
           key: const ValueKey('image-needs-install'),
           icon: Icons.download_rounded,
-          title: 'Install SDXS-512',
-          subtitle: 'Fast local GGUF model · 683 MB · stays on this device',
-          action: FilledButton.tonalIcon(
-            onPressed: onInstall,
-            icon: const Icon(Icons.download_rounded, size: 18),
-            label: const Text('Download'),
-          ),
+          title: profile.isExternal
+              ? '${profile.name} unavailable'
+              : 'Install ${profile.name}',
+          subtitle: profile.isExternal
+              ? 'The original GGUF file cannot be read. Locate it again in Settings.'
+              : '${profile.description} · ${profile.displaySize} · stays on this device',
+          action: profile.isExternal
+              ? null
+              : FilledButton.tonalIcon(
+                  onPressed: onInstall,
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Download'),
+                ),
         ),
         ImageGenerationUiPhase.downloading => _StatusCard(
           key: const ValueKey('image-downloading'),
           icon: Icons.downloading_rounded,
           title:
-              'Downloading SDXS-512 · ${(state.downloadProgress * 100).round()}%',
+              'Downloading ${profile.name} · ${(state.downloadProgress * 100).round()}%',
           subtitle: 'The download can continue in the background.',
           progress: state.downloadProgress,
           action: TextButton(
@@ -67,7 +74,7 @@ class ImageGenerationStatusPanel extends StatelessWidget {
         ImageGenerationUiPhase.loadingModel => _StatusCard(
           key: const ValueKey('image-loading-model'),
           icon: Icons.memory_rounded,
-          title: 'Loading SDXS-512',
+          title: 'Loading ${profile.name}',
           subtitle: 'Releasing other local AI models to protect memory.',
           indeterminate: true,
           action: TextButton(
@@ -105,11 +112,13 @@ class ImageGenerationStatusPanel extends StatelessWidget {
             label: const Text('Retry'),
           ),
         ),
-        ImageGenerationUiPhase.removing => const _StatusCard(
-          key: ValueKey('image-removing'),
+        ImageGenerationUiPhase.removing => _StatusCard(
+          key: const ValueKey('image-removing'),
           icon: Icons.delete_outline_rounded,
-          title: 'Removing SDXS-512',
-          subtitle: 'Freeing local storage…',
+          title: 'Removing ${profile.name}',
+          subtitle: profile.isExternal
+              ? 'Removing the model from Nomi without deleting your file…'
+              : 'Freeing local storage…',
           indeterminate: true,
         ),
         ImageGenerationUiPhase.ready ||
@@ -118,8 +127,8 @@ class ImageGenerationStatusPanel extends StatelessWidget {
           key: const ValueKey('image-ready'),
           onRemove: onRemove,
           status: state.phase == ImageGenerationUiPhase.cancelled
-              ? 'Generation cancelled · SDXS-512 ready'
-              : 'SDXS-512 ready · 512 × 512 · local',
+              ? 'Generation cancelled · ${profile.name} ready'
+              : '${profile.name} ready · 512 × 512 · local',
         ),
       },
     );

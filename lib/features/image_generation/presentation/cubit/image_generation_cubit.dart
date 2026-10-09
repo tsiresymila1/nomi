@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/data/services/image_generation_actions.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
 
 enum ImageGenerationUiPhase {
   initial,
@@ -27,6 +28,7 @@ class ImageGenerationState {
     this.progress,
     this.artifact,
     this.errorMessage,
+    this.profile = ImageModelProfile.sdxs,
   });
 
   final ImageGenerationUiPhase phase;
@@ -36,6 +38,7 @@ class ImageGenerationState {
   final LocalImageGenerationProgress? progress;
   final GeneratedImageArtifact? artifact;
   final String? errorMessage;
+  final ImageModelProfile profile;
 
   bool get isBusy => switch (phase) {
     ImageGenerationUiPhase.checking ||
@@ -58,6 +61,7 @@ class ImageGenerationState {
     bool clearProgress = false,
     bool clearArtifact = false,
     bool clearError = false,
+    ImageModelProfile? profile,
   }) => ImageGenerationState(
     phase: phase ?? this.phase,
     support: support ?? this.support,
@@ -66,18 +70,28 @@ class ImageGenerationState {
     progress: clearProgress ? null : progress ?? this.progress,
     artifact: clearArtifact ? null : artifact ?? this.artifact,
     errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+    profile: profile ?? this.profile,
   );
 }
 
 class ImageGenerationCubit extends Cubit<ImageGenerationState> {
-  ImageGenerationCubit(this._actions) : super(const ImageGenerationState());
+  ImageGenerationCubit(
+    this._actions, {
+    required ImageModelSelectionCubit selection,
+  }) : _selection = selection,
+       super(ImageGenerationState(profile: selection.state.selectedProfile));
 
   final ImageGenerationActionsApi _actions;
+  final ImageModelSelectionCubit _selection;
 
   Future<void> initialize() async {
     if (state.phase == ImageGenerationUiPhase.checking) return;
     emit(
-      state.copyWith(phase: ImageGenerationUiPhase.checking, clearError: true),
+      state.copyWith(
+        phase: ImageGenerationUiPhase.checking,
+        profile: _selection.state.selectedProfile,
+        clearError: true,
+      ),
     );
     try {
       final support = await _actions.checkSupport();
@@ -203,6 +217,14 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
   }
 
   void cancelGeneration() => _actions.cancelGeneration();
+
+  Future<void> refreshForSelectedModel() async {
+    _actions.cancelGeneration();
+    await _actions.releaseEngine();
+    if (isClosed) return;
+    emit(ImageGenerationState(profile: _selection.state.selectedProfile));
+    await initialize();
+  }
 
   Future<void> removeModel() async {
     if (state.isBusy) return;

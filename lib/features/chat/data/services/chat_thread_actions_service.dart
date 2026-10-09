@@ -350,6 +350,17 @@ class ChatThreadActions implements ChatThreadActionsApi {
       }
     }
 
+    final partialAssistantMessageId = failure.partialAssistantMessageId;
+    if (partialAssistantMessageId != null) {
+      await (_database.delete(_database.messages)..where(
+            (row) =>
+                row.id.equals(partialAssistantMessageId) &
+                row.chat.equals(failure.chatId) &
+                row.role.equals('assistant'),
+          ))
+          .go();
+    }
+
     await _generateStoredTurn(
       chatId: failure.chatId,
       activeModel: activeModel,
@@ -382,7 +393,10 @@ class ChatThreadActions implements ChatThreadActionsApi {
       );
 
       if (_cancelGenerationSerial == currentGeneration) {
-        await _persistCancelledDraftIfAny(chatId);
+        await _recordCancelledGeneration(
+          chatId: chatId,
+          userMessageId: userMessageId,
+        );
         return;
       }
 
@@ -395,7 +409,13 @@ class ChatThreadActions implements ChatThreadActionsApi {
         activeModel: activeModel,
       );
     } catch (error, stackTrace) {
-      if (_cancelGenerationSerial == currentGeneration) return;
+      if (_cancelGenerationSerial == currentGeneration) {
+        await _recordCancelledGeneration(
+          chatId: chatId,
+          userMessageId: userMessageId,
+        );
+        return;
+      }
 
       final failure = _safeGenerationFailure(error);
       RemoteFallbackProposal? remoteFallback;
@@ -490,11 +510,33 @@ class ChatThreadActions implements ChatThreadActionsApi {
     }
   }
 
-  Future<void> _persistCancelledDraftIfAny(int chatId) async {
-    final draft = (_chatDraftResponseCubit.state ?? '').trim();
-    if (draft.isEmpty) return;
+  Future<void> _recordCancelledGeneration({
+    required int chatId,
+    required int userMessageId,
+  }) async {
+    int? partialAssistantMessageId;
+    try {
+      partialAssistantMessageId = await _persistCancelledDraftIfAny(chatId);
+    } catch (error, stackTrace) {
+      logger.w(
+        'Could not persist the partial cancelled response: $error',
+        stackTrace: stackTrace,
+      );
+    }
+    _chatGenerationFailureCubit.fail(
+      chatId: chatId,
+      userMessageId: userMessageId,
+      displayMessage: 'Generation stopped. You can retry this response.',
+      canRetry: true,
+      partialAssistantMessageId: partialAssistantMessageId,
+    );
+  }
 
-    await _database
+  Future<int?> _persistCancelledDraftIfAny(int chatId) async {
+    final draft = (_chatDraftResponseCubit.state ?? '').trim();
+    if (draft.isEmpty) return null;
+
+    return _database
         .into(_database.messages)
         .insert(
           db.MessagesCompanion.insert(

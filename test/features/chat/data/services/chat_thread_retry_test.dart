@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
@@ -111,6 +113,104 @@ void main() {
       expect(generationCalls, 2);
       expect(failureCubit.state, isNull);
       expect(generatingCubit.state, isFalse);
+    },
+  );
+
+  test(
+    'stopping generation keeps the turn retryable and replaces its partial response',
+    () async {
+      final database = db.GenaDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final workspaceId = await database
+          .into(database.workspaces)
+          .insert(db.WorkspacesCompanion.insert(name: 'Workspace'));
+      final chatId = await database
+          .into(database.chats)
+          .insert(
+            db.ChatsCompanion.insert(
+              workspace: workspaceId,
+              title: 'Existing title',
+            ),
+          );
+
+      final generatingCubit = ChatGeneratingCubit();
+      final responseCubit = ChatDraftResponseCubit();
+      final thinkingCubit = ChatDraftThinkingCubit();
+      final toolWaitingCubit = ChatToolWaitingCubit();
+      final failureCubit = ChatGenerationFailureCubit();
+      addTearDown(generatingCubit.close);
+      addTearDown(responseCubit.close);
+      addTearDown(thinkingCubit.close);
+      addTearDown(toolWaitingCubit.close);
+      addTearDown(failureCubit.close);
+
+      final generationStarted = Completer<void>();
+      final releaseGeneration = Completer<void>();
+      var generationCalls = 0;
+      final actions = ChatThreadActions(
+        database: database,
+        selectedChatCubit: _SelectedChatCubitFake(chatId.toString()),
+        activeModelInfoResolver: _ActiveModelInfoResolverFake(_remoteModel),
+        localModelRuntime: _LocalModelRuntimeFake(),
+        chatGeneratingCubit: generatingCubit,
+        chatDraftResponseCubit: responseCubit,
+        chatDraftThinkingCubit: thinkingCubit,
+        chatToolWaitingCubit: toolWaitingCubit,
+        chatGenerationFailureCubit: failureCubit,
+        runtimeDependencies: _ChatRuntimeDependenciesFake(),
+        assistantGenerator:
+            ({
+              required database,
+              required chatId,
+              required activeModel,
+              required isCancelled,
+            }) async {
+              generationCalls += 1;
+              if (generationCalls == 1) {
+                responseCubit.setDraft('Partial response');
+                generationStarted.complete();
+                await releaseGeneration.future;
+                if (isCancelled()) return;
+              }
+              await database
+                  .into(database.messages)
+                  .insert(
+                    db.MessagesCompanion.insert(
+                      chat: chatId,
+                      role: 'assistant',
+                      kind: const Value('text'),
+                      content: 'Recovered response',
+                    ),
+                  );
+            },
+      );
+
+      final send = actions.sendMessage('Please answer');
+      await generationStarted.future;
+      await actions.stopGeneration();
+      releaseGeneration.complete();
+      await send;
+
+      final rowsAfterStop = await database.select(database.messages).get();
+      expect(rowsAfterStop.where((row) => row.role == 'user'), hasLength(1));
+      expect(
+        rowsAfterStop.where((row) => row.role == 'assistant').single.content,
+        'Partial response',
+      );
+      expect(failureCubit.state?.canRetry, isTrue);
+      expect(failureCubit.state?.displayMessage, contains('stopped'));
+
+      await actions.retryLastFailedGeneration();
+
+      final rowsAfterRetry = await database.select(database.messages).get();
+      expect(rowsAfterRetry.where((row) => row.role == 'user'), hasLength(1));
+      expect(
+        rowsAfterRetry.where((row) => row.role == 'assistant'),
+        hasLength(1),
+      );
+      expect(rowsAfterRetry.last.content, 'Recovered response');
+      expect(generationCalls, 2);
+      expect(failureCubit.state, isNull);
     },
   );
 }

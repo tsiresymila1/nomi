@@ -37,6 +37,7 @@ void registerImageGenerationDependencies() {
         modelStore: sl<ImageModelStore>(),
         backend: sl<ImageGenerationBackend>(),
         outputStore: sl<GeneratedImageStore>(),
+        selection: sl<ImageModelSelectionCubit>(),
       ),
     );
   }

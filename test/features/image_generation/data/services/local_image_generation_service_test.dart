@@ -3,10 +3,15 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/local_ai/local_ai_runtime_coordinator.dart';
+import 'package:gena/features/image_generation/data/models/image_model_catalog.dart';
 import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/data/services/image_generation_backend.dart';
 import 'package:gena/features/image_generation/data/services/image_model_store.dart';
 import 'package:gena/features/image_generation/data/services/local_image_generation_service.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+
+import '../../../../support/in_memory_hydrated_storage.dart';
 
 void main() {
   group('ImageModelProfile.sdxs', () {
@@ -30,25 +35,30 @@ void main() {
     late _FakeImageModelStore modelStore;
     late _FakeImageGenerationBackend backend;
     late _FakeGeneratedImageStore outputStore;
+    late ImageModelSelectionCubit selection;
     late LocalImageGenerationService service;
 
     setUp(() {
+      HydratedBloc.storage = InMemoryHydratedStorage();
       coordinator = LocalAiRuntimeCoordinator(
         requiresExclusiveAccess: () async => true,
       );
       modelStore = _FakeImageModelStore();
       backend = _FakeImageGenerationBackend();
       outputStore = _FakeGeneratedImageStore();
+      selection = ImageModelSelectionCubit();
       service = LocalImageGenerationService(
         coordinator: coordinator,
         modelStore: modelStore,
         backend: backend,
         outputStore: outputStore,
+        selection: selection,
       );
     });
 
     tearDown(() async {
       await service.releaseEngine();
+      await selection.close();
       await coordinator.close();
     });
 
@@ -118,6 +128,7 @@ void main() {
         expect(artifact.seed, 7);
         expect(artifact.width, 512);
         expect(artifact.height, 512);
+        expect(artifact.profile, ImageModelCatalog.sdxs);
       },
     );
 
@@ -128,6 +139,29 @@ void main() {
       expect(backend.loadPaths, hasLength(1));
       expect(backend.generator.requests, hasLength(2));
     });
+
+    test(
+      'disposes the resident engine before loading a selected model',
+      () async {
+        await service.generate(prompt: 'First');
+        selection.select(ImageModelCatalog.stableDiffusion15Q4.id);
+        modelStore.installed = const InstalledImageModel(
+          profile: ImageModelCatalog.stableDiffusion15Q4,
+          modelPath: '/models/sd15-q4.gguf',
+        );
+
+        final artifact = await service.generate(prompt: 'Second');
+
+        expect(backend.loadPaths, <String>[
+          '/models/sdxs.gguf',
+          '/models/sd15-q4.gguf',
+        ]);
+        expect(backend.generator.disposeCalls, 1);
+        expect(backend.generator.requests.last.steps, 20);
+        expect(backend.generator.requests.last.guidanceScale, 7);
+        expect(artifact.profile, ImageModelCatalog.stableDiffusion15Q4);
+      },
+    );
 
     test('cancels the active native generation', () async {
       final run = _BlockingImageGenerationRun();
@@ -204,7 +238,7 @@ class _FakeImageModelStore implements ImageModelStore {
 
   @override
   Future<InstalledImageModel?> resolve(ImageModelProfile profile) async =>
-      installed;
+      installed?.profile.id == profile.id ? installed : null;
 }
 
 class _FakeImageGenerationBackend implements ImageGenerationBackend {

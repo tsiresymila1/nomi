@@ -5,6 +5,7 @@ import 'package:gena/core/local_ai/local_ai_runtime_coordinator.dart';
 import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/data/services/image_generation_backend.dart';
 import 'package:gena/features/image_generation/data/services/image_model_store.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
 
 abstract interface class GeneratedImageStore {
   Future<String> savePng(Uint8List bytes, {required int seed});
@@ -45,17 +46,18 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
     required ImageModelStore modelStore,
     required ImageGenerationBackend backend,
     required GeneratedImageStore outputStore,
-    this.profile = ImageModelProfile.sdxs,
+    required ImageModelSelectionCubit selection,
   }) : _coordinator = coordinator,
        _modelStore = modelStore,
        _backend = backend,
-       _outputStore = outputStore;
+       _outputStore = outputStore,
+       _selection = selection;
 
   final LocalAiRuntimeCoordinator _coordinator;
   final ImageModelStore _modelStore;
   final ImageGenerationBackend _backend;
   final GeneratedImageStore _outputStore;
-  final ImageModelProfile profile;
+  final ImageModelSelectionCubit _selection;
 
   LocalAiRuntimeLease? _lease;
   LoadedImageGenerator? _generator;
@@ -63,6 +65,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
   Future<LocalImageGenerationCompletion>? _activeCompletion;
   Future<void> _operationTail = Future<void>.value();
   bool _cancelRequested = false;
+  String? _loadedProfileId;
 
   @override
   Future<ImageRuntimeSupport> checkSupport() async {
@@ -76,20 +79,25 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
   }
 
   @override
-  Future<InstalledImageModel?> resolveModel() => _modelStore.resolve(profile);
+  Future<InstalledImageModel?> resolveModel() =>
+      _modelStore.resolve(_selection.state.selectedProfile);
 
   @override
   Future<InstalledImageModel> installModel({
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
-  }) => _modelStore.install(
-    profile,
-    onProgress: onProgress,
-    onVerifying: onVerifying,
-  );
+  }) {
+    final profile = _selection.state.selectedProfile;
+    return _modelStore.install(
+      profile,
+      onProgress: onProgress,
+      onVerifying: onVerifying,
+    );
+  }
 
   @override
-  Future<void> cancelInstall() => _modelStore.cancelInstall(profile);
+  Future<void> cancelInstall() =>
+      _modelStore.cancelInstall(_selection.state.selectedProfile);
 
   @override
   Future<GeneratedImageArtifact> generate({
@@ -101,6 +109,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
     void Function(LocalImageGenerationProgress progress)? onProgress,
   }) {
     return _serialize(() async {
+      final profile = _selection.state.selectedProfile;
       _cancelRequested = false;
       final normalizedPrompt = prompt.trim();
       if (normalizedPrompt.isEmpty) {
@@ -136,6 +145,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
         return switch (outcome.state) {
           LocalImageGenerationCompletionState.completed => _persist(
             outcome.image!,
+            profile,
           ),
           LocalImageGenerationCompletionState.cancelled =>
             throw const ImageGenerationCancelledException(),
@@ -151,7 +161,10 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
     });
   }
 
-  Future<GeneratedImageArtifact> _persist(LocalGeneratedImage image) async {
+  Future<GeneratedImageArtifact> _persist(
+    LocalGeneratedImage image,
+    ImageModelProfile profile,
+  ) async {
     final path = await _outputStore.savePng(image.pngBytes, seed: image.seed);
     return GeneratedImageArtifact(
       path: path,
@@ -159,6 +172,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
       width: image.width,
       height: image.height,
       elapsed: image.elapsed,
+      profile: profile,
     );
   }
 
@@ -170,6 +184,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
 
   @override
   Future<void> removeModel() async {
+    final profile = _selection.state.selectedProfile;
     await releaseEngine();
     await _modelStore.delete(profile);
   }
@@ -179,7 +194,13 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
   ) async {
     final resident = _generator;
     final lease = _lease;
-    if (resident != null && lease != null && lease.isActive) return resident;
+    if (resident != null &&
+        lease != null &&
+        lease.isActive &&
+        _loadedProfileId == installed.profile.id) {
+      return resident;
+    }
+    if (resident != null || lease != null) await releaseEngine();
 
     LocalAiRuntimeLease? acquired;
     try {
@@ -190,6 +211,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
       _lease = acquired;
       final generator = await _backend.load(installed.modelPath);
       _generator = generator;
+      _loadedProfileId = installed.profile.id;
       return generator;
     } catch (_) {
       if (identical(_lease, acquired)) _lease = null;
@@ -212,6 +234,7 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
     final generator = _generator;
     _generator = null;
     _lease = null;
+    _loadedProfileId = null;
     await generator?.dispose();
   }
 

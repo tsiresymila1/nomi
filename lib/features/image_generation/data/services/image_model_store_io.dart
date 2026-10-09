@@ -60,6 +60,7 @@ class IoImageModelStore implements ImageModelStore {
 
   @override
   Future<InstalledImageModel?> resolve(ImageModelProfile profile) async {
+    if (profile.isExternal) return _resolveExternal(profile);
     final directory = await _modelsDirectoryProvider();
     final model = File('${directory.path}/${profile.fileName}');
     if (!await model.exists() || await model.length() != profile.sizeBytes) {
@@ -85,6 +86,11 @@ class IoImageModelStore implements ImageModelStore {
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
   }) async {
+    if (profile.isExternal) {
+      throw StateError(
+        '${profile.name} is an external model and cannot be downloaded.',
+      );
+    }
     final existing = await resolve(profile);
     if (existing != null) {
       onProgress(1);
@@ -120,11 +126,14 @@ class IoImageModelStore implements ImageModelStore {
   }
 
   @override
-  Future<void> cancelInstall(ImageModelProfile profile) =>
-      _downloadClient.cancel(profile);
+  Future<void> cancelInstall(ImageModelProfile profile) async {
+    if (profile.isExternal) return;
+    await _downloadClient.cancel(profile);
+  }
 
   @override
   Future<void> delete(ImageModelProfile profile) async {
+    if (profile.isExternal) return;
     await cancelInstall(profile);
     final directory = await _modelsDirectoryProvider();
     final model = File('${directory.path}/${profile.fileName}');
@@ -141,6 +150,27 @@ class IoImageModelStore implements ImageModelStore {
 
   static Future<String> _streamingSha256(File file) async =>
       (await sha256.bind(file.openRead()).first).toString();
+
+  Future<InstalledImageModel?> _resolveExternal(
+    ImageModelProfile profile,
+  ) async {
+    final path = profile.filePath;
+    if (path == null || !path.toLowerCase().endsWith('.gguf')) return null;
+    final model = File(path);
+    try {
+      if (!await model.exists()) return null;
+      final length = await model.length();
+      if (length <= 0 || length != profile.sizeBytes) return null;
+      await model.openRead(0, 1).drain<void>();
+      if (profile.sha256.isNotEmpty) {
+        final digest = await _digestProvider(model);
+        if (digest.toLowerCase() != profile.sha256.toLowerCase()) return null;
+      }
+      return InstalledImageModel(profile: profile, modelPath: path);
+    } on FileSystemException {
+      return null;
+    }
+  }
 
   static Future<void> _deleteIfPresent(File file) async {
     if (await file.exists()) await file.delete();

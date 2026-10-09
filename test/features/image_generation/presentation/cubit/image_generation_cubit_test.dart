@@ -187,6 +187,7 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
       width: 512,
       height: 512,
       elapsed: Duration(seconds: 1),
+      profile: ImageModelProfile.sdxs,
     );
   }
 

@@ -93,7 +93,7 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
               role: 'assistant',
               kind: const Value('image'),
               content:
-                  'Generated locally with ${ImageModelProfile.sdxs.name} '
+                  'Generated locally with ${artifact.profile.name} '
                   '· seed ${artifact.seed} · ${seconds}s',
               mediaPath: Value(artifact.path),
             ),

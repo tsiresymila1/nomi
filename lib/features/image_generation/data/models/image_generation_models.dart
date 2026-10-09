@@ -239,6 +239,7 @@ class GeneratedImageArtifact {
     required this.width,
     required this.height,
     required this.elapsed,
+    required this.profile,
   });
 
   final String path;
@@ -246,6 +247,7 @@ class GeneratedImageArtifact {
   final int width;
   final int height;
   final Duration elapsed;
+  final ImageModelProfile profile;
 }
 
 class ImageGenerationCancelledException implements Exception {

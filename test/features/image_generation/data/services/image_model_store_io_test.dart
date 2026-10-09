@@ -101,6 +101,58 @@ void main() {
     );
     expect(downloader.cancelCalls, 1);
   });
+
+  test(
+    'resolves an external GGUF from its original path without copying',
+    () async {
+      final external = File('${directory.path}/external.gguf');
+      await external.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+      final profile = ImageModelProfile.external(
+        id: 'custom:external',
+        name: 'External',
+        filePath: external.path,
+        sizeBytes: 4,
+      );
+      final downloader = _FakeDownloadClient(directory, const <int>[]);
+      final managedDirectory = Directory('${directory.path}/managed');
+      final store = IoImageModelStore(
+        downloadClient: downloader,
+        modelsDirectoryProvider: () async => managedDirectory,
+      );
+
+      final installed = await store.resolve(profile);
+
+      expect(installed?.modelPath, external.path);
+      expect(downloader.downloadCalls, 0);
+    },
+  );
+
+  test('never downloads or deletes an external GGUF', () async {
+    final external = File('${directory.path}/external.gguf');
+    await external.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+    final profile = ImageModelProfile.external(
+      id: 'custom:external',
+      name: 'External',
+      filePath: external.path,
+      sizeBytes: 4,
+    );
+    final downloader = _FakeDownloadClient(directory, const <int>[]);
+    final store = IoImageModelStore(
+      downloadClient: downloader,
+      modelsDirectoryProvider: () async =>
+          Directory('${directory.path}/managed'),
+    );
+
+    await expectLater(
+      store.install(profile, onProgress: (_) {}, onVerifying: () {}),
+      throwsA(isA<StateError>()),
+    );
+    await store.delete(profile);
+
+    expect(await external.exists(), isTrue);
+    expect(downloader.downloadCalls, 0);
+    expect(downloader.cancelCalls, 0);
+  });
 }
 
 ImageModelProfile _profile({required int sizeBytes, required String digest}) =>
@@ -122,6 +174,7 @@ class _FakeDownloadClient implements ImageModelDownloadClient {
   final Directory directory;
   final List<int> bytes;
   int cancelCalls = 0;
+  int downloadCalls = 0;
 
   @override
   Future<void> cancel(ImageModelProfile profile) async {
@@ -133,6 +186,7 @@ class _FakeDownloadClient implements ImageModelDownloadClient {
     ImageModelProfile profile, {
     required void Function(double progress) onProgress,
   }) async {
+    downloadCalls++;
     final file = File('${directory.path}/${profile.fileName}');
     await file.writeAsBytes(bytes, flush: true);
     onProgress(0.5);

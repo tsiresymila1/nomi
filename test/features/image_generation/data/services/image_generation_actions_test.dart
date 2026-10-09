@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
+import 'package:gena/features/image_generation/data/models/image_model_catalog.dart';
 import 'package:gena/features/image_generation/data/models/image_generation_models.dart';
 import 'package:gena/features/image_generation/data/services/image_generation_actions.dart';
 import 'package:gena/features/image_generation/data/services/local_image_generation_service.dart';
@@ -50,7 +51,7 @@ void main() {
       expect(rows.last.role, 'assistant');
       expect(rows.last.kind, 'image');
       expect(rows.last.mediaPath, artifact.path);
-      expect(rows.last.content, contains('SDXS-512'));
+      expect(rows.last.content, contains('Stable Diffusion 1.5 Q4'));
     },
   );
 
@@ -136,6 +137,7 @@ class _FakeImageGenerationService implements ImageGenerationServiceApi {
       width: width,
       height: height,
       elapsed: const Duration(seconds: 1),
+      profile: ImageModelCatalog.stableDiffusion15Q4,
     );
   }
 

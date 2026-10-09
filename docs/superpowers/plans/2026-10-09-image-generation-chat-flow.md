@@ -16,32 +16,32 @@
 - Modify: `lib/features/image_generation/data/services/image_generation_actions.dart`
 - Test: `test/features/image_generation/data/services/image_generation_actions_test.dart`
 
-- [ ] **Step 1: Write a failing data test**
+- [x] **Step 1: Write a failing data test**
 
 Add a controllable generation future and assert that the user message is
 already stored before that future completes. Update failure and cancellation
 expectations so the user prompt remains and no assistant image is inserted.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run: `rtk flutter test test/features/image_generation/data/services/image_generation_actions_test.dart`
 
 Expected: FAIL because the current action inserts the prompt only after image
 generation succeeds.
 
-- [ ] **Step 3: Implement the minimal persistence split**
+- [x] **Step 3: Implement the minimal persistence split**
 
 Introduce explicit `persistPrompt` control on `generateAndPersist`, defaulting
 to `true`. Insert and title the user turn before invoking the image service;
 insert only the assistant image after a successful result.
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [x] **Step 4: Run the focused test and verify GREEN**
 
 Run: `rtk flutter test test/features/image_generation/data/services/image_generation_actions_test.dart`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit: `fix(image): persist prompts before generation`
 
@@ -51,31 +51,31 @@ Commit: `fix(image): persist prompts before generation`
 - Modify: `lib/features/image_generation/presentation/cubit/image_generation_cubit.dart`
 - Test: `test/features/image_generation/presentation/cubit/image_generation_cubit_test.dart`
 
-- [ ] **Step 1: Write failing cubit tests**
+- [x] **Step 1: Write failing cubit tests**
 
 Assert that loading, failure, and cancellation retain the normalized active
 prompt. Add a retry test asserting the second generation call passes
 `persistPrompt: false`.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run: `rtk flutter test test/features/image_generation/presentation/cubit/image_generation_cubit_test.dart`
 
 Expected: FAIL because the state has no active prompt or retry API.
 
-- [ ] **Step 3: Implement active prompt and retry**
+- [x] **Step 3: Implement active prompt and retry**
 
 Add `activePrompt` to `ImageGenerationState`, route generation through a private
 method accepting `persistPrompt`, and expose `retryGeneration()` for failed or
 cancelled turns.
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [x] **Step 4: Run the focused test and verify GREEN**
 
 Run: `rtk flutter test test/features/image_generation/presentation/cubit/image_generation_cubit_test.dart`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit: `feat(image): retain generation turn state`
 
@@ -88,33 +88,33 @@ Commit: `feat(image): retain generation turn state`
 - Test: `test/features/image_generation/presentation/widgets/image_generation_chat_activity_test.dart`
 - Test: `test/features/image_generation/presentation/widgets/image_generation_controls_test.dart`
 
-- [ ] **Step 1: Write failing widget tests**
+- [x] **Step 1: Write failing widget tests**
 
 Cover loading, progress, failure/retry, and cancellation rendering for the new
 timeline item. Add a visibility predicate test proving active generation is not
 rendered by the composer status panel.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run: `rtk flutter test test/features/image_generation/presentation/widgets`
 
 Expected: FAIL because the timeline activity widget and visibility policy do
 not exist.
 
-- [ ] **Step 3: Implement the timeline item and immediate composer clear**
+- [x] **Step 3: Implement the timeline item and immediate composer clear**
 
 Append `ImageGenerationChatActivity` to `ChatView` only for the selected chat
 when the image cubit is loading, generating, failed, or cancelled. Clear the
 text controller before awaiting generation. Keep only runtime setup phases in
 the composer panel.
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run: `rtk flutter test test/features/image_generation/presentation/widgets`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit: `fix(chat): show image generation in timeline`
 
@@ -123,23 +123,23 @@ Commit: `fix(chat): show image generation in timeline`
 **Files:**
 - Review all files changed by Tasks 1-3
 
-- [ ] **Step 1: Format changed Dart files**
+- [x] **Step 1: Format changed Dart files**
 
 Run: `rtk dart format <changed Dart files>`
 
-- [ ] **Step 2: Run static analysis**
+- [x] **Step 2: Run static analysis**
 
 Run: `rtk flutter analyze`
 
 Expected: no issues found.
 
-- [ ] **Step 3: Run all tests**
+- [x] **Step 3: Run all tests**
 
 Run: `rtk flutter test`
 
 Expected: all tests pass.
 
-- [ ] **Step 4: Build the Android release APK**
+- [x] **Step 4: Build the Android release APK**
 
 Run: `rtk flutter build apk --release`
 

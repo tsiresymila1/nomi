@@ -11,8 +11,14 @@ import 'package:gena/features/image_generation/data/services/llamadart_image_gen
 import 'package:gena/features/image_generation/data/services/local_image_generation_service.dart';
 import 'package:gena/features/image_generation/presentation/cubit/chat_composer_mode_cubit.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
+import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
 
 void registerImageGenerationDependencies() {
+  if (!sl.isRegistered<ImageModelSelectionCubit>()) {
+    sl.registerLazySingleton<ImageModelSelectionCubit>(
+      ImageModelSelectionCubit.new,
+    );
+  }
   if (!sl.isRegistered<ImageModelStore>()) {
     sl.registerLazySingleton<ImageModelStore>(createImageModelStore);
   }

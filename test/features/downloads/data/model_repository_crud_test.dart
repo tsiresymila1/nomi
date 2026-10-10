@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/downloads/data/model_repository.dart';
+import 'package:gena/features/downloads/data/default_seed_models.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 
 void main() {
@@ -73,8 +74,9 @@ void main() {
 
     test('emits an update when a new model is added', () async {
       final emissions = <int>[];
-      final sub =
-          repository.watchModels().listen((models) => emissions.add(models.length));
+      final sub = repository.watchModels().listen(
+        (models) => emissions.add(models.length),
+      );
       addTearDown(sub.cancel);
 
       await addRemote(name: 'Added');
@@ -96,17 +98,19 @@ void main() {
       expect(afterSecond.length, afterFirst.length);
     });
 
-    test('does not duplicate a default model already present by name',
-        () async {
-      await seeder.ensureSeeded();
-      final seededCount =
-          (await database.select(database.models).get()).length;
+    test(
+      'does not duplicate a default model already present by name',
+      () async {
+        await seeder.ensureSeeded();
+        final seededCount =
+            (await database.select(database.models).get()).length;
 
-      // force=true re-runs the missing-only seed; nothing new is added.
-      await seeder.ensureSeeded(force: true);
-      final recount = (await database.select(database.models).get()).length;
-      expect(recount, seededCount);
-    });
+        // force=true re-runs the missing-only seed; nothing new is added.
+        await seeder.ensureSeeded(force: true);
+        final recount = (await database.select(database.models).get()).length;
+        expect(recount, seededCount);
+      },
+    );
 
     test('clearAndReseed wipes then restores the default catalog', () async {
       await addRemote(name: 'Custom');
@@ -119,14 +123,48 @@ void main() {
       expect(models.any((row) => row.name == 'Custom'), isFalse);
       expect(models, isNotEmpty);
     });
+
+    test(
+      'replaces uninstalled legacy seeded sources with the GGUF catalog',
+      () async {
+        await actions.addModel(
+          name: 'Legacy LiteRT model',
+          description: 'old seed',
+          provider: ModelProviderType.local,
+          modelType: 'qwen3',
+          supportImage: false,
+          supportAudio: false,
+          supportsFunctionCalls: false,
+          isThinking: false,
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxTokens: 1024,
+          tokenBuffer: 128,
+          randomSeed: 1,
+          preferredBackend: 'cpu',
+          sourceType: 'file',
+          source: kLegacyDefaultSeedSources.first,
+        );
+
+        await seeder.ensureSeeded();
+        final models = await database.select(database.models).get();
+
+        expect(
+          models.any((row) => kLegacyDefaultSeedSources.contains(row.source)),
+          isFalse,
+        );
+        expect(models.every((row) => row.source.endsWith('.gguf')), isTrue);
+      },
+    );
   });
 
   group('ModelRepositoryActions', () {
     test('addModel persists a row with the provided values', () async {
       final id = await addRemote(name: 'Persisted');
-      final row = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .getSingle();
+      final row = await (database.select(
+        database.models,
+      )..where((t) => t.id.equals(id))).getSingle();
       expect(row.name, 'Persisted');
       expect(row.description, 'desc');
       expect(row.provider, ModelProviderType.remote);
@@ -159,9 +197,9 @@ void main() {
         source: '/tmp/model.gguf',
       );
 
-      final row = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .getSingle();
+      final row = await (database.select(
+        database.models,
+      )..where((t) => t.id.equals(id))).getSingle();
       expect(row.name, 'Renamed');
       expect(row.provider, ModelProviderType.local);
       expect(row.apiUrl, isNull);
@@ -183,9 +221,9 @@ void main() {
         preferredBackend: 'npu',
       );
 
-      final row = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .getSingle();
+      final row = await (database.select(
+        database.models,
+      )..where((t) => t.id.equals(id))).getSingle();
       expect(row.temperature, 0.1);
       expect(row.topK, 5);
       expect(row.preferredBackend, 'npu');
@@ -193,35 +231,37 @@ void main() {
       expect(row.name, 'Tuned');
     });
 
-    test('updateModelId and updateModelMmprojSource set nullable columns',
-        () async {
-      final id = await addRemote(name: 'Ids');
-      await actions.updateModelId(id: id, modelId: 'installed-123');
-      await actions.updateModelMmprojSource(
-        id: id,
-        mmprojSource: '/tmp/proj.gguf',
-      );
+    test(
+      'updateModelId and updateModelMmprojSource set nullable columns',
+      () async {
+        final id = await addRemote(name: 'Ids');
+        await actions.updateModelId(id: id, modelId: 'installed-123');
+        await actions.updateModelMmprojSource(
+          id: id,
+          mmprojSource: '/tmp/proj.gguf',
+        );
 
-      final row = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .getSingle();
-      expect(row.modelId, 'installed-123');
-      expect(row.mmprojSource, '/tmp/proj.gguf');
+        final row = await (database.select(
+          database.models,
+        )..where((t) => t.id.equals(id))).getSingle();
+        expect(row.modelId, 'installed-123');
+        expect(row.mmprojSource, '/tmp/proj.gguf');
 
-      // Clearing the id back to null is supported.
-      await actions.updateModelId(id: id, modelId: null);
-      final cleared = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .getSingle();
-      expect(cleared.modelId, isNull);
-    });
+        // Clearing the id back to null is supported.
+        await actions.updateModelId(id: id, modelId: null);
+        final cleared = await (database.select(
+          database.models,
+        )..where((t) => t.id.equals(id))).getSingle();
+        expect(cleared.modelId, isNull);
+      },
+    );
 
     test('deleteModel removes the row', () async {
       final id = await addRemote(name: 'Doomed');
       await actions.deleteModel(id);
-      final rows = await (database.select(database.models)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (database.select(
+        database.models,
+      )..where((t) => t.id.equals(id))).get();
       expect(rows, isEmpty);
     });
 

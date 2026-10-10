@@ -106,6 +106,9 @@ class DefaultModelSeeder {
   }
 
   Future<void> _seedMissingDefaultModels() async {
+    await (_database.delete(
+      _database.models,
+    )..where((row) => row.source.isIn(kLegacyDefaultSeedSources))).go();
     final existingRows = await _database.select(_database.models).get();
 
     final existingNames = existingRows

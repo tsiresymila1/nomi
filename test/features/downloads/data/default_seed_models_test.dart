@@ -10,8 +10,7 @@ void main() {
     }
   }
 
-  bool isCompatible(String url) =>
-      url.endsWith('.gguf') || url.endsWith('.litertlm');
+  bool isCompatible(String url) => url.endsWith('.gguf');
 
   test('all default local model sources are llamadart compatible', () {
     for (final model in kDefaultSeedModels) {
@@ -26,7 +25,7 @@ void main() {
     }
   });
 
-  test('no catalog source references a FlutterGemma .task bundle', () {
+  test('the Android-first catalog only contains GGUF models', () {
     for (final model in kDefaultSeedModels) {
       for (final url in allSources(model)) {
         expect(
@@ -34,7 +33,7 @@ void main() {
           isTrue,
           reason: '${model.key} has incompatible source: $url',
         );
-        expect(url.endsWith('.task'), isFalse);
+        expect(url.endsWith('.gguf'), isTrue);
       }
     }
   });
@@ -78,17 +77,37 @@ void main() {
 
   test('format reflects the source extension', () {
     for (final model in kDefaultSeedModels) {
-      final expected = model.sourceUrl.endsWith('.gguf') ? 'GGUF' : 'LiteRT-LM';
-      expect(model.format, expected, reason: model.key);
+      expect(model.format, 'GGUF', reason: model.key);
     }
   });
 
   test('notes describe the llamadart format and capabilities', () {
-    final model = kDefaultSeedModels.firstWhere((m) => m.key == 'gemma4_E2B');
+    final model = kDefaultSeedModels.firstWhere(
+      (m) => m.key == 'smolvlm2_500m_q8_0',
+    );
     expect(model.notes, contains('llamadart'));
     expect(model.notes, contains(model.format));
     expect(model.notes, contains(model.size));
     expect(model.notes, contains('image'));
+  });
+
+  test('every entry declares conservative RAM and parameter metadata', () {
+    for (final model in kDefaultSeedModels) {
+      expect(model.minimumRamGb, greaterThan(0), reason: model.key);
+      expect(
+        model.recommendedRamGb,
+        greaterThanOrEqualTo(model.minimumRamGb),
+        reason: model.key,
+      );
+      expect(model.parameterCountB, greaterThan(0), reason: model.key);
+    }
+  });
+
+  test('Qwen3 0.6B is the lightweight default for 4 GB Android devices', () {
+    final model = kDefaultSeedModels.first;
+    expect(model.key, 'qwen3_0_6b_q4_k_m');
+    expect(model.recommendedRamGb, lessThanOrEqualTo(4));
+    expect(model.preferredBackend.name, 'cpu');
   });
 
   group('matchesModelNameOrSource', () {

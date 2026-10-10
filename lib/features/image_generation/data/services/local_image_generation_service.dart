@@ -145,6 +145,8 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
           height: height,
           steps: profile.steps,
           guidanceScale: profile.guidanceScale,
+          sampler: profile.sampler,
+          scheduler: profile.scheduler,
           seed: seed,
         ),
       );

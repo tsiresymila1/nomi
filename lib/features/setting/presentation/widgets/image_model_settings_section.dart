@@ -143,6 +143,7 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 8,
                   children: [
                     const ListTile(
                       leading: Icon(Icons.auto_awesome_rounded),
@@ -208,7 +209,9 @@ class _ImageModelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final badge = switch (profile.deviceTier) {
       ImageModelDeviceTier.recommended4Gb => 'Recommended for 4 GB',
-      ImageModelDeviceTier.experimental => 'Experimental',
+      ImageModelDeviceTier.compatible6Gb => 'Compatible from 6 GB',
+      ImageModelDeviceTier.experimental =>
+        'Experimental · ${_formatRam(profile.minimumRamBytes)} minimum',
       ImageModelDeviceTier.custom => 'Custom',
     };
     final selectedStatus = selected && generationState.profile.id == profile.id
@@ -244,6 +247,12 @@ class _ImageModelTile extends StatelessWidget {
               icon: const Icon(Icons.close_rounded),
             ),
     );
+  }
+
+  String _formatRam(int bytes) {
+    if (bytes <= 0) return 'unknown RAM';
+    final gb = bytes / (1024 * 1024 * 1024);
+    return '${gb.toStringAsFixed(gb == gb.roundToDouble() ? 0 : 1)} GB RAM';
   }
 }
 

@@ -46,6 +46,23 @@ class _LlamadartLoadedImageGenerator implements LoadedImageGenerator {
         height: request.height,
         steps: request.steps,
         guidanceScale: request.guidanceScale,
+        sampler: switch (request.sampler) {
+          ImageModelSampler.euler => llama.ImageGenerationSampler.euler,
+          ImageModelSampler.eulerAncestral =>
+            llama.ImageGenerationSampler.eulerAncestral,
+          ImageModelSampler.dpmpp2m => llama.ImageGenerationSampler.dpmpp2m,
+          ImageModelSampler.lcm => llama.ImageGenerationSampler.lcm,
+          null => null,
+        },
+        scheduler: switch (request.scheduler) {
+          ImageModelScheduler.discrete =>
+            llama.ImageGenerationScheduler.discrete,
+          ImageModelScheduler.karras => llama.ImageGenerationScheduler.karras,
+          ImageModelScheduler.sgmUniform =>
+            llama.ImageGenerationScheduler.sgmUniform,
+          ImageModelScheduler.simple => llama.ImageGenerationScheduler.simple,
+          null => null,
+        },
         seed: request.seed,
       ),
     );

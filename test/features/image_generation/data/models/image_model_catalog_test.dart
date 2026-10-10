@@ -16,7 +16,7 @@ void main() {
       expect(profile.isExternal, isFalse);
     });
 
-    test('pins the experimental Stable Diffusion 1.5 Q4 profile', () {
+    test('pins the 6 GB Stable Diffusion 1.5 Q4 profile', () {
       final profile = ImageModelCatalog.stableDiffusion15Q4;
 
       expect(profile.id, 'stable-diffusion-v1-5-q4_0');
@@ -31,7 +31,27 @@ void main() {
       );
       expect(profile.steps, 20);
       expect(profile.guidanceScale, 7);
+      expect(profile.deviceTier, ImageModelDeviceTier.compatible6Gb);
+      expect(profile.minimumRamBytes, 5 * 1024 * 1024 * 1024);
+    });
+
+    test('pins DreamShaper LCM with its required sampler', () {
+      final profile = ImageModelCatalog.dreamShaper8LcmQ4;
+
+      expect(profile.sizeBytes, 1625373856);
+      expect(profile.steps, 4);
+      expect(profile.guidanceScale, 1);
+      expect(profile.sampler, ImageModelSampler.lcm);
       expect(profile.deviceTier, ImageModelDeviceTier.experimental);
+    });
+
+    test('keeps SDXL Turbo visible but clearly outside the 4 GB tier', () {
+      final profile = ImageModelCatalog.sdxlTurboQ4;
+
+      expect(profile.sizeBytes, 3940010720);
+      expect(profile.minimumRamBytes, 10 * 1024 * 1024 * 1024);
+      expect(profile.sampler, ImageModelSampler.euler);
+      expect(profile.scheduler, ImageModelScheduler.sgmUniform);
     });
 
     test('resolves only built-in profile ids', () {
@@ -60,5 +80,6 @@ void main() {
     expect(restored.sourceType, ImageModelSourceType.externalFile);
     expect(restored.deviceTier, ImageModelDeviceTier.custom);
     expect(restored.displaySize, '42 B');
+    expect(restored.sampler, isNull);
   });
 }

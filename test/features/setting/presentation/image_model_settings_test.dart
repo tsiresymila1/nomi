@@ -58,8 +58,11 @@ void main() {
     expect(find.text('Image generation'), findsOneWidget);
     expect(find.text('SDXS-512'), findsOneWidget);
     expect(find.text('Stable Diffusion 1.5 Q4'), findsOneWidget);
+    expect(find.text('DreamShaper 8 LCM Q4'), findsOneWidget);
+    expect(find.text('SDXL Turbo Q4'), findsOneWidget);
     expect(find.text('Recommended for 4 GB'), findsOneWidget);
-    expect(find.text('Experimental'), findsOneWidget);
+    expect(find.text('Compatible from 6 GB'), findsOneWidget);
+    expect(find.textContaining('Experimental'), findsNWidgets(2));
   });
 
   testWidgets('shows loading then ready while preloading the selected model', (
@@ -157,6 +160,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Locate again'));
       await tester.tap(find.text('Locate again'));
       await tester.pumpAndSettle();
 

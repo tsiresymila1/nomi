@@ -2,7 +2,16 @@ import 'dart:typed_data';
 
 enum ImageModelSourceType { managedDownload, externalFile }
 
-enum ImageModelDeviceTier { recommended4Gb, experimental, custom }
+enum ImageModelDeviceTier {
+  recommended4Gb,
+  compatible6Gb,
+  experimental,
+  custom,
+}
+
+enum ImageModelSampler { euler, eulerAncestral, dpmpp2m, lcm }
+
+enum ImageModelScheduler { discrete, karras, sgmUniform, simple }
 
 /// A pinned, downloadable image-generation model.
 class ImageModelProfile {
@@ -16,6 +25,10 @@ class ImageModelProfile {
     required this.sha256,
     required this.steps,
     required this.guidanceScale,
+    this.minimumRamBytes = 0,
+    this.recommendedRamBytes = 0,
+    this.sampler,
+    this.scheduler,
     this.sourceType = ImageModelSourceType.managedDownload,
     this.deviceTier = ImageModelDeviceTier.recommended4Gb,
     this.filePath,
@@ -57,6 +70,14 @@ class ImageModelProfile {
       sha256: json['sha256'] as String? ?? '',
       steps: (json['steps'] as num).toInt(),
       guidanceScale: (json['guidanceScale'] as num).toDouble(),
+      minimumRamBytes: (json['minimumRamBytes'] as num?)?.toInt() ?? 0,
+      recommendedRamBytes: (json['recommendedRamBytes'] as num?)?.toInt() ?? 0,
+      sampler: json['sampler'] == null
+          ? null
+          : ImageModelSampler.values.byName(json['sampler'] as String),
+      scheduler: json['scheduler'] == null
+          ? null
+          : ImageModelScheduler.values.byName(json['scheduler'] as String),
       sourceType: ImageModelSourceType.values.byName(
         json['sourceType'] as String? ??
             ImageModelSourceType.managedDownload.name,
@@ -77,6 +98,10 @@ class ImageModelProfile {
   final String sha256;
   final int steps;
   final double guidanceScale;
+  final int minimumRamBytes;
+  final int recommendedRamBytes;
+  final ImageModelSampler? sampler;
+  final ImageModelScheduler? scheduler;
   final ImageModelSourceType sourceType;
   final ImageModelDeviceTier deviceTier;
   final String? filePath;
@@ -105,6 +130,10 @@ class ImageModelProfile {
     'sha256': sha256,
     'steps': steps,
     'guidanceScale': guidanceScale,
+    'minimumRamBytes': minimumRamBytes,
+    'recommendedRamBytes': recommendedRamBytes,
+    'sampler': sampler?.name,
+    'scheduler': scheduler?.name,
     'sourceType': sourceType.name,
     'deviceTier': deviceTier.name,
     'filePath': filePath,
@@ -121,6 +150,8 @@ class ImageModelProfile {
     sha256: '409ab23582ee074c6b9d5395784fc0741b0599fb9d138686c69087c71678eb6a',
     steps: 1,
     guidanceScale: 1,
+    minimumRamBytes: 3 * 1024 * 1024 * 1024,
+    recommendedRamBytes: 4 * 1024 * 1024 * 1024,
   );
 }
 
@@ -171,6 +202,8 @@ class LocalImageGenerationRequest {
     this.height = 512,
     required this.steps,
     required this.guidanceScale,
+    this.sampler,
+    this.scheduler,
     this.seed,
   });
 
@@ -180,6 +213,8 @@ class LocalImageGenerationRequest {
   final int height;
   final int steps;
   final double guidanceScale;
+  final ImageModelSampler? sampler;
+  final ImageModelScheduler? scheduler;
   final int? seed;
 }
 

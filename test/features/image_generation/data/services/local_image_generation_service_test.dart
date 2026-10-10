@@ -192,6 +192,21 @@ void main() {
       },
     );
 
+    test('forwards the selected profile sampler and scheduler', () async {
+      selection.select(ImageModelCatalog.dreamShaper8LcmQ4.id);
+      modelStore.installed = const InstalledImageModel(
+        profile: ImageModelCatalog.dreamShaper8LcmQ4,
+        modelPath: '/models/dreamshaper-lcm.gguf',
+      );
+
+      await service.generate(prompt: 'A watercolor lighthouse');
+
+      final request = backend.generator.requests.single;
+      expect(request.steps, 4);
+      expect(request.sampler, ImageModelSampler.lcm);
+      expect(request.scheduler, isNull);
+    });
+
     test('cancels the active native generation', () async {
       final run = _BlockingImageGenerationRun();
       backend.generator.run = run;

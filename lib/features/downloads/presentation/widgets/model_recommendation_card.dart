@@ -69,6 +69,14 @@ class ModelRecommendationCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             Text(
+              'Available RAM now: ${_formatBytes(deviceInfo.availableRamBytes)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Text(
+              'Suggested context: ${insight.recommendedContextTokens} tokens',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Text(
               'Device RAM: ${_formatBytes(deviceInfo.totalRamBytes)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),

@@ -130,6 +130,11 @@ class _DownloadItemState extends State<DownloadItem> {
                             label: 'Size: ${widget.insight!.sizeLabel}',
                             enabled: true,
                           ),
+                        if (widget.insight?.experimental == true)
+                          const DownloadItemCapabilityChip(
+                            label: 'Experimental',
+                            enabled: true,
+                          ),
                         DownloadItemCapabilityChip(
                           label: 'Type: ${model.modelType}',
                           enabled: true,
@@ -197,7 +202,7 @@ class _DownloadItemState extends State<DownloadItem> {
                       canDeleteDownloadedFile: widget.canDeleteDownloadedFile,
                       isInstalled: widget.isInstalled,
                       onEdit: widget.onEdit,
-                      onDownload: widget.onDownload,
+                      onDownload: () => _download(context),
                       onRemove: () => _confirmRemove(context),
                       onDeleteDownloadedFile: () {
                         _confirmDeleteDownloadedFile(context);
@@ -225,6 +230,22 @@ class _DownloadItemState extends State<DownloadItem> {
       confirmLabel: 'Remove',
     );
     if (shouldRemove) widget.onRemove();
+  }
+
+  Future<void> _download(BuildContext context) async {
+    if (widget.insight?.limited != true) {
+      widget.onDownload();
+      return;
+    }
+    final shouldDownload = await showConfirmActionSheet(
+      context,
+      title: 'Limited memory available',
+      message:
+          '"${widget.model.name}" may be slow or stop when Android needs memory. Close other apps before loading it.',
+      confirmLabel: 'Download anyway',
+      destructive: false,
+    );
+    if (shouldDownload) widget.onDownload();
   }
 
   Future<void> _confirmDeleteDownloadedFile(BuildContext context) async {

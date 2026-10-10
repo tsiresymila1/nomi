@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_item.dart';
 
 void main() {
@@ -33,6 +34,52 @@ void main() {
 
     // One value is in the compact status badge and one stays beside the bar.
     expect(find.text('37%'), findsNWidgets(2));
+  });
+
+  testWidgets('requires confirmation before downloading a limited model', (
+    tester,
+  ) async {
+    var downloads = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DownloadItem(
+            model: _model,
+            insight: const ModelCatalogInsight(
+              usage: ModelUsage.llm,
+              isRemote: false,
+              sizeBytes: 400000000,
+              sizeLabel: '400MB',
+              minimumRamBytes: 2000000000,
+              recommendedRamBytes: 3000000000,
+              status: ModelCompatibilityStatus.limited,
+              recommendedContextTokens: 2048,
+              experimental: false,
+            ),
+            progress: null,
+            isInstalled: false,
+            canRemove: false,
+            canDeleteDownloadedFile: false,
+            onDownload: () => downloads += 1,
+            onRemove: () {},
+            onCancelDownload: () {},
+            onDeleteDownloadedFile: () {},
+            onEdit: () {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text(_model.name));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Download model'));
+    await tester.pumpAndSettle();
+
+    expect(downloads, 0);
+    expect(find.text('Limited memory available'), findsOneWidget);
+    await tester.tap(find.text('Download anyway'));
+    await tester.pumpAndSettle();
+    expect(downloads, 1);
   });
 }
 

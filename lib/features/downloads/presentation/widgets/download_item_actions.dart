@@ -40,6 +40,7 @@ class DownloadItemActions extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         IconButton.outlined(
+          tooltip: 'Download model',
           onPressed: isDownloading || isRemote || isInstalled
               ? null
               : onDownload,

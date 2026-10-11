@@ -2,17 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
-import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
-import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
-import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
-import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/setting/data/services/theme_settings_service.dart';
-import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
-import 'package:gena/features/setting/presentation/widgets/whisper_model_settings_section.dart';
-import 'package:gena/features/setting/presentation/widgets/text_to_speech_settings_section.dart';
-import 'package:gena/features/setting/presentation/widgets/image_model_settings_section.dart';
-import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
-import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -36,26 +26,6 @@ class SettingsPage extends StatelessWidget {
             body: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
-                FutureBuilder(
-                  future: Future.wait([
-                    sl<ModelCatalogInsightsService>().getDeviceInfo(),
-                    sl<ModelCatalogInsightsService>().getStorageInsights(),
-                  ]),
-                  builder: (context, snapshot) {
-                    final data = snapshot.data;
-                    if (data == null || data.length < 2) {
-                      return const SizedBox.shrink();
-                    }
-                    return ModelDeviceSummaryCard(
-                          deviceInfo: data[0] as dynamic,
-                          storageInsights: data[1] as dynamic,
-                        )
-                        .animate()
-                        .fadeIn(duration: 220.ms, delay: 30.ms)
-                        .slideY(begin: 0.08, end: 0);
-                  },
-                ),
-                const SizedBox(height: 8),
                 SwitchListTile(
                       title: const Text(
                         'Dark mode',
@@ -77,25 +47,24 @@ class SettingsPage extends StatelessWidget {
                     .fadeIn(duration: 220.ms, delay: 60.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
-                WhisperModelSettingsSection(cubit: sl<WhisperModelCubit>())
+                ListTile(
+                      title: const Text(
+                        'Model management',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      subtitle: const Text(
+                        'Text, multimodal, speech and image models',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      leading: const Icon(Icons.model_training_outlined),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                      ),
+                      onTap: () => context.pushNamed('download'),
+                    )
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 100.ms)
-                    .slideY(begin: 0.08, end: 0),
-                const SizedBox(height: 8),
-                TextToSpeechSettingsSection(
-                      cubit: sl<TextToSpeechSettingsCubit>(),
-                      textToSpeech: sl<FlutterTextToSpeech>(),
-                    )
-                    .animate()
-                    .fadeIn(duration: 220.ms, delay: 110.ms)
-                    .slideY(begin: 0.08, end: 0),
-                const SizedBox(height: 8),
-                ImageModelSettingsSection(
-                      selectionCubit: sl<ImageModelSelectionCubit>(),
-                      generationCubit: sl<ImageGenerationCubit>(),
-                    )
-                    .animate()
-                    .fadeIn(duration: 220.ms, delay: 120.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
                 ListTile(

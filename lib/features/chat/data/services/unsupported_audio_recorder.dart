@@ -12,6 +12,9 @@ class _UnsupportedAudioRecorder implements VoiceAudioRecorder {
   static const _message = 'Voice input is unavailable on this platform.';
 
   @override
+  Stream<double> get amplitudeStream => const Stream<double>.empty();
+
+  @override
   Future<void> start() => throw const SpeechToTextException(_message);
 
   @override

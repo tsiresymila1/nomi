@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
@@ -12,6 +14,11 @@ class _FakeRecorder implements VoiceAudioRecorder {
   bool started = false;
   bool stopped = false;
   bool cancelled = false;
+  final StreamController<double> amplitudes =
+      StreamController<double>.broadcast();
+
+  @override
+  Stream<double> get amplitudeStream => amplitudes.stream;
 
   @override
   Future<void> start() async {
@@ -102,6 +109,23 @@ void main() {
     expect(chatInputCubit.state.draftText, 'Note: buy milk');
     expect(cubit.state.status, VoiceInputStatus.idle);
     await cubit.close();
+  });
+
+  test('microphone amplitude updates the recording level', () async {
+    final recorder = _FakeRecorder();
+    final cubit = buildCubit(
+      recorder: recorder,
+      speechToText: _FakeSpeechToText(),
+    );
+
+    await cubit.startRecording();
+    recorder.amplitudes.add(0.8);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(cubit.state.micLevel, closeTo(0.36, 0.001));
+    await cubit.cancelRecording();
+    await cubit.close();
+    await recorder.amplitudes.close();
   });
 
   test(

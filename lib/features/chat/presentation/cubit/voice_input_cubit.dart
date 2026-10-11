@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:gena/features/chat/data/services/speech_to_text.dart';
@@ -8,6 +10,8 @@ import 'package:gena/features/chat/presentation/cubit/chat_input_cubit.dart';
 /// the cubit depends only on this interface so the record→transcribe flow is
 /// testable with a fake and web builds never pull in `record`.
 abstract interface class VoiceAudioRecorder {
+  Stream<double> get amplitudeStream;
+
   Future<void> start();
   Future<String?> stop();
   Future<void> cancel();
@@ -16,16 +20,23 @@ abstract interface class VoiceAudioRecorder {
 enum VoiceInputStatus { idle, recording, transcribing }
 
 class VoiceInputState {
-  const VoiceInputState({this.status = VoiceInputStatus.idle});
+  const VoiceInputState({
+    this.status = VoiceInputStatus.idle,
+    this.micLevel = 0,
+  });
 
   final VoiceInputStatus status;
+  final double micLevel;
 
   bool get isRecording => status == VoiceInputStatus.recording;
   bool get isTranscribing => status == VoiceInputStatus.transcribing;
   bool get isBusy => isRecording || isTranscribing;
 
-  VoiceInputState copyWith({VoiceInputStatus? status}) {
-    return VoiceInputState(status: status ?? this.status);
+  VoiceInputState copyWith({VoiceInputStatus? status, double? micLevel}) {
+    return VoiceInputState(
+      status: status ?? this.status,
+      micLevel: micLevel ?? this.micLevel,
+    );
   }
 }
 
@@ -45,19 +56,32 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
        _speechToText = speechToText,
        _chatInputCubit = chatInputCubit,
        _onError = onError,
-       super(const VoiceInputState());
+       super(const VoiceInputState()) {
+    _amplitudeSubscription = _recorder.amplitudeStream.listen(
+      _onAmplitude,
+      onError: (_) {},
+    );
+  }
 
   final VoiceAudioRecorder _recorder;
   final SpeechToText _speechToText;
   final ChatInputCubit _chatInputCubit;
   final void Function(String message)? _onError;
+  StreamSubscription<double>? _amplitudeSubscription;
+
+  void _onAmplitude(double level) {
+    if (!state.isRecording || isClosed) return;
+    final normalized = level.clamp(0.0, 1.0);
+    final smoothed = (state.micLevel * 0.55) + (normalized * 0.45);
+    emit(state.copyWith(micLevel: smoothed));
+  }
 
   /// Begins recording. No-op if already recording or transcribing.
   Future<void> startRecording() async {
     if (state.isBusy) return;
     try {
       await _recorder.start();
-      emit(state.copyWith(status: VoiceInputStatus.recording));
+      emit(state.copyWith(status: VoiceInputStatus.recording, micLevel: 0));
     } catch (error) {
       emit(const VoiceInputState());
       _reportError(error);
@@ -113,5 +137,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         ? error.message
         : 'Voice input failed: $error';
     _onError?.call(message);
+  }
+
+  @override
+  Future<void> close() async {
+    await _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = null;
+    return super.close();
   }
 }

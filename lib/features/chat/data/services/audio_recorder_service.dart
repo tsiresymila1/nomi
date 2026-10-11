@@ -21,11 +21,26 @@ class AudioRecorderService implements VoiceAudioRecorder {
 
   String? _activePath;
 
+  @override
+  Stream<double> get amplitudeStream => _recorder
+      .onAmplitudeChanged(const Duration(milliseconds: 90))
+      .map((amplitude) {
+        // `record` reports dBFS (0 is the loudest possible value). Treat
+        // -55 dB as the visual noise floor and clamp unexpected platforms.
+        return ((amplitude.current + 55) / 55).clamp(0.0, 1.0);
+      });
+
   /// 16 kHz mono WAV — the format whisper requires.
   static const RecordConfig recordConfig = RecordConfig(
     encoder: AudioEncoder.wav,
     numChannels: 1,
     sampleRate: 16000,
+    autoGain: true,
+    echoCancel: true,
+    noiseSuppress: true,
+    androidConfig: AndroidRecordConfig(
+      audioSource: AndroidAudioSource.voiceRecognition,
+    ),
   );
 
   /// Whether a microphone permission has been granted (requesting if needed).

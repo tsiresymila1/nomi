@@ -29,15 +29,17 @@ class _ChatInputVoiceButtonState extends State<ChatInputVoiceButton> {
   static const double _cancelDragThreshold = 80;
 
   Timer? _timer;
+  Future<void>? _recordingStart;
   Duration _elapsed = Duration.zero;
   bool _willCancel = false;
+  bool _finishing = false;
 
   void _startTimer() {
     _elapsed = Duration.zero;
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
-      setState(() => _elapsed += const Duration(seconds: 1));
+      setState(() => _elapsed += const Duration(milliseconds: 100));
     });
   }
 
@@ -56,7 +58,13 @@ class _ChatInputVoiceButtonState extends State<ChatInputVoiceButton> {
     if (!widget.enabled) return;
     setState(() => _willCancel = false);
     _startTimer();
-    await widget.cubit.startRecording();
+    final start = widget.cubit.startRecording();
+    _recordingStart = start;
+    await start;
+    if (!widget.cubit.state.isRecording) {
+      _stopTimer();
+      if (mounted) setState(() {});
+    }
   }
 
   void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
@@ -66,14 +74,22 @@ class _ChatInputVoiceButtonState extends State<ChatInputVoiceButton> {
     }
   }
 
-  Future<void> _onLongPressEnd() async {
+  Future<void> _finishRecording({required bool cancel}) async {
+    if (_finishing) return;
+    _finishing = true;
     _stopTimer();
-    if (_willCancel) {
-      await widget.cubit.cancelRecording();
-    } else {
-      await widget.cubit.stopAndTranscribe();
+    try {
+      await _recordingStart;
+      if (cancel || _willCancel) {
+        await widget.cubit.cancelRecording();
+      } else {
+        await widget.cubit.stopAndTranscribe();
+      }
+    } finally {
+      _recordingStart = null;
+      _finishing = false;
+      if (mounted) setState(() => _willCancel = false);
     }
-    if (mounted) setState(() => _willCancel = false);
   }
 
   String _formatElapsed(Duration value) {
@@ -103,49 +119,101 @@ class _ChatInputVoiceButtonState extends State<ChatInputVoiceButton> {
         final recording = state.isRecording;
 
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onLongPressStart: (_) => _onLongPressStart(),
           onLongPressMoveUpdate: _onLongPressMoveUpdate,
-          onLongPressEnd: (_) => _onLongPressEnd(),
+          onLongPressEnd: (_) => _finishRecording(cancel: false),
           onLongPressCancel: () {
-            _stopTimer();
-            widget.cubit.cancelRecording();
+            unawaited(_finishRecording(cancel: true));
           },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (recording) ...[
-                Text(
-                  _willCancel ? 'Release to cancel' : _formatElapsed(_elapsed),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: _willCancel
-                        ? colorScheme.error
-                        : colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: Tooltip(
+            message: 'Hold to record voice input',
+            triggerMode: TooltipTriggerMode.manual,
+            child: Semantics(
+              button: true,
+              enabled: widget.enabled,
+              label: 'Hold to record voice input',
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (recording) ...[
+                      _VoiceWaveform(
+                        level: state.micLevel,
+                        color: _willCancel
+                            ? colorScheme.error
+                            : colorScheme.primary,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        _willCancel
+                            ? 'Release to cancel'
+                            : _formatElapsed(_elapsed),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: _willCancel
+                              ? colorScheme.error
+                              : colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                    ],
+                    HugeIcon(
+                      icon: recording
+                          ? HugeIcons.strokeRoundedRecord
+                          : HugeIcons.strokeRoundedMic02,
+                      size: 25,
+                      color: widget.enabled
+                          ? recording
+                                ? (_willCancel
+                                      ? colorScheme.error
+                                      : colorScheme.primary)
+                                : colorScheme.primary
+                          : colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-              ],
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                visualDensity: VisualDensity.compact,
-                onPressed: widget.enabled ? () {} : null,
-                tooltip: 'Hold to record voice input',
-                icon: HugeIcon(
-                  icon: recording
-                      ? HugeIcons.strokeRoundedRecord
-                      : HugeIcons.strokeRoundedMic02,
-                  size: 25,
-                  color: recording
-                      ? (_willCancel ? colorScheme.error : colorScheme.primary)
-                      : colorScheme.primary,
-                ),
-                splashRadius: 16,
               ),
-            ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+class _VoiceWaveform extends StatelessWidget {
+  const _VoiceWaveform({required this.level, required this.color});
+
+  final double level;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = level.clamp(0.08, 1.0);
+    const weights = <double>[0.42, 0.72, 1, 0.68, 0.46];
+    return SizedBox(
+      width: 24,
+      height: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (final weight in weights)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 90),
+              curve: Curves.easeOut,
+              width: 3,
+              height: 4 + (14 * normalized * weight),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

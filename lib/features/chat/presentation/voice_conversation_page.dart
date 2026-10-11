@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
+import 'package:gena/features/chat/presentation/widgets/voice_crystal_orb.dart';
 
 /// Full-screen hands-free voice conversation UI. A central animated orb reflects
 /// the loop phase (listening / transcribing / thinking / speaking), the live
@@ -66,10 +66,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                         onTap: () =>
                             context.read<VoiceConversationCubit>().onTap(),
                         behavior: HitTestBehavior.opaque,
-                        child: _VoiceOrb(
+                        child: VoiceCrystalOrb(
                           phase: state.phase,
                           micLevel: state.micLevel,
-                          color: colorScheme.primary,
+                          accentColor: colorScheme.primary,
                         ),
                       ),
                     ),
@@ -184,79 +184,3 @@ String _voicePhaseLabel(VoiceConversationPhase phase) => switch (phase) {
   VoiceConversationPhase.thinking => 'Thinking… (tap to cancel)',
   VoiceConversationPhase.speaking => 'Speaking… (tap to interrupt)',
 };
-
-/// Animated orb that pulses/scales differently per phase. While listening it
-/// also reacts to the live mic level for an immediate sense of feedback.
-class _VoiceOrb extends StatelessWidget {
-  const _VoiceOrb({
-    required this.phase,
-    required this.micLevel,
-    required this.color,
-  });
-
-  final VoiceConversationPhase phase;
-  final double micLevel;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    // Mic level (0..1) nudges the listening orb size for live feedback.
-    final levelScale = phase == VoiceConversationPhase.listening
-        ? 1.0 + (micLevel.clamp(0.0, 1.0) * 0.25)
-        : 1.0;
-
-    final orb = AnimatedScale(
-      duration: const Duration(milliseconds: 120),
-      scale: levelScale,
-      child: Container(
-        width: 160,
-        height: 160,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0.65)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.45),
-              blurRadius: 48,
-              spreadRadius: 8,
-            ),
-          ],
-        ),
-        child: Center(
-          child: HugeIcon(icon: _phaseIcon, size: 56, color: Colors.white),
-        ),
-      ),
-    );
-
-    // Phase-specific looping animation, keyed so it restarts on phase change.
-    return switch (phase) {
-      VoiceConversationPhase.thinking =>
-        orb
-            .animate(key: const ValueKey('thinking'), onPlay: (c) => c.repeat())
-            .rotate(duration: 2400.ms),
-      VoiceConversationPhase.speaking =>
-        orb
-            .animate(
-              key: const ValueKey('speaking'),
-              onPlay: (c) => c.repeat(reverse: true),
-            )
-            .scaleXY(begin: 0.94, end: 1.08, duration: 600.ms),
-      VoiceConversationPhase.listening =>
-        orb
-            .animate(
-              key: const ValueKey('listening'),
-              onPlay: (c) => c.repeat(reverse: true),
-            )
-            .scaleXY(begin: 0.98, end: 1.04, duration: 1200.ms),
-      _ => orb,
-    };
-  }
-
-  List<List<dynamic>> get _phaseIcon => switch (phase) {
-    VoiceConversationPhase.speaking => HugeIcons.strokeRoundedVolumeHigh,
-    VoiceConversationPhase.thinking => HugeIcons.strokeRoundedLoading03,
-    _ => HugeIcons.strokeRoundedMic02,
-  };
-}

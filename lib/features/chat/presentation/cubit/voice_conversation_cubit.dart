@@ -81,12 +81,12 @@ class VoiceConversationState {
 ///   → send + thinking → (reply finished) → speaking → listening → …
 /// ```
 ///
-/// Strictly sequential: the microphone and TTS never run at the same time. The
-/// segmenter is paused/stopped before transcribing/thinking/speaking so it never
-/// captures the assistant's own speech (no full-duplex). Tapping during
-/// `speaking` barges in (cancels TTS → listening); tapping during `listening`
-/// ends the current turn now. [exit] tears everything down and returns to
-/// `idle`.
+/// The microphone resumes while TTS is speaking so Silero's validated speech
+/// start can barge in automatically. The recorder uses the platform's acoustic
+/// echo cancellation; a confirmed user voice stops TTS and the remaining chat
+/// generation while the VAD pre-buffer keeps the beginning of the utterance.
+/// Tapping during `speaking` remains a manual barge-in fallback. [exit] tears
+/// everything down and returns to `idle`.
 ///
 /// Errors never crash the loop: STT/generation failures return to listening; a
 /// TTS failure skips speaking and returns to listening.
@@ -138,6 +138,8 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   StreamSubscription<bool>? _speakingSubscription;
 
   bool _wired = false;
+  bool _segmenterCapturing = false;
+  bool _bargeInInFlight = false;
 
   /// Bumped on every [exit] (and re-entry) so a phase that was in flight when
   /// the user exits does not resume the loop afterwards.
@@ -190,13 +192,17 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     _wired = true;
 
     _levelSubscription = _segmenter.levelStream.listen((level) {
-      if (isClosed || !state.isListening) return;
+      if (isClosed || (!state.isListening && !state.isSpeaking)) return;
       emit(state.copyWith(micLevel: level.clamp(0.0, 1.0)));
     }, onError: (_) {});
 
     _speechStartSubscription = _segmenter.onSpeechStart.listen((_) {
-      // Purely a hint that the user has started talking; no phase change. The
-      // orb level already reflects it, so nothing to emit here.
+      final token = _runToken;
+      if (!_running(token) || !state.isSpeaking) return;
+      // VadHandler's `onRealSpeechStart` is emitted only after the configured
+      // consecutive speech frames, so this is already a confidence gate rather
+      // than a raw microphone level spike.
+      unawaited(_bargeIn(token));
     }, onError: (_) {});
 
     _speechSubscription = _segmenter.onSpeech.listen((segment) {
@@ -212,7 +218,7 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     if (!_running(token)) return;
 
     try {
-      await _segmenter.start();
+      await _ensureSegmenterCapturing();
     } catch (error) {
       _reportError(error);
       await _exitInternal();
@@ -406,6 +412,11 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
     }
     if (_speakingSubscription != null) return;
 
+    // Resume VAD while audio is playing. The native recorder is configured for
+    // voice communication/AEC, and only validated speech-start events trigger
+    // automatic interruption.
+    unawaited(_enableBargeInListening(token));
+
     _speakingSubscription = _textToSpeech.speakingChanges.listen((speaking) {
       if (speaking) return;
       if (!_running(token) || state.phase != VoiceConversationPhase.speaking) {
@@ -440,15 +451,57 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   }
 
   Future<void> _bargeIn(int token) async {
-    if (!_running(token) || !state.isSpeaking) return;
-    await _speakingSubscription?.cancel();
-    _speakingSubscription = null;
+    if (!_running(token) || !state.isSpeaking || _bargeInInFlight) return;
+    _bargeInInFlight = true;
     try {
-      await _textToSpeech.stop();
-    } catch (_) {
-      // Stopping is best-effort.
+      await _speakingSubscription?.cancel();
+      _speakingSubscription = null;
+      try {
+        await _textToSpeech.stop();
+      } catch (_) {
+        // Stopping is best-effort.
+      }
+      if (!_running(token)) return;
+
+      emit(
+        state.copyWith(
+          phase: VoiceConversationPhase.listening,
+          partialTranscript: '',
+          micLevel: 0,
+        ),
+      );
+      try {
+        await _ensureSegmenterCapturing();
+      } catch (error) {
+        _reportError(error);
+      }
+
+      final cancelGeneration = _cancelGeneration;
+      if (cancelGeneration != null) {
+        unawaited(_cancelGenerationAfterBargeIn(cancelGeneration));
+      }
+    } finally {
+      _bargeInInFlight = false;
     }
-    await _restartListening(token);
+  }
+
+  Future<void> _enableBargeInListening(int token) async {
+    try {
+      await _ensureSegmenterCapturing();
+    } catch (error) {
+      if (_running(token) && state.isSpeaking) _reportError(error);
+    }
+  }
+
+  Future<void> _cancelGenerationAfterBargeIn(
+    Future<void> Function() cancelGeneration,
+  ) async {
+    try {
+      await cancelGeneration();
+    } catch (_) {
+      // TTS is already stopped and listening has resumed; cancellation of the
+      // remaining text generation is best-effort.
+    }
   }
 
   /// Abandons the active voice turn without closing hands-free mode.
@@ -511,6 +564,7 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   Future<void> _pauseSegmenter() async {
     try {
       await _segmenter.pause();
+      _segmenterCapturing = false;
     } catch (_) {
       // Pausing is best-effort.
     }
@@ -519,9 +573,16 @@ class VoiceConversationCubit extends Cubit<VoiceConversationState> {
   Future<void> _safeStopSegmenter() async {
     try {
       await _segmenter.stop();
+      _segmenterCapturing = false;
     } catch (_) {
       // Stopping is best-effort.
     }
+  }
+
+  Future<void> _ensureSegmenterCapturing() async {
+    if (_segmenterCapturing) return;
+    await _segmenter.start();
+    _segmenterCapturing = true;
   }
 
   void _reportError(Object error) {

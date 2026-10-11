@@ -428,6 +428,31 @@ void main() {
   );
 
   test(
+    'validated speech automatically interrupts playback and generation',
+    () async {
+      var cancelCalls = 0;
+      final cubit = build(cancelGeneration: () async => cancelCalls++);
+
+      await cubit.enter();
+      await _speak(cubit, seg);
+      expect(cubit.state.phase, VoiceConversationPhase.speaking);
+      expect(seg.startCount, 2, reason: 'VAD resumes while TTS is playing');
+
+      seg.emitLevel(0.9);
+      seg.emitSpeechStart();
+      await _settle();
+      await _settle();
+
+      expect(tts.stopCount, greaterThanOrEqualTo(1));
+      expect(cancelCalls, 1);
+      expect(cubit.state.phase, VoiceConversationPhase.listening);
+
+      await cubit.exit();
+      await cubit.close();
+    },
+  );
+
+  test(
     'cancel during generation stops the turn and resumes listening',
     () async {
       gen.resultGate = Completer<String?>();

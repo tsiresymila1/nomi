@@ -132,7 +132,7 @@ void main() {
       },
     );
 
-    await tester.tap(find.text('Add GGUF model'));
+    await tester.tap(find.text('Add image model'));
     await tester.pumpAndSettle();
 
     expect(pickerCalls, 1);

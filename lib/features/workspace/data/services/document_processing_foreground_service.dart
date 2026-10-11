@@ -1,15 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-
-const int documentProcessingForegroundThresholdBytes = 8 * 1024 * 1024;
+import 'package:gena/core/platform/task_notification_permission.dart';
 
 bool requiresDocumentProcessingForeground({
   required String platform,
   required int sizeBytes,
 }) {
-  return platform.toLowerCase() == 'android' &&
-      sizeBytes >= documentProcessingForegroundThresholdBytes;
+  return platform.toLowerCase() == 'android';
 }
 
 abstract interface class DocumentProcessingForegroundController {
@@ -25,11 +23,15 @@ abstract interface class DocumentProcessingForegroundController {
 
 class AndroidDocumentProcessingForegroundController
     implements DocumentProcessingForegroundController {
-  const AndroidDocumentProcessingForegroundController();
+  AndroidDocumentProcessingForegroundController({
+    TaskNotificationPermissionService? notificationPermission,
+  }) : _notificationPermission =
+           notificationPermission ?? TaskNotificationPermissionService.instance;
 
   static const MethodChannel _channel = MethodChannel(
     'gena/document_processing',
   );
+  final TaskNotificationPermissionService _notificationPermission;
 
   @override
   Future<bool> startIfNeeded({
@@ -42,6 +44,7 @@ class AndroidDocumentProcessingForegroundController
     )) {
       return false;
     }
+    await _notificationPermission.ensureGranted();
     try {
       await _channel.invokeMethod<void>('start', {'name': documentName});
       return true;

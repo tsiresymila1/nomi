@@ -3,9 +3,8 @@ import 'package:gena/features/workspace/data/models/workspace_embedder_install_s
 
 /// Reports the workspace RAG engine readiness/indexing state.
 ///
-/// The embedding model is bundled with the app and provisioned by
-/// `mobile_rag_engine`, so there is no download progress — this card surfaces
-/// engine initialization status and lets the user re-check readiness.
+/// The embedding model is downloaded on first use. This card surfaces engine
+/// initialization status and lets the user re-check readiness.
 class WorkspaceEmbedderStatusCard extends StatelessWidget {
   const WorkspaceEmbedderStatusCard({
     super.key,

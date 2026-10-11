@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gena/core/platform/task_notification_permission.dart';
 import 'package:gena/features/downloads/data/services/model_download_task.dart';
 
 export 'package:gena/features/downloads/data/services/model_download_task.dart'
@@ -77,8 +78,8 @@ class ModelBackgroundDownloadService {
     _downloader.configureNotificationForGroup(
       modelDownloadsGroup,
       running: const TaskNotification(
-        'Downloading model',
-        '{displayName} · {progress}',
+        'Nomi · Downloading {displayName}',
+        '{progress} · {networkSpeed} · {timeRemaining} remaining',
       ),
       complete: const TaskNotification(
         'Model downloaded',
@@ -115,13 +116,6 @@ class ModelBackgroundDownloadService {
       _storeSnapshot(modelDownloadSnapshotFromRecord(record));
     }
     _emitSnapshots();
-
-    final notificationPermission = await _downloader.permissions.status(
-      PermissionType.notifications,
-    );
-    if (notificationPermission == PermissionStatus.undetermined) {
-      await _downloader.permissions.request(PermissionType.notifications);
-    }
   }
 
   Future<DownloadedModelFile> downloadModelToFile({
@@ -149,6 +143,8 @@ class ModelBackgroundDownloadService {
         sizeBytes: await output.length(),
       );
     }
+
+    await TaskNotificationPermissionService.instance.ensureGranted();
 
     final activeTaskId = activeModelDownloadTaskId(
       modelKey: modelKey,

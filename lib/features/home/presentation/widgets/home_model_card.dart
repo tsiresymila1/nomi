@@ -90,7 +90,7 @@ class HomeModelCard extends StatelessWidget {
               subtitle: Text(
                 !capabilities.supportsWorkspaceRag
                     ? capabilities.workspaceRagUnavailableMessage
-                    : 'On-device embedding engine (bundled model)',
+                    : 'On-device embedding engine (downloaded on first use)',
                 style: const TextStyle(fontSize: 12),
               ),
             ),

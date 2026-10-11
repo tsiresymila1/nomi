@@ -1,8 +1,18 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:dio/dio.dart';
+import 'package:gena/features/downloads/data/services/model_background_download_service.dart';
 import 'package:path_provider/path_provider.dart';
+
+typedef RagModelDirectoryProvider = Future<Directory> Function();
+typedef RagModelDigestProvider = Future<String> Function(File file);
+typedef RagModelDownload =
+    Future<DownloadedModelFile> Function({
+      required String modelKey,
+      required String modelName,
+      required String sourceUrl,
+      void Function(double progress, String message)? onProgress,
+    });
 
 /// Downloads the workspace-RAG embedding model + tokenizer on first use.
 ///
@@ -16,9 +26,20 @@ import 'package:path_provider/path_provider.dart';
 /// The downloaded filenames MUST match the basenames passed as `modelAsset` /
 /// `tokenizerAsset` to `MobileRag.initialize` (`model.onnx`, `tokenizer.json`).
 class RagModelProvisioner {
-  RagModelProvisioner({Dio? dio}) : _dio = dio ?? Dio();
+  RagModelProvisioner({
+    RagModelDirectoryProvider? directoryProvider,
+    RagModelDigestProvider? digestProvider,
+    RagModelDownload? download,
+  }) : _directoryProvider =
+           directoryProvider ?? getApplicationDocumentsDirectory,
+       _digestProvider = digestProvider ?? _streamingSha256,
+       _download =
+           download ??
+           ModelBackgroundDownloadService.instance.downloadModelToFile;
 
-  final Dio _dio;
+  final RagModelDirectoryProvider _directoryProvider;
+  final RagModelDigestProvider _digestProvider;
+  final RagModelDownload _download;
 
   static Future<void>? _inFlight;
 
@@ -27,6 +48,7 @@ class RagModelProvisioner {
   /// cross-architecture under onnxruntime (slower off-target). To require x86
   /// emulators, swap [_model] to the fp32 `onnx/model.onnx` build.
   static const _model = _RagAsset(
+    label: 'Workspace RAG model',
     fileName: 'model.onnx',
     url:
         'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model_qint8_arm64.onnx',
@@ -35,6 +57,7 @@ class RagModelProvisioner {
   );
 
   static const _tokenizer = _RagAsset(
+    label: 'Workspace RAG tokenizer',
     fileName: 'tokenizer.json',
     url:
         'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json',
@@ -51,7 +74,8 @@ class RagModelProvisioner {
   }
 
   Future<void> _ensure({void Function(String status)? onProgress}) async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _directoryProvider();
+    if (!await dir.exists()) await dir.create(recursive: true);
     await _ensureAsset(dir, _tokenizer, onProgress: onProgress);
     await _ensureAsset(dir, _model, onProgress: onProgress);
   }
@@ -66,26 +90,37 @@ class RagModelProvisioner {
       return;
     }
 
-    onProgress?.call('Downloading ${asset.fileName}...');
-    final temp = File('${target.path}.download');
-    if (await temp.exists()) await temp.delete();
+    onProgress?.call('Downloading ${asset.label}...');
+    File? downloadedFile;
 
     try {
-      await _dio.download(
-        asset.url,
-        temp.path,
-        options: Options(followRedirects: true, receiveTimeout: null),
+      final downloaded = await _download(
+        modelKey: 'workspace-rag:${asset.fileName}',
+        modelName: asset.label,
+        sourceUrl: asset.url,
+        onProgress: (progress, _) => onProgress?.call(
+          'Downloading ${asset.label} ${(progress * 100).round()}%',
+        ),
       );
+      downloadedFile = File(downloaded.path);
     } catch (error) {
-      if (await temp.exists()) await temp.delete();
       throw RagModelDownloadException(
         'Failed to download ${asset.fileName}: $error',
       );
     }
 
-    final digest = sha256.convert(await temp.readAsBytes()).toString();
+    if (!await downloadedFile.exists() ||
+        await downloadedFile.length() != asset.sizeBytes) {
+      await _deleteIfPresent(downloadedFile);
+      throw RagModelDownloadException(
+        '${asset.fileName} has an unexpected download size.',
+      );
+    }
+
+    onProgress?.call('Verifying ${asset.label}...');
+    final digest = await _digestProvider(downloadedFile);
     if (digest != asset.sha256) {
-      await temp.delete();
+      await _deleteIfPresent(downloadedFile);
       throw RagModelDownloadException(
         '${asset.fileName} checksum mismatch (expected ${asset.sha256}, '
         'got $digest).',
@@ -93,18 +128,27 @@ class RagModelProvisioner {
     }
 
     if (await target.exists()) await target.delete();
-    await temp.rename(target.path);
+    await downloadedFile.rename(target.path);
+  }
+
+  static Future<String> _streamingSha256(File file) async =>
+      (await sha256.bind(file.openRead()).first).toString();
+
+  static Future<void> _deleteIfPresent(File file) async {
+    if (await file.exists()) await file.delete();
   }
 }
 
 class _RagAsset {
   const _RagAsset({
+    required this.label,
     required this.fileName,
     required this.url,
     required this.sha256,
     required this.sizeBytes,
   });
 
+  final String label;
   final String fileName;
   final String url;
   final String sha256;

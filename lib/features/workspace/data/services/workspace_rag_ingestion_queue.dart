@@ -22,7 +22,7 @@ class WorkspaceRagIngestionQueue {
        _vectorStore = vectorStore,
        _foregroundController =
            foregroundController ??
-           const AndroidDocumentProcessingForegroundController(),
+           AndroidDocumentProcessingForegroundController(),
        _capabilities = capabilities ?? AppCapabilities.current;
 
   final db.GenaDatabase _database;

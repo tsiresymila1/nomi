@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:genkit/genkit.dart';
 import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:llamadart/llamadart.dart' show ComputeDevice;
 
@@ -51,29 +50,37 @@ class _LlamadartRuntimeLoader implements LocalRuntimeLoader {
     }
 
     final modelId = localModelIdForPath(canonical);
-    final definition = LlamaModelDefinition(
+    final prepared = await llamaDart.prepareModel(
       name: modelId,
-      modelPath: canonical,
-      mmprojPath: mmprojPath,
+      source: ModelSource.path(canonical),
+      mmprojSource: mmprojPath == null ? null : ModelSource.path(mmprojPath),
       modelParams: buildLocalModelParams(request),
       supportsEmbeddings: false,
       supportsTools: true,
       supportsConstrainedOutput: request.constrainedOutput,
     );
+    final ai = prepared.createGenkit();
 
-    final plugin = LlamaDartPlugin(models: <LlamaModelDefinition>[definition]);
-    final modelRef = llamaDart.model(modelId);
-    final ai = Genkit(plugins: <LlamaDartPlugin>[plugin], model: modelRef);
+    try {
+      // Preparing a local path only validates it and registers the plugin. The
+      // tiny generation below performs the actual native load while the model
+      // switch loader is visible instead of delaying the first chat message.
+      await prepared.warmUp(ai);
 
-    return LoadedLocalRuntime(
-      ai: ai,
-      modelRef: modelRef,
-      modelId: modelId,
-      cancel: () => plugin.cancelActiveGeneration(definition.name),
-      dispose: () async {
-        await plugin.dispose();
-        await ai.shutdown();
-      },
-    );
+      return LoadedLocalRuntime(
+        ai: ai,
+        modelRef: prepared.modelRef,
+        modelId: modelId,
+        cancel: prepared.cancelActiveGeneration,
+        dispose: () async {
+          await prepared.dispose();
+          await ai.shutdown();
+        },
+      );
+    } catch (_) {
+      await prepared.dispose();
+      await ai.shutdown();
+      rethrow;
+    }
   }
 }

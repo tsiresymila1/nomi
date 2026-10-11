@@ -133,6 +133,7 @@ class LoadedLocalRuntime {
 /// Loads the underlying native runtime. Injected so the caching state machine
 /// is testable without native libraries.
 abstract interface class LocalRuntimeLoader {
+  /// Returns only after the native runtime is loaded and ready to generate.
   Future<LoadedLocalRuntime> load(LocalRuntimeRequest request);
 }
 

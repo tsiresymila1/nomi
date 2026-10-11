@@ -14,10 +14,12 @@ LocalNeuralTextToSpeech createPlatformLocalNeuralTextToSpeech({
   required LlamaDartTtsModelStore modelStore,
   required LocalAiRuntimeCoordinator coordinator,
   required String? Function() languageCode,
+  required LlamaDartTtsModelProfile Function() selectedProfile,
 }) => LlamaDartTextToSpeech(
   modelStore: modelStore,
   coordinator: coordinator,
   languageCode: languageCode,
+  selectedProfile: selectedProfile,
 );
 
 class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
@@ -25,17 +27,20 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
     required LlamaDartTtsModelStore modelStore,
     required LocalAiRuntimeCoordinator coordinator,
     required String? Function() languageCode,
+    required LlamaDartTtsModelProfile Function() selectedProfile,
     AudioPlayer? audioPlayer,
     AudioPlayer Function()? audioPlayerFactory,
   }) : _modelStore = modelStore,
        _coordinator = coordinator,
        _languageCode = languageCode,
+       _selectedProfile = selectedProfile,
        _player = audioPlayer,
        _audioPlayerFactory = audioPlayerFactory ?? AudioPlayer.new;
 
   final LlamaDartTtsModelStore _modelStore;
   final LocalAiRuntimeCoordinator _coordinator;
   final String? Function() _languageCode;
+  final LlamaDartTtsModelProfile Function() _selectedProfile;
   final AudioPlayer Function() _audioPlayerFactory;
   AudioPlayer? _player;
   final StreamController<bool> _speakingController =
@@ -74,10 +79,11 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
       );
     }
     if (_engine != null && _lease?.isActive == true) return;
-    final installed = await _modelStore.resolve(qwen3Tts17bQ4);
+    final selectedProfile = _selectedProfile();
+    final installed = await _modelStore.resolve(selectedProfile);
     if (installed == null) {
-      throw const TextToSpeechException(
-        'Install the Qwen3-TTS model before selecting Local AI voice.',
+      throw TextToSpeechException(
+        'Install or locate ${selectedProfile.name} before selecting Local AI voice.',
       );
     }
     final lease = await _coordinator.acquire(

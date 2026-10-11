@@ -3,8 +3,15 @@ import 'package:gena/features/chat/data/models/llamadart_tts_model_profile.dart'
 import 'package:gena/features/chat/data/services/llamadart_tts_model_store.dart';
 import 'package:gena/features/chat/data/services/local_neural_text_to_speech.dart';
 import 'package:gena/features/chat/presentation/cubit/llamadart_tts_model_cubit.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+
+import '../../../../support/in_memory_hydrated_storage.dart';
 
 void main() {
+  setUp(() {
+    HydratedBloc.storage = InMemoryHydratedStorage();
+  });
+
   test('installs and preloads the neural voice runtime', () async {
     final store = _FakeStore();
     final tts = _FakeLocalTextToSpeech();
@@ -19,6 +26,28 @@ void main() {
     expect(tts.prepareCount, 1);
     expect(cubit.state.phase, LlamaDartTtsModelPhase.ready);
   });
+
+  test('persists and preloads a custom Qwen3-TTS pair', () async {
+    final store = _FakeStore();
+    final tts = _FakeLocalTextToSpeech();
+    final cubit = LlamaDartTtsModelCubit(store: store, textToSpeech: tts);
+    addTearDown(cubit.close);
+
+    final profile = await cubit.registerExternal(
+      name: 'Custom Qwen3-TTS',
+      modelPath: '/custom/model.gguf',
+      modelSizeBytes: 10,
+      projectorPath: '/custom/mmproj.gguf',
+      projectorSizeBytes: 5,
+    );
+
+    expect(cubit.state.profile, profile);
+    expect(cubit.state.customProfiles, <LlamaDartTtsModelProfile>[profile]);
+    expect(cubit.state.phase, LlamaDartTtsModelPhase.ready);
+    expect(tts.prepareCount, 1);
+    final restored = cubit.fromJson(cubit.toJson(cubit.state)!)!;
+    expect(restored.profile, profile);
+  });
 }
 
 class _FakeStore implements LlamaDartTtsModelStore {
@@ -27,11 +56,12 @@ class _FakeStore implements LlamaDartTtsModelStore {
   @override
   bool get isSupported => true;
 
-  InstalledLlamaDartTtsModel get _model => InstalledLlamaDartTtsModel(
-    profile: qwen3Tts17bQ4,
-    modelPath: '/model.gguf',
-    projectorPath: '/mmproj.gguf',
-  );
+  InstalledLlamaDartTtsModel _model(LlamaDartTtsModelProfile profile) =>
+      InstalledLlamaDartTtsModel(
+        profile: profile,
+        modelPath: '/model.gguf',
+        projectorPath: '/mmproj.gguf',
+      );
 
   @override
   Future<void> cancelInstall(LlamaDartTtsModelProfile profile) async {}
@@ -50,13 +80,13 @@ class _FakeStore implements LlamaDartTtsModelStore {
     onProgress(0.5, 'Downloading');
     onVerifying('Verifying');
     installed = true;
-    return _model;
+    return _model(profile);
   }
 
   @override
   Future<InstalledLlamaDartTtsModel?> resolve(
     LlamaDartTtsModelProfile profile,
-  ) async => installed ? _model : null;
+  ) async => installed || profile.isExternal ? _model(profile) : null;
 }
 
 class _FakeLocalTextToSpeech implements LocalNeuralTextToSpeech {

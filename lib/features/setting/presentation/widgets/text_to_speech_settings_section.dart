@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/features/chat/data/models/llamadart_tts_model_profile.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/chat/presentation/cubit/llamadart_tts_model_cubit.dart';
+import 'package:gena/features/downloads/data/services/direct_model_file_picker.dart';
 import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
+
+typedef TtsModelPathPicker = Future<String?> Function();
 
 class TextToSpeechSettingsSection extends StatefulWidget {
   const TextToSpeechSettingsSection({
@@ -14,6 +18,8 @@ class TextToSpeechSettingsSection extends StatefulWidget {
     required this.textToSpeech,
     this.llamaDartCubit,
     this.initiallyExpanded = false,
+    this.ttsModelPathPicker,
+    this.ttsProjectorPathPicker,
     TextToSpeech? playback,
   }) : playback = playback ?? textToSpeech;
 
@@ -22,6 +28,8 @@ class TextToSpeechSettingsSection extends StatefulWidget {
   final LlamaDartTtsModelCubit? llamaDartCubit;
   final TextToSpeech playback;
   final bool initiallyExpanded;
+  final TtsModelPathPicker? ttsModelPathPicker;
+  final TtsModelPathPicker? ttsProjectorPathPicker;
 
   @override
   State<TextToSpeechSettingsSection> createState() =>
@@ -205,6 +213,56 @@ class _TextToSpeechSettingsSectionState
     await llamaDartCubit?.deactivate();
   }
 
+  Future<void> _addExternalTtsModel() async {
+    final cubit = widget.llamaDartCubit;
+    if (cubit == null) return;
+    try {
+      final modelPath =
+          await (widget.ttsModelPathPicker?.call() ??
+              DirectModelFilePicker.pickModelPath(
+                allowedExtensions: const <String>['gguf'],
+                dialogTitle: 'Select Qwen3-TTS GGUF',
+              ));
+      if (modelPath == null || !mounted) return;
+      final projectorPath =
+          await (widget.ttsProjectorPathPicker?.call() ??
+              DirectModelFilePicker.pickModelPath(
+                allowedExtensions: const <String>['gguf'],
+                dialogTitle: 'Select Qwen3-TTS mmproj GGUF',
+              ));
+      if (projectorPath == null || !mounted) return;
+      if (!modelPath.toLowerCase().endsWith('.gguf') ||
+          !projectorPath.toLowerCase().endsWith('.gguf')) {
+        throw const DirectModelFilePickerException(
+          'Choose both the Qwen3-TTS model and its .gguf projector.',
+        );
+      }
+      final modelSize = await File(modelPath).length();
+      final projectorSize = await File(projectorPath).length();
+      if (modelSize <= 0 || projectorSize <= 0) {
+        throw const DirectModelFilePickerException(
+          'The selected TTS model files are empty.',
+        );
+      }
+      final modelName = modelPath
+          .split(RegExp(r'[/\\]'))
+          .last
+          .replaceFirst(RegExp(r'\.gguf$', caseSensitive: false), '');
+      await cubit.registerExternal(
+        name: modelName,
+        modelPath: modelPath,
+        modelSizeBytes: modelSize,
+        projectorPath: projectorPath,
+        projectorSizeBytes: projectorSize,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('TTS model import failed: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -261,6 +319,7 @@ class _TextToSpeechSettingsSectionState
                     cubit: llamaDartCubit,
                     previewing: _previewing,
                     onPreview: _preview,
+                    onAddExternal: _addExternalTtsModel,
                   )
                 else if (_loading)
                   const LinearProgressIndicator(minHeight: 2)
@@ -337,11 +396,41 @@ class _LlamaDartTtsModelPanel extends StatelessWidget {
     required this.cubit,
     required this.previewing,
     required this.onPreview,
+    required this.onAddExternal,
   });
 
   final LlamaDartTtsModelCubit cubit;
   final bool previewing;
   final VoidCallback onPreview;
+  final VoidCallback onAddExternal;
+
+  Future<void> _selectProfile(
+    BuildContext context,
+    LlamaDartTtsModelProfile profile,
+  ) async {
+    if (profile == cubit.state.profile) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Use ${profile.name}?'),
+        content: const Text(
+          'The current local AI runtime will be released, then this voice '
+          'model will be preloaded.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Use model'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await cubit.selectProfile(profile);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -354,22 +443,46 @@ class _LlamaDartTtsModelPanel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                state.installed
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.graphic_eq_rounded,
+            for (final profile in state.allProfiles)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: !state.isBusy,
+                onTap: () => _selectProfile(context, profile),
+                leading: Icon(
+                  state.profile == profile
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: state.profile == profile
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                title: Text(profile.name),
+                subtitle: Text(
+                  '${profile.isExternal ? 'Custom GGUF pair' : 'French + 9 languages'} · ${_formatSize(profile.totalSizeBytes)}\n'
+                  'Experimental on 4 GB · ${profile.minimumRamGb} GB RAM recommended',
+                ),
+                isThreeLine: true,
+                trailing:
+                    state.profile == profile &&
+                        state.phase == LlamaDartTtsModelPhase.ready
+                    ? const Chip(label: Text('Ready'))
+                    : profile.isExternal
+                    ? IconButton(
+                        tooltip: 'Remove from list',
+                        onPressed: state.isBusy
+                            ? null
+                            : () => cubit.removeCustom(profile.id),
+                        icon: const Icon(Icons.close_rounded),
+                      )
+                    : null,
               ),
-              title: Text(qwen3Tts17bQ4.name),
-              subtitle: const Text(
-                'About 1.5 GB · French + 9 languages\n'
-                'Experimental on 4 GB · 6 GB RAM recommended',
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: state.isBusy ? null : onAddExternal,
+                icon: const Icon(Icons.folder_open_rounded),
+                label: const Text('Add Qwen3-TTS GGUF pair'),
               ),
-              isThreeLine: true,
-              trailing: state.phase == LlamaDartTtsModelPhase.ready
-                  ? const Chip(label: Text('Ready'))
-                  : null,
             ),
             if (state.isBusy || downloading) ...[
               LinearProgressIndicator(
@@ -405,7 +518,11 @@ class _LlamaDartTtsModelPanel extends StatelessWidget {
                 else if (state.installed) ...[
                   TextButton(
                     onPressed: state.isBusy ? null : cubit.remove,
-                    child: const Text('Remove'),
+                    child: Text(
+                      state.profile.isExternal
+                          ? 'Remove from list'
+                          : 'Remove download',
+                    ),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.tonalIcon(
@@ -418,7 +535,7 @@ class _LlamaDartTtsModelPanel extends StatelessWidget {
                         : const Icon(Icons.play_arrow_rounded),
                     label: const Text('Preview'),
                   ),
-                ] else
+                ] else if (!state.profile.isExternal)
                   FilledButton.tonalIcon(
                     onPressed: state.isBusy ? null : cubit.install,
                     icon: const Icon(Icons.download_rounded),
@@ -430,6 +547,13 @@ class _LlamaDartTtsModelPanel extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _formatSize(int bytes) {
+    final gb = bytes / (1024 * 1024 * 1024);
+    return gb >= 1
+        ? '${gb.toStringAsFixed(1)} GB'
+        : '${(bytes / (1024 * 1024)).round()} MB';
   }
 }
 

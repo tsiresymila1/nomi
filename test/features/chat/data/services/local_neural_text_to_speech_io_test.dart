@@ -14,6 +14,7 @@ void main() {
       modelStore: _ModelStoreFake(),
       coordinator: coordinator,
       languageCode: () => 'fr',
+      selectedProfile: () => qwen3Tts17bQ4,
       audioPlayerFactory: () {
         factoryCalls++;
         throw StateError('Audio player should stay lazy.');

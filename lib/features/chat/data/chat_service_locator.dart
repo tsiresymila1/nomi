@@ -156,6 +156,7 @@ void registerChatDependencies() {
         modelStore: sl<LlamaDartTtsModelStore>(),
         coordinator: sl<LocalAiRuntimeCoordinator>(),
         languageCode: () => sl<TextToSpeechSettingsCubit>().state.voiceLocale,
+        selectedProfile: () => sl<LlamaDartTtsModelCubit>().state.profile,
       ),
     );
   }

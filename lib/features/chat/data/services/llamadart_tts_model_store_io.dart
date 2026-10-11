@@ -23,6 +23,7 @@ class IoLlamaDartTtsModelStore implements LlamaDartTtsModelStore {
   Future<InstalledLlamaDartTtsModel?> resolve(
     LlamaDartTtsModelProfile profile,
   ) async {
+    if (profile.isExternal) return _resolveExternal(profile);
     final directory = await _modelsDirectory();
     final model = File('${directory.path}/${profile.modelFileName}');
     final projector = File('${directory.path}/${profile.projectorFileName}');
@@ -51,6 +52,16 @@ class IoLlamaDartTtsModelStore implements LlamaDartTtsModelStore {
     required void Function(double progress, String message) onProgress,
     required void Function(String message) onVerifying,
   }) async {
+    if (profile.isExternal) {
+      final installed = await _resolveExternal(profile);
+      if (installed == null) {
+        throw StateError(
+          'The external Qwen3-TTS model or projector is unavailable.',
+        );
+      }
+      onProgress(1, '${profile.name} is ready');
+      return installed;
+    }
     final existing = await resolve(profile);
     if (existing != null) return existing;
 
@@ -137,6 +148,7 @@ class IoLlamaDartTtsModelStore implements LlamaDartTtsModelStore {
 
   @override
   Future<void> cancelInstall(LlamaDartTtsModelProfile profile) async {
+    if (profile.isExternal) return;
     await Future.wait([
       ModelBackgroundDownloadService.instance.cancelDownload(
         _modelKey(profile),
@@ -149,6 +161,7 @@ class IoLlamaDartTtsModelStore implements LlamaDartTtsModelStore {
 
   @override
   Future<void> delete(LlamaDartTtsModelProfile profile) async {
+    if (profile.isExternal) return;
     await cancelInstall(profile);
     final directory = await _modelsDirectory();
     await _deleteFileAndMarker(
@@ -175,6 +188,38 @@ class IoLlamaDartTtsModelStore implements LlamaDartTtsModelStore {
     if (digest.toLowerCase() != expectedSha256.toLowerCase()) return false;
     await marker.writeAsString(expectedSha256, flush: true);
     return true;
+  }
+
+  Future<InstalledLlamaDartTtsModel?> _resolveExternal(
+    LlamaDartTtsModelProfile profile,
+  ) async {
+    final modelPath = profile.modelPath;
+    final projectorPath = profile.projectorPath;
+    if (modelPath == null ||
+        projectorPath == null ||
+        !modelPath.toLowerCase().endsWith('.gguf') ||
+        !projectorPath.toLowerCase().endsWith('.gguf')) {
+      return null;
+    }
+    final model = File(modelPath);
+    final projector = File(projectorPath);
+    try {
+      if (!await model.exists() ||
+          !await projector.exists() ||
+          await model.length() != profile.modelSizeBytes ||
+          await projector.length() != profile.projectorSizeBytes) {
+        return null;
+      }
+      await model.openRead(0, 1).drain<void>();
+      await projector.openRead(0, 1).drain<void>();
+      return InstalledLlamaDartTtsModel(
+        profile: profile,
+        modelPath: modelPath,
+        projectorPath: projectorPath,
+      );
+    } on FileSystemException {
+      return null;
+    }
   }
 
   Future<Directory> _modelsDirectory() async {

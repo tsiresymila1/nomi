@@ -29,53 +29,74 @@ class DownloadItemActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canDownload = !isDownloading && !isRemote && !isInstalled;
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Edit'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.outlined(
-          tooltip: 'Download model',
-          onPressed: isDownloading || isRemote || isInstalled
-              ? null
-              : onDownload,
-          icon: isRemote
-              ? HugeIcon(
-                  icon: HugeIcons.strokeRoundedCloudDownload,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.primary,
-                )
-              : isNetworkSource
-              ? HugeIcon(
-                  icon: HugeIcons.strokeRoundedDownload01,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.primary,
-                )
-              : const HugeIcon(
-                  icon: HugeIcons.strokeRoundedComputerAdd,
-                  size: 18,
+        if (canDownload)
+          FilledButton.tonalIcon(
+            key: const ValueKey('model-primary-download'),
+            onPressed: onDownload,
+            icon: isNetworkSource
+                ? const HugeIcon(
+                    icon: HugeIcons.strokeRoundedDownload01,
+                    size: 18,
+                  )
+                : const HugeIcon(
+                    icon: HugeIcons.strokeRoundedComputerAdd,
+                    size: 18,
+                  ),
+            label: Text(isNetworkSource ? 'Download' : 'Choose file'),
+          )
+        else
+          const Spacer(),
+        if (canDownload) const Spacer(),
+        PopupMenuButton<_ModelAction>(
+          key: const ValueKey('model-more-actions'),
+          tooltip: 'More model actions',
+          enabled: !isDownloading,
+          onSelected: (action) {
+            switch (action) {
+              case _ModelAction.edit:
+                onEdit();
+              case _ModelAction.deleteFile:
+                onDeleteDownloadedFile();
+              case _ModelAction.remove:
+                onRemove();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: _ModelAction.edit,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.edit_outlined),
+                title: Text('Edit details'),
+              ),
+            ),
+            if (canDeleteDownloadedFile)
+              const PopupMenuItem(
+                value: _ModelAction.deleteFile,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.delete_sweep_outlined),
+                  title: Text('Delete downloaded file'),
                 ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filledTonal(
-          tooltip: 'Delete downloaded file',
-          onPressed: canDeleteDownloadedFile && !isDownloading
-              ? onDeleteDownloadedFile
-              : null,
-          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filledTonal(
-          tooltip: canRemove ? 'Remove model' : 'Static default model',
-          onPressed: !canRemove || isDownloading ? null : onRemove,
-          icon: const HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18),
+              ),
+            if (canRemove)
+              const PopupMenuItem(
+                value: _ModelAction.remove,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('Remove model'),
+                ),
+              ),
+          ],
+          icon: const Icon(Icons.more_vert_rounded),
         ),
       ],
     );
   }
 }
+
+enum _ModelAction { edit, deleteFile, remove }

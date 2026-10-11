@@ -145,7 +145,6 @@ final List<DefaultSeedModel> kDefaultSeedModels = <DefaultSeedModel>[
     recommendedRamGb: 3,
     parameterCountB: 0.6,
     supportsFunctionCalls: true,
-    isThinking: true,
   ),
   const DefaultSeedModel(
     key: 'gemma3_1b_it_q4_k_m',

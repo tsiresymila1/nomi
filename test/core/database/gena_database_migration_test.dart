@@ -4,11 +4,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart';
 
 void main() {
-  test('schemaVersion is 17', () {
+  test('schemaVersion is 18', () {
     final database = GenaDatabase(NativeDatabase.memory());
     addTearDown(database.close);
-    expect(database.schemaVersion, 17);
+    expect(database.schemaVersion, 18);
   });
+
+  test(
+    'v18 disables default Qwen thinking without changing other models',
+    () async {
+      final executor = NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+          CREATE TABLE models (
+            name TEXT NOT NULL,
+            is_thinking INTEGER NOT NULL
+          )
+        ''');
+          raw.execute(
+            "INSERT INTO models (name, is_thinking) VALUES "
+            "('Qwen3 0.6B Q4_K_M', 1), ('Custom reasoning model', 1)",
+          );
+          raw.execute('PRAGMA user_version = 17');
+        },
+      );
+      final database = GenaDatabase(executor);
+      addTearDown(database.close);
+
+      final rows = await database
+          .customSelect('SELECT name, is_thinking FROM models ORDER BY name')
+          .get();
+
+      expect(
+        rows.map(
+          (row) => (row.read<String>('name'), row.read<int>('is_thinking')),
+        ),
+        <(String, int)>[
+          ('Custom reasoning model', 1),
+          ('Qwen3 0.6B Q4_K_M', 0),
+        ],
+      );
+    },
+  );
 
   test('fresh database exposes mcp servers table and workspace flag', () async {
     final database = GenaDatabase(NativeDatabase.memory());

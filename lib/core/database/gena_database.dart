@@ -121,7 +121,7 @@ class GenaDatabase extends _$GenaDatabase {
   GenaDatabase(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -228,6 +228,16 @@ class GenaDatabase extends _$GenaDatabase {
       }
       if (from < 17) {
         await m.createTable(messageAttachments);
+      }
+      if (from < 18) {
+        // Qwen3's reasoning mode can spend a long time generating hidden
+        // tokens before any answer is visible. Keep it opt-in for the
+        // lightweight default model; users can enable it again in model
+        // settings when a task benefits from deeper reasoning.
+        await customStatement(
+          "UPDATE models SET is_thinking = 0 "
+          "WHERE LOWER(TRIM(name)) = 'qwen3 0.6b q4_k_m'",
+        );
       }
     },
   );

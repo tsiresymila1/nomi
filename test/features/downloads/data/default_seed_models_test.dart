@@ -108,6 +108,7 @@ void main() {
     expect(model.key, 'qwen3_0_6b_q4_k_m');
     expect(model.recommendedRamGb, lessThanOrEqualTo(4));
     expect(model.preferredBackend.name, 'cpu');
+    expect(model.isThinking, isFalse);
   });
 
   group('matchesModelNameOrSource', () {

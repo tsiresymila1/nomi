@@ -266,6 +266,9 @@ class ChatPageActions {
       }
 
       await _selectedModelCubit.selectModel(target.id);
+      if (target.provider == ModelProviderType.local) {
+        await _chatThreadActions.primeCurrentContext(activeModel: target);
+      }
       _chatModelSwitchingCubit.complete(operationId);
     } catch (error, stackTrace) {
       logger.e(
@@ -353,6 +356,7 @@ class ChatPageActions {
     final model = await _activeModelInfoResolver.getActiveModelInfo();
     if (model == null || model.provider != ModelProviderType.local) return;
     await _localModelRuntime.prepare(model);
+    await _chatThreadActions.primeCurrentContext(activeModel: model);
   }
 
   void _requestStopGenerationInBackground() {

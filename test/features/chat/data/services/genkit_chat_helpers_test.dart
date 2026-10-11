@@ -281,6 +281,66 @@ void main() {
     });
   });
 
+  group('buildChatContextPrimeMessages', () {
+    test('keeps completed history and appends a disposable user turn', () {
+      final messages = buildChatContextPrimeMessages([
+        Message(
+          role: Role.system,
+          content: [TextPart(text: 'Be concise.')],
+        ),
+        Message(
+          role: Role.user,
+          content: [TextPart(text: 'Hello')],
+        ),
+        Message(
+          role: Role.model,
+          content: [TextPart(text: 'Hi')],
+        ),
+      ]);
+
+      expect(messages, hasLength(4));
+      expect(messages[0].role, Role.system);
+      expect(messages[1].role, Role.user);
+      expect(messages[2].role, Role.model);
+      expect(messages.last.role, Role.user);
+      expect(messages.last.content.single.text, '.');
+    });
+
+    test('drops unanswered user turns before appending the prime turn', () {
+      final messages = buildChatContextPrimeMessages([
+        Message(
+          role: Role.system,
+          content: [TextPart(text: 'Be concise.')],
+        ),
+        Message(
+          role: Role.user,
+          content: [TextPart(text: 'Completed')],
+        ),
+        Message(
+          role: Role.model,
+          content: [TextPart(text: 'Done')],
+        ),
+        Message(
+          role: Role.user,
+          content: [TextPart(text: 'Unanswered')],
+        ),
+        Message(
+          role: Role.user,
+          content: [TextPart(text: 'Also pending')],
+        ),
+      ]);
+
+      expect(messages, hasLength(4));
+      expect(messages[2].role, Role.model);
+      expect(messages.last.role, Role.user);
+      expect(messages.last.content.single.text, '.');
+      expect(
+        messages.expand((message) => message.content).map((part) => part.text),
+        isNot(contains('Unanswered')),
+      );
+    });
+  });
+
   group('resolveModelConfig', () {
     test('maps local model onto LlamaDartGenerationConfig', () {
       final config =

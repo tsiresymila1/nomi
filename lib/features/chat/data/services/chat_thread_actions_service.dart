@@ -260,6 +260,30 @@ class ChatThreadActions implements ChatThreadActionsApi {
     );
   }
 
+  /// Serializes context priming with visible generations so two native llama
+  /// requests never overlap on the shared local runtime.
+  Future<void> primeCurrentContext({ModelInfo? activeModel}) async {
+    final chatId = int.tryParse(_selectedChatCubit.state ?? '');
+    if (chatId == null) return;
+    final model =
+        activeModel ?? await _activeModelInfoResolver.getActiveModelInfo();
+    if (model == null || model.provider != ModelProviderType.local) return;
+
+    final result = _generationTail.then(
+      (_) => primeLocalChatContextWithGenkit(
+        deps: _runtimeDependencies,
+        database: _database,
+        chatId: chatId,
+        activeModel: model,
+      ),
+    );
+    _generationTail = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return result;
+  }
+
   Future<void> retryLastFailedGeneration() async {
     final failure = _chatGenerationFailureCubit.state;
     if (failure == null ||

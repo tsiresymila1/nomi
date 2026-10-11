@@ -17,10 +17,37 @@ import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
+import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 import 'package:schemantic/schemantic.dart';
 
 const String _remoteNamespace = 'remote';
+
+class _ChatSetup {
+  const _ChatSetup({
+    required this.workspace,
+    required this.systemInstruction,
+    required this.enableRag,
+    required this.enableMemory,
+    required this.toolDefinitions,
+  });
+
+  final WorkspaceEntity? workspace;
+  final String systemInstruction;
+  final bool enableRag;
+  final bool enableMemory;
+  final List<UnifiedChatToolDefinition> toolDefinitions;
+}
+
+class _StoredChat {
+  const _StoredChat({
+    required this.messages,
+    required this.attachmentsByMessageId,
+  });
+
+  final List<db.Message> messages;
+  final Map<int, List<db.MessageAttachment>> attachmentsByMessageId;
+}
 
 Future<void> generateAssistantResponseWithGenkit({
   required ChatRuntimeDependencies deps,
@@ -29,90 +56,8 @@ Future<void> generateAssistantResponseWithGenkit({
   required ModelInfo activeModel,
   required bool Function() isCancelled,
 }) async {
-  final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
-  final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
-  final enableMemory =
-      (activeWorkspace?.memoryEnabled ?? false) &&
-      activeModel.supportsFunctionCalls;
-  final memoryBlock = enableMemory && activeWorkspace != null
-      ? await deps.workspaceMemoryActions.buildMemoryBlock(
-          workspaceId: activeWorkspace.id,
-        )
-      : '';
-  final composedBasePrompt = memoryBlock.isEmpty
-      ? basePrompt
-      : (basePrompt.isEmpty ? memoryBlock : '$basePrompt\n\n$memoryBlock');
-  final systemInstruction = buildSystemInstruction(composedBasePrompt);
-  final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
-    workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
-  );
-  final toolDefinitions = buildUnifiedChatToolDefinitions(
-    supportsFunctionCalls: activeModel.supportsFunctionCalls,
-    enableRagTool: enableRag,
-    enableMemoryTools: enableMemory,
-    enableNativeOpenUrlTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeOpenUrlEnabled ?? false),
-    enableNativeOpenAppTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeOpenAppEnabled ?? false),
-    enableNativePhoneCallTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeOpenAppEnabled ?? false),
-    enableNativeContactsTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeOpenAppEnabled ?? false),
-    enableNativeSmsTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeOpenAppEnabled ?? false),
-    enableNativeSendEmailTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeSendEmailEnabled ?? false),
-    enableNativeFlashlightTool:
-        (activeWorkspace?.nativeToolsEnabled ?? false) &&
-        (activeWorkspace?.nativeFlashlightEnabled ?? false),
-  );
-
-  final mcpEnabled =
-      AppCapabilities.current.supportsMcp &&
-      (activeWorkspace?.mcpEnabled ?? false) &&
-      activeModel.supportsFunctionCalls;
-  if (mcpEnabled) {
-    final enabledServers = await deps.mcpRepository.listEnabledServers();
-    if (enabledServers.isNotEmpty) {
-      final mcpTools = await deps.mcpClientManager.discoverTools(
-        enabledServers,
-      );
-      toolDefinitions.addAll(
-        buildMcpUnifiedToolDefinitions(
-          supportsFunctionCalls: activeModel.supportsFunctionCalls,
-          mcpEnabled: true,
-          mcpTools: mcpTools,
-        ),
-      );
-    }
-  }
-
-  final storedMessages =
-      await (database.select(database.messages)
-            ..where((t) => t.chat.equals(chatId))
-            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-          .get();
-
-  final attachmentsByMessageId = <int, List<db.MessageAttachment>>{};
-  final messageIds = storedMessages.map((message) => message.id).toList();
-  if (messageIds.isNotEmpty) {
-    final storedAttachments =
-        await (database.select(database.messageAttachments)
-              ..where((row) => row.message.isIn(messageIds))
-              ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
-            .get();
-    for (final attachment in storedAttachments) {
-      attachmentsByMessageId
-          .putIfAbsent(attachment.message, () => <db.MessageAttachment>[])
-          .add(attachment);
-    }
-  }
+  final setup = await _resolveChatSetup(deps, activeModel);
+  final storedChat = await _loadStoredChat(database, chatId);
 
   if (isCancelled()) return;
 
@@ -124,14 +69,14 @@ Future<void> generateAssistantResponseWithGenkit({
   final messageWindow = await _resolveMessageWindow(
     deps: deps,
     activeModel: activeModel,
-    storedMessages: storedMessages,
-    storedAttachmentsByMessageId: attachmentsByMessageId,
-    systemInstruction: systemInstruction,
+    storedMessages: storedChat.messages,
+    storedAttachmentsByMessageId: storedChat.attachmentsByMessageId,
+    systemInstruction: setup.systemInstruction,
   );
   final messages = buildGenkitMessages(
-    systemInstruction: systemInstruction,
+    systemInstruction: setup.systemInstruction,
     storedMessages: messageWindow.keptMessages,
-    storedAttachmentsByMessageId: attachmentsByMessageId,
+    storedAttachmentsByMessageId: storedChat.attachmentsByMessageId,
   );
   final ai = prepared?.ai ?? _buildRemoteGenkit(activeModel);
   final toolResultCollector = ToolResultCollector();
@@ -139,13 +84,13 @@ Future<void> generateAssistantResponseWithGenkit({
       shouldStringifyToolResultForGemma4LiteRt(activeModel);
   final toolNames = _registerTools(
     ai: ai,
-    toolDefinitions: toolDefinitions,
+    toolDefinitions: setup.toolDefinitions,
     database: database,
     chatId: chatId,
     deps: deps,
-    workspace: activeWorkspace,
-    enableRag: enableRag,
-    enableMemory: enableMemory,
+    workspace: setup.workspace,
+    enableRag: setup.enableRag,
+    enableMemory: setup.enableMemory,
     isCancelled: isCancelled,
     toolResultCollector: toolResultCollector,
     stringifyToolResultForGemma4LiteRt: stringifyToolResultForGemma4LiteRt,
@@ -233,6 +178,167 @@ Future<void> generateAssistantResponseWithGenkit({
       );
 }
 
+/// Primes the local llama.cpp prompt cache with the exact context prefix used
+/// by the next visible chat turn. The generated token is intentionally
+/// discarded; no message or tool result is persisted.
+Future<void> primeLocalChatContextWithGenkit({
+  required ChatRuntimeDependencies deps,
+  required db.GenaDatabase database,
+  required int chatId,
+  required ModelInfo activeModel,
+}) async {
+  if (activeModel.provider != ModelProviderType.local) return;
+
+  final prepared = await deps.localModelRuntime.prepare(activeModel);
+  final setup = await _resolveChatSetup(deps, activeModel);
+  final storedChat = await _loadStoredChat(database, chatId);
+  final messageWindow = await _resolveMessageWindow(
+    deps: deps,
+    activeModel: activeModel,
+    storedMessages: storedChat.messages,
+    storedAttachmentsByMessageId: storedChat.attachmentsByMessageId,
+    systemInstruction: setup.systemInstruction,
+  );
+  final conversation = buildGenkitMessages(
+    systemInstruction: setup.systemInstruction,
+    storedMessages: messageWindow.keptMessages,
+    storedAttachmentsByMessageId: storedChat.attachmentsByMessageId,
+  );
+  final messages = buildChatContextPrimeMessages(conversation);
+  final toolNames = _registerPrimingTools(
+    ai: prepared.ai,
+    toolDefinitions: setup.toolDefinitions,
+  );
+
+  final stopwatch = Stopwatch()..start();
+  await prepared.ai.generate<dynamic, dynamic>(
+    model: prepared.modelRef,
+    messages: messages,
+    config: LlamaDartGenerationConfig(
+      temperature: 0,
+      topP: activeModel.topP,
+      topK: activeModel.topK,
+      maxTokens: 1,
+      seed: activeModel.randomSeed,
+      enableThinking: activeModel.isThinking,
+      parallelToolCalls: activeModel.supportsFunctionCalls,
+    ),
+    toolNames: toolNames.isEmpty ? null : toolNames,
+    maxTurns: 1,
+  );
+  stopwatch.stop();
+  logger.i(
+    'Primed local chat context for chat $chatId in '
+    '${stopwatch.elapsedMilliseconds} ms.',
+  );
+}
+
+Future<_ChatSetup> _resolveChatSetup(
+  ChatRuntimeDependencies deps,
+  ModelInfo activeModel,
+) async {
+  final activeWorkspace = await deps.workspaceQueries.resolveActiveWorkspace();
+  final basePrompt = activeWorkspace?.generalInstruction.trim() ?? '';
+  final enableMemory =
+      (activeWorkspace?.memoryEnabled ?? false) &&
+      activeModel.supportsFunctionCalls;
+  final memoryBlock = enableMemory && activeWorkspace != null
+      ? await deps.workspaceMemoryActions.buildMemoryBlock(
+          workspaceId: activeWorkspace.id,
+        )
+      : '';
+  final composedBasePrompt = memoryBlock.isEmpty
+      ? basePrompt
+      : (basePrompt.isEmpty ? memoryBlock : '$basePrompt\n\n$memoryBlock');
+  final systemInstruction = buildSystemInstruction(composedBasePrompt);
+  final enableRag = AppCapabilities.current.isWorkspaceRagEnabled(
+    workspaceRagEnabled: activeWorkspace?.ragEnabled ?? false,
+  );
+  final toolDefinitions = buildUnifiedChatToolDefinitions(
+    supportsFunctionCalls: activeModel.supportsFunctionCalls,
+    enableRagTool: enableRag,
+    enableMemoryTools: enableMemory,
+    enableNativeOpenUrlTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenUrlEnabled ?? false),
+    enableNativeOpenAppTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativePhoneCallTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeContactsTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeSmsTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeOpenAppEnabled ?? false),
+    enableNativeSendEmailTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeSendEmailEnabled ?? false),
+    enableNativeFlashlightTool:
+        (activeWorkspace?.nativeToolsEnabled ?? false) &&
+        (activeWorkspace?.nativeFlashlightEnabled ?? false),
+  );
+
+  final mcpEnabled =
+      AppCapabilities.current.supportsMcp &&
+      (activeWorkspace?.mcpEnabled ?? false) &&
+      activeModel.supportsFunctionCalls;
+  if (mcpEnabled) {
+    final enabledServers = await deps.mcpRepository.listEnabledServers();
+    if (enabledServers.isNotEmpty) {
+      final mcpTools = await deps.mcpClientManager.discoverTools(
+        enabledServers,
+      );
+      toolDefinitions.addAll(
+        buildMcpUnifiedToolDefinitions(
+          supportsFunctionCalls: activeModel.supportsFunctionCalls,
+          mcpEnabled: true,
+          mcpTools: mcpTools,
+        ),
+      );
+    }
+  }
+
+  return _ChatSetup(
+    workspace: activeWorkspace,
+    systemInstruction: systemInstruction,
+    enableRag: enableRag,
+    enableMemory: enableMemory,
+    toolDefinitions: toolDefinitions,
+  );
+}
+
+Future<_StoredChat> _loadStoredChat(
+  db.GenaDatabase database,
+  int chatId,
+) async {
+  final storedMessages =
+      await (database.select(database.messages)
+            ..where((t) => t.chat.equals(chatId))
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+          .get();
+  final attachmentsByMessageId = <int, List<db.MessageAttachment>>{};
+  final messageIds = storedMessages.map((message) => message.id).toList();
+  if (messageIds.isNotEmpty) {
+    final storedAttachments =
+        await (database.select(database.messageAttachments)
+              ..where((row) => row.message.isIn(messageIds))
+              ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
+            .get();
+    for (final attachment in storedAttachments) {
+      attachmentsByMessageId
+          .putIfAbsent(attachment.message, () => <db.MessageAttachment>[])
+          .add(attachment);
+    }
+  }
+  return _StoredChat(
+    messages: storedMessages,
+    attachmentsByMessageId: attachmentsByMessageId,
+  );
+}
+
 Genkit _buildRemoteGenkit(ModelInfo model) {
   final baseUrl = normalizeBaseUrl((model.apiUrl ?? '').trim());
   final apiToken = normalizeApiKey((model.apiToken ?? '').trim());
@@ -318,6 +424,26 @@ ModelRef<dynamic> _resolveModelRef(
     return prepared.modelRef;
   }
   return openAI.model(resolveRemoteModelId(model), namespace: _remoteNamespace);
+}
+
+List<String> _registerPrimingTools({
+  required Genkit ai,
+  required List<UnifiedChatToolDefinition> toolDefinitions,
+}) {
+  final names = <String>[];
+  for (final definition in toolDefinitions) {
+    ai.defineTool<Map<String, dynamic>, Map<String, dynamic>>(
+      name: definition.name,
+      description: definition.description,
+      inputSchema: SchemanticType.from<Map<String, dynamic>>(
+        jsonSchema: Map<String, Object?>.from(definition.parameters),
+        parse: _parseToolInput,
+      ),
+      fn: (_, _) async => const <String, dynamic>{'status': 'priming'},
+    );
+    names.add(definition.name);
+  }
+  return names;
 }
 
 List<String> _registerTools({

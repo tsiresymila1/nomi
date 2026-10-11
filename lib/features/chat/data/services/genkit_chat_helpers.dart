@@ -121,6 +121,28 @@ List<Message> buildGenkitMessages({
   return messages;
 }
 
+/// Builds a disposable request that primes the native prompt cache for the
+/// next real user turn.
+///
+/// Trailing user messages are removed because an unanswered turn would make
+/// the real prompt a shorter prefix of the priming request, forcing llamadart
+/// to tokenize the whole prompt again. Completed system/user/model history is
+/// preserved and a tiny user turn is appended so the next request can reuse
+/// the expensive shared prefix.
+List<Message> buildChatContextPrimeMessages(List<Message> messages) {
+  final primed = List<Message>.of(messages);
+  while (primed.isNotEmpty && primed.last.role == Role.user) {
+    primed.removeLast();
+  }
+  primed.add(
+    Message(
+      role: Role.user,
+      content: [TextPart(text: '.')],
+    ),
+  );
+  return primed;
+}
+
 String _imageContentType(String sourceType) {
   final normalized = sourceType.trim().toLowerCase();
   return switch (normalized) {

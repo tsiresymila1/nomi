@@ -46,7 +46,7 @@ void main() {
 
       await actions.selectModel(_localModel(2, 'Target'));
 
-      expect(events, ['stop', 'reset', 'prepare:2', 'select:2']);
+      expect(events, ['stop', 'reset', 'prepare:2', 'select:2', 'prime:2']);
       expect(selectedModelCubit.state, 2);
       expect(switchingCubit.state.phase, ChatModelSwitchPhase.ready);
       expect(switchingCubit.state.modelId, 2);
@@ -68,7 +68,14 @@ void main() {
 
       await actions.installModel(_localModel(2, 'Target'));
 
-      expect(events, ['install:2', 'stop', 'reset', 'prepare:2', 'select:2']);
+      expect(events, [
+        'install:2',
+        'stop',
+        'reset',
+        'prepare:2',
+        'select:2',
+        'prime:2',
+      ]);
       expect(selectedModelCubit.state, 2);
       expect(switchingCubit.state.phase, ChatModelSwitchPhase.ready);
       expect(switchingCubit.state.origin, ChatModelSwitchOrigin.installation);
@@ -202,6 +209,27 @@ void main() {
       expect(switchingCubit.state.modelId, 1);
       expect(switchingCubit.state.errorMessage, isNotEmpty);
     });
+
+    test('chat selection primes the active chat context', () async {
+      final events = <String>[];
+      final switchingCubit = ChatModelSwitchingCubit();
+      addTearDown(switchingCubit.close);
+      final selectedModelCubit = _SelectedModelCubitFake(1, events);
+      final runtime = _LocalModelRuntimeFake(events);
+      final actions = _actions(
+        events: events,
+        switchingCubit: switchingCubit,
+        selectedModelCubit: selectedModelCubit,
+        runtime: runtime,
+        previousModel: _localModel(1, 'Previous'),
+      );
+
+      await actions.selectChat('42');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(events, containsAllInOrder(['prepare:1', 'prime:1']));
+      expect(switchingCubit.state.phase, ChatModelSwitchPhase.ready);
+    });
   });
 }
 
@@ -289,6 +317,11 @@ class _ChatThreadActionsFake extends Fake implements ChatThreadActions {
   @override
   Future<void> retryLastFailedGeneration() async {
     events.add('retry-generation');
+  }
+
+  @override
+  Future<void> primeCurrentContext({ModelInfo? activeModel}) async {
+    events.add('prime:${activeModel?.id}');
   }
 }
 

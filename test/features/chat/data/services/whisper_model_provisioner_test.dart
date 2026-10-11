@@ -120,4 +120,25 @@ void main() {
     expect(await provisioner.cancel(WhisperModelProfile.base), isTrue);
     expect(client.cancellations, 1);
   });
+
+  test('uses an external Whisper model without copying it', () async {
+    final external = File('${tempDirectory.path}/custom-whisper.bin');
+    await external.writeAsBytes(<int>[1, 2, 3]);
+    final unused = File('${tempDirectory.path}/unused.bin');
+    await unused.writeAsBytes(<int>[9]);
+    final client = _FakeDownloadClient(unused);
+    final provisioner = WhisperModelProvisioner(
+      downloadClient: client,
+      modelDirectoryProvider: () async => tempDirectory,
+    );
+    final profile = WhisperModelProfile.external(
+      name: 'Custom Whisper',
+      filePath: external.path,
+      sizeBytes: await external.length(),
+    );
+
+    expect(await provisioner.ensureReady(profile), external.path);
+    expect(client.downloads, 0);
+    expect(await provisioner.isInstalled(profile), isTrue);
+  });
 }

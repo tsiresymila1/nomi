@@ -105,6 +105,17 @@ class WhisperModelProvisioner implements WhisperModelManager {
     WhisperModelProfile profile, {
     required void Function(double progress, String message) onProgress,
   }) async {
+    if (profile.isExternal) {
+      final model = File(profile.filePath!);
+      if (!await _isUsable(model) ||
+          !model.path.toLowerCase().endsWith('.bin')) {
+        throw StateError(
+          'The selected Whisper .bin file is unavailable or empty.',
+        );
+      }
+      onProgress(1, '${profile.label} is ready');
+      return model.path;
+    }
     final directory = await _modelDirectoryProvider();
     if (!await directory.exists()) await directory.create(recursive: true);
     final target = File('${directory.path}/${profile.fileName}');
@@ -135,16 +146,29 @@ class WhisperModelProvisioner implements WhisperModelManager {
 
   @override
   Future<bool> isInstalled(WhisperModelProfile profile) async {
+    if (profile.isExternal) {
+      final path = profile.filePath;
+      return path != null &&
+          path.toLowerCase().endsWith('.bin') &&
+          await _isUsable(File(path));
+    }
     final directory = await _modelDirectoryProvider();
     return _isUsable(File('${directory.path}/${profile.fileName}'));
   }
 
   @override
   Future<bool> cancel(WhisperModelProfile profile) {
+    if (profile.isExternal) return Future<bool>.value(false);
     return _downloadClient.cancel(profile);
   }
 
   Future<bool> _isUsable(File file) async {
-    return await file.exists() && await file.length() > 0;
+    try {
+      if (!await file.exists() || await file.length() <= 0) return false;
+      await file.openRead(0, 1).drain<void>();
+      return true;
+    } on FileSystemException {
+      return false;
+    }
   }
 }

@@ -17,6 +17,7 @@ SpeechToText createSpeechToText({
 abstract interface class WhisperEngine {
   Future<String?> transcribe({
     required WhisperModelProfile profile,
+    required String modelPath,
     required String audioPath,
     required String language,
   });
@@ -31,14 +32,25 @@ class NativeWhisperEngine implements WhisperEngine {
   @override
   Future<String?> transcribe({
     required WhisperModelProfile profile,
+    required String modelPath,
     required String audioPath,
     required String language,
   }) async {
+    if (profile.isExternal) {
+      final result = await const Whisper(model: WhisperModel.tiny).transcribe(
+        transcribeRequest: TranscribeRequest(
+          audio: audioPath,
+          language: language,
+          isRealtime: true,
+        ),
+        modelPath: modelPath,
+      );
+      return result.text;
+    }
     final result = await _controller.transcribe(
-      model: switch (profile) {
-        WhisperModelProfile.tiny => WhisperModel.tiny,
-        WhisperModelProfile.base => WhisperModel.base,
-      },
+      model: profile == WhisperModelProfile.base
+          ? WhisperModel.base
+          : WhisperModel.tiny,
       audioPath: audioPath,
       lang: language,
     );
@@ -86,15 +98,16 @@ class WhisperSpeechToText implements SpeechToText {
   @override
   Future<SttResult> transcribe(String wavPath, {String lang = 'auto'}) async {
     final profile = _selectedProfile();
+    late final String modelPath;
     try {
-      await _provisioner.ensureReady(profile);
+      modelPath = await _provisioner.ensureReady(profile);
     } catch (error) {
       throw SpeechToTextException(
         'Failed to prepare the speech-to-text model: $error',
       );
     }
 
-    final text = await _transcribe(profile, wavPath, lang);
+    final text = await _transcribe(profile, modelPath, wavPath, lang);
     if (text == null) {
       throw const SpeechToTextException('Transcription returned no result.');
     }
@@ -104,12 +117,14 @@ class WhisperSpeechToText implements SpeechToText {
 
   Future<String?> _transcribe(
     WhisperModelProfile profile,
+    String modelPath,
     String wavPath,
     String lang,
   ) async {
     try {
       return await _engine.transcribe(
         profile: profile,
+        modelPath: modelPath,
         audioPath: wavPath,
         language: lang,
       );

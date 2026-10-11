@@ -22,6 +22,7 @@ class _FakeEngine implements WhisperEngine {
   @override
   Future<String?> transcribe({
     required WhisperModelProfile profile,
+    required String modelPath,
     required String audioPath,
     required String language,
   }) async {

@@ -96,6 +96,27 @@ void main() {
     expect(restored?.profile, WhisperModelProfile.tiny);
   });
 
+  test('persists a custom external Whisper model', () {
+    final cubit = WhisperModelCubit();
+    addTearDown(cubit.close);
+    final custom = WhisperModelProfile.external(
+      name: 'Custom',
+      filePath: '/models/custom.bin',
+      sizeBytes: 1024,
+    );
+
+    final json = cubit.toJson(
+      WhisperModelState(
+        profile: custom,
+        customProfiles: <WhisperModelProfile>[custom],
+      ),
+    )!;
+    final restored = cubit.fromJson(json)!;
+
+    expect(restored.profile, custom);
+    expect(restored.customProfiles, <WhisperModelProfile>[custom]);
+  });
+
   test('reports foreground download progress and ready state', () async {
     final manager = _FakeModelManager();
     final cubit = WhisperModelCubit(modelManager: manager);

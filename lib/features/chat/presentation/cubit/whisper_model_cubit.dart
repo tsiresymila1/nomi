@@ -16,6 +16,7 @@ enum WhisperModelStatus {
 class WhisperModelState {
   const WhisperModelState({
     this.profile = WhisperModelProfile.tiny,
+    this.customProfiles = const <WhisperModelProfile>[],
     this.status = WhisperModelStatus.idle,
     this.progress = 0,
     this.message,
@@ -23,6 +24,7 @@ class WhisperModelState {
   });
 
   final WhisperModelProfile profile;
+  final List<WhisperModelProfile> customProfiles;
   final WhisperModelStatus status;
   final double progress;
   final String? message;
@@ -30,6 +32,7 @@ class WhisperModelState {
 
   WhisperModelState copyWith({
     WhisperModelProfile? profile,
+    List<WhisperModelProfile>? customProfiles,
     WhisperModelStatus? status,
     double? progress,
     String? message,
@@ -39,12 +42,18 @@ class WhisperModelState {
   }) {
     return WhisperModelState(
       profile: profile ?? this.profile,
+      customProfiles: customProfiles ?? this.customProfiles,
       status: status ?? this.status,
       progress: (progress ?? this.progress).clamp(0.0, 1.0),
       message: clearMessage ? null : message ?? this.message,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
+
+  List<WhisperModelProfile> get allProfiles => <WhisperModelProfile>[
+    ...WhisperModelProfile.builtIn,
+    ...customProfiles,
+  ];
 }
 
 class WhisperModelCubit extends HydratedCubit<WhisperModelState>
@@ -58,8 +67,22 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
 
   Future<void> selectProfile(WhisperModelProfile profile) async {
     if (profile == state.profile) return;
+    final customProfiles = profile.isExternal
+        ? <WhisperModelProfile>[
+            for (final existing in state.customProfiles)
+              if (existing.id != profile.id) existing,
+            profile,
+          ]
+        : state.customProfiles;
     emit(
-      WhisperModelState(profile: profile, message: '${profile.label} selected'),
+      state.copyWith(
+        profile: profile,
+        customProfiles: List.unmodifiable(customProfiles),
+        status: WhisperModelStatus.idle,
+        progress: 0,
+        message: '${profile.label} selected',
+        clearError: true,
+      ),
     );
     if (_modelManager == null) return;
     try {
@@ -67,6 +90,27 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
     } catch (_) {
       // The preparation state already exposes the actionable failure in UI.
     }
+  }
+
+  Future<void> removeCustom(String id) async {
+    final profiles = state.customProfiles
+        .where((profile) => profile.id != id)
+        .toList(growable: false);
+    if (profiles.length == state.customProfiles.length) return;
+    if (state.profile.id == id) {
+      emit(
+        state.copyWith(
+          profile: WhisperModelProfile.tiny,
+          customProfiles: profiles,
+          status: WhisperModelStatus.idle,
+          progress: 0,
+          message: 'Tiny selected',
+          clearError: true,
+        ),
+      );
+      return;
+    }
+    emit(state.copyWith(customProfiles: profiles));
   }
 
   @override
@@ -188,13 +232,32 @@ class WhisperModelCubit extends HydratedCubit<WhisperModelState>
 
   @override
   WhisperModelState? fromJson(Map<String, dynamic> json) {
+    final customProfiles = <WhisperModelProfile>[];
+    final rawProfiles = json['customProfiles'];
+    if (rawProfiles is List) {
+      for (final raw in rawProfiles) {
+        final profile = WhisperModelProfile.parse(raw);
+        if (profile.isExternal) customProfiles.add(profile);
+      }
+    }
+    final selected = WhisperModelProfile.parse(json['profile']);
     return WhisperModelState(
-      profile: WhisperModelProfile.parse(json['profile']),
+      profile:
+          selected.isExternal &&
+              !customProfiles.any((profile) => profile.id == selected.id)
+          ? WhisperModelProfile.tiny
+          : selected,
+      customProfiles: List.unmodifiable(customProfiles),
     );
   }
 
   @override
   Map<String, dynamic>? toJson(WhisperModelState state) {
-    return <String, dynamic>{'profile': state.profile.id};
+    return <String, dynamic>{
+      'profile': state.profile.toJson(),
+      'customProfiles': state.customProfiles
+          .map((profile) => profile.toJson())
+          .toList(growable: false),
+    };
   }
 }

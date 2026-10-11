@@ -1,12 +1,60 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/features/chat/data/models/whisper_model_profile.dart';
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
+import 'package:gena/features/downloads/data/services/direct_model_file_picker.dart';
+
+typedef WhisperModelPathPicker = Future<String?> Function();
 
 class WhisperModelSettingsSection extends StatelessWidget {
-  const WhisperModelSettingsSection({super.key, required this.cubit});
+  const WhisperModelSettingsSection({
+    super.key,
+    required this.cubit,
+    this.pathPicker,
+  });
 
   final WhisperModelCubit cubit;
+  final WhisperModelPathPicker? pathPicker;
+
+  Future<void> _addExternal(BuildContext context) async {
+    try {
+      final path =
+          await (pathPicker?.call() ??
+              DirectModelFilePicker.pickModelPath(
+                allowedExtensions: const <String>['bin'],
+                dialogTitle: 'Select Whisper GGML model',
+              ));
+      if (path == null || !context.mounted) return;
+      if (!path.toLowerCase().endsWith('.bin')) {
+        throw const DirectModelFilePickerException(
+          'Choose a Whisper GGML .bin file.',
+        );
+      }
+      final size = await File(path).length();
+      if (size <= 0) {
+        throw const DirectModelFilePickerException(
+          'The selected Whisper model is empty.',
+        );
+      }
+      final fileName = path.split(RegExp(r'[/\\]')).last;
+      final profile = WhisperModelProfile.external(
+        name: fileName.replaceFirst(
+          RegExp(r'\.bin$', caseSensitive: false),
+          '',
+        ),
+        filePath: path,
+        sizeBytes: size,
+      );
+      await cubit.selectProfile(profile);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Whisper import failed: $error')));
+    }
+  }
 
   Future<void> _select(
     BuildContext context,
@@ -61,25 +109,29 @@ class WhisperModelSettingsSection extends StatelessWidget {
                     'Choose the local multilingual Whisper model.',
                   ),
                 ),
-                _WhisperProfileTile(
-                  key: const ValueKey('whisper-profile-tiny'),
-                  profile: WhisperModelProfile.tiny,
-                  selected: state.profile == WhisperModelProfile.tiny,
-                  subtitle:
-                      'Recommended for 4 GB · about 75 MB${_statusSuffix(state, WhisperModelProfile.tiny)}',
-                  onTap: isPreparing
-                      ? null
-                      : () => _select(context, WhisperModelProfile.tiny),
-                ),
-                _WhisperProfileTile(
-                  key: const ValueKey('whisper-profile-base'),
-                  profile: WhisperModelProfile.base,
-                  selected: state.profile == WhisperModelProfile.base,
-                  subtitle:
-                      'Better accuracy · about 142 MB${_statusSuffix(state, WhisperModelProfile.base)}',
-                  onTap: isPreparing
-                      ? null
-                      : () => _select(context, WhisperModelProfile.base),
+                for (final profile in state.allProfiles)
+                  _WhisperProfileTile(
+                    key: ValueKey('whisper-profile-${profile.id}'),
+                    profile: profile,
+                    selected: state.profile == profile,
+                    subtitle:
+                        '${profile == WhisperModelProfile.tiny
+                            ? 'Recommended for 4 GB'
+                            : profile.isExternal
+                            ? 'Custom local file'
+                            : 'Better accuracy'} · about ${profile.approximateSizeMb} MB${_statusSuffix(state, profile)}',
+                    onTap: isPreparing ? null : () => _select(context, profile),
+                    onRemove: profile.isExternal && !isPreparing
+                        ? () => cubit.removeCustom(profile.id)
+                        : null,
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: OutlinedButton.icon(
+                    onPressed: isPreparing ? null : () => _addExternal(context),
+                    icon: const Icon(Icons.folder_open_rounded),
+                    label: const Text('Add Whisper .bin'),
+                  ),
                 ),
                 if (isPreparing) ...[
                   Padding(
@@ -167,12 +219,14 @@ class _WhisperProfileTile extends StatelessWidget {
     required this.selected,
     required this.subtitle,
     required this.onTap,
+    this.onRemove,
   });
 
   final WhisperModelProfile profile;
   final bool selected;
   final String subtitle;
   final VoidCallback? onTap;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -180,9 +234,20 @@ class _WhisperProfileTile extends StatelessWidget {
       onTap: onTap,
       title: Text('${profile.label} (multilingual)'),
       subtitle: Text(subtitle),
-      trailing: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? Theme.of(context).colorScheme.primary : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            selected ? Icons.radio_button_checked : Icons.radio_button_off,
+            color: selected ? Theme.of(context).colorScheme.primary : null,
+          ),
+          if (onRemove != null)
+            IconButton(
+              tooltip: 'Remove from list',
+              onPressed: onRemove,
+              icon: const Icon(Icons.close_rounded),
+            ),
+        ],
       ),
     );
   }

@@ -14,6 +14,7 @@ void main() {
     'persists the selected TTS engine, voice and inference controls',
     () async {
       final first = TextToSpeechSettingsCubit();
+      first.selectBackend(TextToSpeechBackend.llamaDart);
       first.selectEngine('com.google.android.tts');
       first.selectVoice(
         const TextToSpeechVoice(name: 'local-fr', locale: 'fr-FR'),
@@ -27,6 +28,7 @@ void main() {
       addTearDown(restored.close);
 
       expect(restored.state.engine, 'com.google.android.tts');
+      expect(restored.state.backend, TextToSpeechBackend.llamaDart);
       expect(restored.state.voiceName, 'local-fr');
       expect(restored.state.voiceLocale, 'fr-FR');
       expect(restored.state.speechRate, 0.65);

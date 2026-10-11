@@ -17,6 +17,11 @@ import 'package:gena/features/chat/data/repositories/chat_queries_repository.dar
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime_factory.dart';
+import 'package:gena/features/chat/data/services/llamadart_tts_model_store.dart';
+import 'package:gena/features/chat/data/services/llamadart_tts_model_store_factory.dart';
+import 'package:gena/features/chat/data/services/local_neural_text_to_speech.dart';
+import 'package:gena/features/chat/data/services/local_neural_text_to_speech_factory.dart';
+import 'package:gena/features/chat/data/services/routing_text_to_speech.dart';
 import 'package:gena/features/chat/data/services/coordinated_local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/coordinated_speech_to_text.dart';
 import 'package:gena/features/chat/data/services/audio_recorder_factory.dart';
@@ -27,6 +32,7 @@ import 'package:gena/features/chat/data/services/speech_to_text_factory.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/chat/data/services/whisper_model_provisioner.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_conversation_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/llamadart_tts_model_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_input_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/voice_output_cubit.dart';
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
@@ -137,7 +143,30 @@ void registerChatDependencies() {
     sl.registerLazySingleton<VoiceAudioRecorder>(createVoiceAudioRecorder);
   }
 
-  // Platform-native text-to-speech (flutter_tts; web + native).
+  // Native TTS stays the low-memory default. LlamaDart TTS is an optional
+  // heavyweight runtime coordinated with chat, Whisper and image generation.
+  if (!sl.isRegistered<LlamaDartTtsModelStore>()) {
+    sl.registerLazySingleton<LlamaDartTtsModelStore>(
+      createLlamaDartTtsModelStore,
+    );
+  }
+  if (!sl.isRegistered<LocalNeuralTextToSpeech>()) {
+    sl.registerLazySingleton<LocalNeuralTextToSpeech>(
+      () => createLocalNeuralTextToSpeech(
+        modelStore: sl<LlamaDartTtsModelStore>(),
+        coordinator: sl<LocalAiRuntimeCoordinator>(),
+        languageCode: () => sl<TextToSpeechSettingsCubit>().state.voiceLocale,
+      ),
+    );
+  }
+  if (!sl.isRegistered<LlamaDartTtsModelCubit>()) {
+    sl.registerLazySingleton<LlamaDartTtsModelCubit>(
+      () => LlamaDartTtsModelCubit(
+        store: sl<LlamaDartTtsModelStore>(),
+        textToSpeech: sl<LocalNeuralTextToSpeech>(),
+      ),
+    );
+  }
   if (!sl.isRegistered<FlutterTextToSpeech>()) {
     sl.registerLazySingleton<FlutterTextToSpeech>(
       () => FlutterTextToSpeech(
@@ -146,7 +175,13 @@ void registerChatDependencies() {
     );
   }
   if (!sl.isRegistered<TextToSpeech>()) {
-    sl.registerLazySingleton<TextToSpeech>(() => sl<FlutterTextToSpeech>());
+    sl.registerLazySingleton<TextToSpeech>(
+      () => RoutingTextToSpeech(
+        native: sl<FlutterTextToSpeech>(),
+        local: sl<LocalNeuralTextToSpeech>(),
+        selectedBackend: () => sl<TextToSpeechSettingsCubit>().state.backend,
+      ),
+    );
   }
 
   // Services (no deps or minimal deps)

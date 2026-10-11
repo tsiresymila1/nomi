@@ -4,6 +4,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:gena/core/platform/app_capabilities.dart';
 
+enum TextToSpeechBackend { native, llamaDart }
+
 class TextToSpeechPreferences {
   const TextToSpeechPreferences({
     this.engine,

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
-enum LocalAiWorkload { chat, speechToText, diffusion }
+enum LocalAiWorkload { chat, speechToText, textToSpeech, diffusion }
 
 enum LocalAiRuntimePhase { idle, waiting, releasing, active, failed }
 
@@ -73,7 +73,8 @@ class _ActiveLease {
 /// A lease remains active for as long as its native runtime is resident. When
 /// another workload needs exclusive access, the current owner's [onEvict]
 /// callback is awaited before the next lease is granted. This ensures chat,
-/// Whisper and diffusion do not overlap on the Android 4 GB profile.
+/// Whisper, neural TTS and diffusion do not overlap on the Android 4 GB
+/// profile.
 class LocalAiRuntimeCoordinator {
   LocalAiRuntimeCoordinator({
     required Future<bool> Function() requiresExclusiveAccess,

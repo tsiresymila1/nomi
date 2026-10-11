@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gena/features/chat/data/models/llamadart_tts_model_profile.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
+import 'package:gena/features/chat/presentation/cubit/llamadart_tts_model_cubit.dart';
 import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
 
 class TextToSpeechSettingsSection extends StatefulWidget {
@@ -8,10 +12,16 @@ class TextToSpeechSettingsSection extends StatefulWidget {
     super.key,
     required this.cubit,
     required this.textToSpeech,
-  });
+    this.llamaDartCubit,
+    this.initiallyExpanded = false,
+    TextToSpeech? playback,
+  }) : playback = playback ?? textToSpeech;
 
   final TextToSpeechSettingsCubit cubit;
   final FlutterTextToSpeech textToSpeech;
+  final LlamaDartTtsModelCubit? llamaDartCubit;
+  final TextToSpeech playback;
+  final bool initiallyExpanded;
 
   @override
   State<TextToSpeechSettingsSection> createState() =>
@@ -29,6 +39,17 @@ class _TextToSpeechSettingsSectionState
   void initState() {
     super.initState();
     _loadOptions();
+    final llamaDartCubit = widget.llamaDartCubit;
+    if (llamaDartCubit != null) unawaited(_initializeLlamaDart(llamaDartCubit));
+  }
+
+  Future<void> _initializeLlamaDart(
+    LlamaDartTtsModelCubit llamaDartCubit,
+  ) async {
+    await llamaDartCubit.initialize();
+    if (widget.cubit.state.backend == TextToSpeechBackend.llamaDart) {
+      await llamaDartCubit.activate();
+    }
   }
 
   Future<void> _loadOptions() async {
@@ -133,7 +154,7 @@ class _TextToSpeechSettingsSectionState
     setState(() => _previewing = true);
     try {
       await _apply();
-      await widget.textToSpeech.speak(
+      await widget.playback.speak(
         'Bonjour, ceci est un aperçu de la voix sélectionnée.',
       );
     } catch (error) {
@@ -145,6 +166,43 @@ class _TextToSpeechSettingsSectionState
     } finally {
       if (mounted) setState(() => _previewing = false);
     }
+  }
+
+  Future<void> _selectBackend(TextToSpeechBackend backend) async {
+    if (backend == widget.cubit.state.backend) return;
+    final llamaDartCubit = widget.llamaDartCubit;
+    if (backend == TextToSpeechBackend.llamaDart) {
+      if (llamaDartCubit == null) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Use Local AI voice?'),
+          content: const Text(
+            'Qwen3-TTS uses about 1.5 GB of model files and is designed for '
+            'devices with at least 6 GB RAM. On a 4 GB device it is '
+            'experimental and chat models will be released while it speaks.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Use Local AI'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await widget.playback.stop();
+      widget.cubit.selectBackend(backend);
+      await llamaDartCubit.activate();
+      return;
+    }
+    await widget.playback.stop();
+    widget.cubit.selectBackend(backend);
+    await llamaDartCubit?.deactivate();
   }
 
   @override
@@ -159,21 +217,52 @@ class _TextToSpeechSettingsSectionState
           final selectedEngine = _engines.contains(state.engine)
               ? state.engine
               : null;
+          final llamaDartCubit = widget.llamaDartCubit;
 
           return Card(
             child: ExpansionTile(
+              initiallyExpanded: widget.initiallyExpanded,
               leading: const Icon(Icons.record_voice_over_outlined),
               title: const Text(
                 'Voice output (TTS)',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                'Android engine, voice and speaking style',
+                'Android native voice or local LlamaDart neural voice',
                 style: TextStyle(fontSize: 13),
               ),
               childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               children: [
-                if (_loading)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SegmentedButton<TextToSpeechBackend>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: TextToSpeechBackend.native,
+                        icon: Icon(Icons.phone_android_rounded),
+                        label: Text('Android'),
+                      ),
+                      ButtonSegment(
+                        value: TextToSpeechBackend.llamaDart,
+                        icon: Icon(Icons.memory_rounded),
+                        label: Text('Local AI'),
+                      ),
+                    ],
+                    selected: {state.backend},
+                    onSelectionChanged: (selection) =>
+                        _selectBackend(selection.first),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (state.backend == TextToSpeechBackend.llamaDart &&
+                    llamaDartCubit != null)
+                  _LlamaDartTtsModelPanel(
+                    cubit: llamaDartCubit,
+                    previewing: _previewing,
+                    onPreview: _preview,
+                  )
+                else if (_loading)
                   const LinearProgressIndicator(minHeight: 2)
                 else ...[
                   if (_engines.isNotEmpty)
@@ -239,6 +328,107 @@ class _TextToSpeechSettingsSectionState
           );
         },
       ),
+    );
+  }
+}
+
+class _LlamaDartTtsModelPanel extends StatelessWidget {
+  const _LlamaDartTtsModelPanel({
+    required this.cubit,
+    required this.previewing,
+    required this.onPreview,
+  });
+
+  final LlamaDartTtsModelCubit cubit;
+  final bool previewing;
+  final VoidCallback onPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LlamaDartTtsModelCubit, LlamaDartTtsModelState>(
+      bloc: cubit,
+      builder: (context, state) {
+        final downloading =
+            state.phase == LlamaDartTtsModelPhase.downloading ||
+            state.phase == LlamaDartTtsModelPhase.verifying;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                state.installed
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.graphic_eq_rounded,
+              ),
+              title: Text(qwen3Tts17bQ4.name),
+              subtitle: const Text(
+                'About 1.5 GB · French + 9 languages\n'
+                'Experimental on 4 GB · 6 GB RAM recommended',
+              ),
+              isThreeLine: true,
+              trailing: state.phase == LlamaDartTtsModelPhase.ready
+                  ? const Chip(label: Text('Ready'))
+                  : null,
+            ),
+            if (state.isBusy || downloading) ...[
+              LinearProgressIndicator(
+                value: state.phase == LlamaDartTtsModelPhase.downloading
+                    ? state.progress
+                    : null,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                state.phase == LlamaDartTtsModelPhase.downloading
+                    ? '${(state.progress * 100).round()}% · ${state.message ?? 'Downloading'}'
+                    : state.message ?? 'Preparing…',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else if (state.message != null)
+              Text(
+                state.message!,
+                style: TextStyle(
+                  color: state.phase == LlamaDartTtsModelPhase.failed
+                      ? Theme.of(context).colorScheme.error
+                      : null,
+                ),
+              ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (downloading)
+                  TextButton(
+                    onPressed: cubit.cancel,
+                    child: const Text('Cancel'),
+                  )
+                else if (state.installed) ...[
+                  TextButton(
+                    onPressed: state.isBusy ? null : cubit.remove,
+                    child: const Text('Remove'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: previewing ? null : onPreview,
+                    icon: previewing
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 1),
+                          )
+                        : const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Preview'),
+                  ),
+                ] else
+                  FilledButton.tonalIcon(
+                    onPressed: state.isBusy ? null : cubit.install,
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Install model'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

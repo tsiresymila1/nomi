@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
   ffmpeg_kit_flutter_new_min
   file_selector_windows
   flutter_inappwebview_windows

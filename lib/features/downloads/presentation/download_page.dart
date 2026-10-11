@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
+import 'package:gena/features/chat/presentation/cubit/llamadart_tts_model_cubit.dart';
 import 'package:gena/features/downloads/data/services/download_notifier_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/download_models_list.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
@@ -88,6 +89,9 @@ class _DownloadPageState extends State<DownloadPage>
               child: TextToSpeechSettingsSection(
                 cubit: sl<TextToSpeechSettingsCubit>(),
                 textToSpeech: sl<FlutterTextToSpeech>(),
+                llamaDartCubit: sl<LlamaDartTtsModelCubit>(),
+                playback: sl<TextToSpeech>(),
+                initiallyExpanded: true,
               ),
             ),
             _ModelSettingsTab(

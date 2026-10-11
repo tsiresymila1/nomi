@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_linux
   ffmpeg_kit_flutter_new_min
   file_selector_linux
   record_linux

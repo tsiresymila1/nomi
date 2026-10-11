@@ -362,6 +362,14 @@ class ChatThreadActions implements ChatThreadActionsApi {
           .go();
     }
 
+    await (_database.update(_database.messages)..where(
+          (row) =>
+              row.id.equals(userMessage.id) &
+              row.chat.equals(failure.chatId) &
+              row.role.equals('user'),
+        ))
+        .write(db.MessagesCompanion(kind: Value(hasImage ? 'image' : 'text')));
+
     await _generateStoredTurn(
       chatId: failure.chatId,
       activeModel: activeModel,
@@ -540,6 +548,13 @@ class ChatThreadActions implements ChatThreadActionsApi {
   }) async {
     int? partialAssistantMessageId;
     try {
+      await (_database.update(_database.messages)..where(
+            (row) =>
+                row.id.equals(userMessageId) &
+                row.chat.equals(chatId) &
+                row.role.equals('user'),
+          ))
+          .write(const db.MessagesCompanion(kind: Value('cancelled')));
       partialAssistantMessageId = await _persistCancelledDraftIfAny(chatId);
     } catch (error, stackTrace) {
       logger.w(
@@ -566,7 +581,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
           db.MessagesCompanion.insert(
             chat: chatId,
             role: 'assistant',
-            kind: const Value('text'),
+            kind: const Value('cancelled'),
             content: draft,
           ),
         );

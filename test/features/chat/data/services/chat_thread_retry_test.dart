@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/services/active_model_info_service.dart';
 import 'package:gena/features/chat/data/services/chat_runtime_dependencies.dart';
+import 'package:gena/features/chat/data/services/genkit_chat_helpers.dart';
 import 'package:gena/features/chat/data/services/chat_thread_actions_service.dart';
 import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
@@ -194,8 +195,14 @@ void main() {
       final rowsAfterStop = await database.select(database.messages).get();
       expect(rowsAfterStop.where((row) => row.role == 'user'), hasLength(1));
       expect(
-        rowsAfterStop.where((row) => row.role == 'assistant').single.content,
-        'Partial response',
+        rowsAfterStop.where((row) => row.role == 'user').single.kind,
+        'cancelled',
+      );
+      expect(
+        rowsAfterStop.where((row) => row.role == 'assistant').single,
+        isA<db.Message>()
+            .having((row) => row.kind, 'kind', 'cancelled')
+            .having((row) => row.content, 'content', 'Partial response'),
       );
       expect(failureCubit.state?.canRetry, isTrue);
       expect(failureCubit.state?.displayMessage, contains('stopped'));
@@ -207,6 +214,10 @@ void main() {
       expect(
         rowsAfterRetry.where((row) => row.role == 'assistant'),
         hasLength(1),
+      );
+      expect(
+        rowsAfterRetry.where((row) => row.role == 'user').single.kind,
+        'text',
       );
       expect(rowsAfterRetry.last.content, 'Recovered response');
       expect(generationCalls, 2);
@@ -304,8 +315,16 @@ void main() {
 
       final rows = await database.select(database.messages).get();
       expect(rows.where((row) => row.role == 'user'), hasLength(2));
+      expect(rows.where((row) => row.role == 'user').map((row) => row.kind), [
+        'cancelled',
+        'text',
+      ]);
       expect(rows.where((row) => row.role == 'assistant'), hasLength(1));
       expect(rows.last.content, 'Second answer');
+      expect(
+        rows.where(isGenkitConversationMessage).map((row) => row.content),
+        ['Second message', 'Second answer'],
+      );
       expect(generationCalls, 2);
       expect(generatingCubit.state, isFalse);
       expect(failureCubit.state, isNull);

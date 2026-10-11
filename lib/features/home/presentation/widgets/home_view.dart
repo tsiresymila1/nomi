@@ -129,11 +129,24 @@ class _HomeViewState extends State<HomeView> {
                             )
                           : HomeWorkspaceList(
                               groups: state.groups,
+                              onOpenChat: (workspaceId, chatId) async {
+                                await sl<ChatPageActions>().selectWorkspaceChat(
+                                  workspaceId: workspaceId,
+                                  chatId: chatId,
+                                );
+                                if (context.mounted) context.goNamed('chat');
+                              },
                               onOpenWorkspaceChat: (workspaceId) async {
                                 await sl<ChatPageActions>().selectWorkspace(
                                   workspaceId,
                                 );
                                 if (context.mounted) context.goNamed('chat');
+                              },
+                              onOpenWorkspaceSettings: (workspaceId) {
+                                context.pushNamed(
+                                  'workspace-config',
+                                  pathParameters: {'workspaceId': workspaceId},
+                                );
                               },
                             ),
                     ),

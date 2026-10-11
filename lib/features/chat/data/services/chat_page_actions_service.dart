@@ -76,6 +76,17 @@ class ChatPageActions {
     if (!preparedSelection) _warmupLocalSessionInBackground();
   }
 
+  Future<void> selectWorkspaceChat({
+    required String workspaceId,
+    required String chatId,
+  }) async {
+    _requestStopGenerationInBackground();
+    _selectedWorkspaceCubit.selectWorkspace(workspaceId);
+    _selectedChatCubit.selectChat(chatId);
+    final preparedSelection = await _ensureModelSelectedIfNeeded();
+    if (!preparedSelection) _warmupLocalSessionInBackground();
+  }
+
   Future<void> selectWorkspace(String workspaceId) async {
     _requestStopGenerationInBackground();
     _selectedWorkspaceCubit.selectWorkspace(workspaceId);

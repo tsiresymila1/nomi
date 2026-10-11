@@ -6,12 +6,16 @@ import 'package:hugeicons/hugeicons.dart';
 class HomeWorkspaceList extends StatelessWidget {
   const HomeWorkspaceList({
     required this.groups,
+    required this.onOpenChat,
     required this.onOpenWorkspaceChat,
+    required this.onOpenWorkspaceSettings,
     super.key,
   });
 
   final List<WorkspaceChatGroup> groups;
+  final void Function(String workspaceId, String chatId) onOpenChat;
   final ValueChanged<String> onOpenWorkspaceChat;
+  final ValueChanged<String> onOpenWorkspaceSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +29,7 @@ class HomeWorkspaceList extends StatelessWidget {
         final group = groups[index];
         final delayMs = index * 50;
         final threadCount = group.chats.length;
+        final visibleChats = group.chats.take(5);
         return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
@@ -40,22 +45,54 @@ class HomeWorkspaceList extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   side: BorderSide.none,
                 ),
-                title: Text(
-                  group.workspace.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        group.workspace.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      key: ValueKey('workspace-settings-${group.workspace.id}'),
+                      tooltip: 'Workspace settings',
+                      visualDensity: VisualDensity.compact,
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedSettings02,
+                        size: 18,
+                      ),
+                      onPressed: () =>
+                          onOpenWorkspaceSettings(group.workspace.id),
+                    ),
+                  ],
                 ),
                 subtitle: Text(
                   '$threadCount thread${threadCount == 1 ? '' : 's'}',
                 ),
                 children: [
                   if (group.chats.isEmpty)
-                    const ListTile(dense: true, title: Text('No thread yet'))
+                    ListTile(
+                      key: ValueKey(
+                        'workspace-start-chat-${group.workspace.id}',
+                      ),
+                      dense: true,
+                      leading: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedChatAdd01,
+                        size: 18,
+                      ),
+                      title: const Text('Start a chat'),
+                      trailing: const Icon(Icons.chevron_right, size: 18),
+                      onTap: () => onOpenWorkspaceChat(group.workspace.id),
+                    )
                   else
-                    for (final chat in group.chats.take(5))
+                    for (final chat in visibleChats)
                       ListTile(
+                        key: ValueKey('home-chat-${chat.id}'),
                         dense: true,
                         leading: const HugeIcon(
                           icon: HugeIcons.strokeRoundedChat01,
@@ -66,17 +103,22 @@ class HomeWorkspaceList extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        trailing: const Icon(Icons.chevron_right, size: 18),
+                        onTap: () => onOpenChat(group.workspace.id, chat.id),
                       ),
-                  ListTile(
-                    leading: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedLink01,
+                  if (group.chats.length > 5)
+                    ListTile(
+                      dense: true,
+                      leading: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedMoreHorizontalCircle01,
+                        size: 18,
+                      ),
+                      title: const Text(
+                        'View all chats',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      onTap: () => onOpenWorkspaceChat(group.workspace.id),
                     ),
-                    title: const Text(
-                      'Open Workspace Chat',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    onTap: () => onOpenWorkspaceChat(group.workspace.id),
-                  ),
                 ],
               ),
             )

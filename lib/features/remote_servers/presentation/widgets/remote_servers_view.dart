@@ -133,6 +133,7 @@ class RemoteServersView extends StatelessWidget {
     BuildContext context, {
     RemoteServerEntry? existing,
   }) async {
+    final cubit = context.read<RemoteServersCubit>();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -144,8 +145,7 @@ class RemoteServersView extends StatelessWidget {
         return RemoteServerFormSheet(
           existing: existing,
           onSubmit: (name, baseUrl, token) async {
-            final cubit = context.read<RemoteServersCubit>();
-            await _run(context, () async {
+            await cubit.runBusyTask(() async {
               await cubit.addOrUpdateManualServer(
                 id: existing?.id,
                 name: name,

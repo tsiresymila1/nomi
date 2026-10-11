@@ -130,18 +130,32 @@ class _TextToSpeechSettingsSectionState
                             ? Icons.offline_bolt_outlined
                             : Icons.cloud_outlined,
                       ),
-                      title: Text(voice.locale),
+                      title: Row(
+                        children: [
+                          Flexible(child: Text(voice.locale)),
+                          if (recommended) ...[
+                            const SizedBox(width: 8),
+                            const Badge(label: Text('Recommended')),
+                          ],
+                        ],
+                      ),
                       subtitle: Text(
                         '${voice.name}\n${voice.quality} quality · ${voice.latency} latency',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       isThreeLine: true,
-                      trailing: recommended
-                          ? const Chip(label: Text('Recommended'))
-                          : isSelected
-                          ? const Icon(Icons.check_rounded)
-                          : null,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Test voice',
+                            onPressed: () => _previewVoice(voice),
+                            icon: const Icon(Icons.play_arrow_rounded),
+                          ),
+                          if (isSelected) const Icon(Icons.check_rounded),
+                        ],
+                      ),
                       onTap: () => Navigator.pop(context, voice),
                     );
                   },
@@ -152,9 +166,37 @@ class _TextToSpeechSettingsSectionState
         ),
       ),
     );
-    if (selected == null) return;
-    widget.cubit.selectVoice(selected);
+    await widget.textToSpeech.stop();
+    if (selected != null) widget.cubit.selectVoice(selected);
     await _apply();
+  }
+
+  Future<void> _previewVoice(TextToSpeechVoice voice) async {
+    if (_previewing) return;
+    setState(() => _previewing = true);
+    try {
+      final state = widget.cubit.state;
+      await widget.textToSpeech.applyPreferences(
+        TextToSpeechPreferences(
+          engine: state.engine,
+          voiceName: voice.name,
+          voiceLocale: voice.locale,
+          speechRate: state.speechRate,
+          pitch: state.pitch,
+        ),
+      );
+      await widget.textToSpeech.speak(
+        'Bonjour, ceci est un aperçu de cette voix.',
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _previewing = false);
+    }
   }
 
   Future<void> _preview() async {

@@ -99,6 +99,12 @@ void main() {
     await tester.tap(find.text('Voice model'));
     await tester.pumpAndSettle();
     expect(find.text('Recommended'), findsOneWidget);
+    expect(find.byTooltip('Test voice'), findsOneWidget);
+    await tester.tap(find.byTooltip('Test voice'));
+    await tester.pump();
+    expect(platformTts.spoken, hasLength(1));
+    expect(cubit.state.voiceName, isNull);
+
     await tester.tap(find.text('fr-FR'));
     await tester.pumpAndSettle();
 
@@ -107,7 +113,7 @@ void main() {
 
     await tester.tap(find.text('Preview voice'));
     await tester.pump();
-    expect(platformTts.spoken, hasLength(1));
+    expect(platformTts.spoken, hasLength(2));
   });
 
   testWidgets('confirms, installs and preloads the LlamaDart voice', (

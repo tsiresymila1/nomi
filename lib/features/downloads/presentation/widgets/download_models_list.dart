@@ -33,6 +33,42 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
     super.dispose();
   }
 
+  Future<void> _showFilters({required bool supportsLocalModels}) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                leading: Icon(Icons.filter_alt_outlined),
+                title: Text('Model filters'),
+              ),
+              SwitchListTile(
+                title: const Text('Hide local models'),
+                subtitle: Text(
+                  supportsLocalModels
+                      ? 'Only show models provided by remote servers.'
+                      : 'Local models are unavailable on this device.',
+                ),
+                value: !supportsLocalModels || _hideLocal,
+                onChanged: supportsLocalModels
+                    ? (selected) {
+                        setState(() => _hideLocal = selected);
+                        setSheetState(() {});
+                      }
+                    : null,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget reveal(Widget child, {int delayMs = 0}) {
@@ -135,51 +171,56 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
                           ),
                           const SizedBox(height: 8),
                         ],
-                        TextField(
-                          controller: _searchController,
-                          onChanged: (value) =>
-                              setState(() => _searchQuery = value),
-                          decoration: InputDecoration(
-                            hintText: 'Search models',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            suffixIcon: _searchQuery.trim().isEmpty
-                                ? null
-                                : IconButton(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                    icon: const Icon(Icons.close_rounded),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              FilterChip(
-                                label: const Text('Hide local models'),
-                                selected:
-                                    !capabilities.supportsLocalModels ||
-                                    _hideLocal,
-                                onSelected: capabilities.supportsLocalModels
-                                    ? (selected) {
-                                        setState(() => _hideLocal = selected);
-                                      }
-                                    : null,
-                              ),
-                              if (hiddenIncompatible > 0)
-                                Chip(
-                                  label: Text(
-                                    '$hiddenIncompatible incompatible hidden',
-                                  ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (value) =>
+                                    setState(() => _searchQuery = value),
+                                decoration: InputDecoration(
+                                  hintText: 'Search models',
+                                  prefixIcon: const Icon(Icons.search_rounded),
+                                  suffixIcon: _searchQuery.trim().isEmpty
+                                      ? null
+                                      : IconButton(
+                                          tooltip: 'Clear search',
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            setState(() => _searchQuery = '');
+                                          },
+                                          icon: const Icon(Icons.close_rounded),
+                                        ),
                                 ),
-                            ],
-                          ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              tooltip: 'Filter models',
+                              onPressed: () => _showFilters(
+                                supportsLocalModels:
+                                    capabilities.supportsLocalModels,
+                              ),
+                              icon: Badge(
+                                isLabelVisible:
+                                    capabilities.supportsLocalModels &&
+                                    _hideLocal,
+                                child: const Icon(Icons.filter_alt_outlined),
+                              ),
+                            ),
+                          ],
                         ),
+                        if (hiddenIncompatible > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '$hiddenIncompatible incompatible model${hiddenIncompatible == 1 ? '' : 's'} hidden',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),

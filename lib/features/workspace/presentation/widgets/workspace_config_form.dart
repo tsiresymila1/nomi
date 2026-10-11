@@ -222,10 +222,9 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                             ),
                           ),
                     icon: state.isImporting
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 1),
                           )
                         : const Icon(Icons.upload_file_rounded),
                     label: const Text('Add'),
@@ -259,10 +258,9 @@ class _WorkspaceConfigFormState extends State<WorkspaceConfigForm> {
                       ? null
                       : () => unawaited(WorkspaceConfigActions.save(cubit)),
                   child: state.isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 1),
                         )
                       : const Text('Save'),
                 ),
@@ -338,10 +336,9 @@ class _MemorySection extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Center(
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              child: SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 1),
               ),
             ),
           )

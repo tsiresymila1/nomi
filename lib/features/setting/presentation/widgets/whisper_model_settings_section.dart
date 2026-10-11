@@ -97,6 +97,7 @@ class WhisperModelSettingsSection extends StatelessWidget {
             state.status == WhisperModelStatus.queued ||
             state.status == WhisperModelStatus.checking;
         return Card(
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(

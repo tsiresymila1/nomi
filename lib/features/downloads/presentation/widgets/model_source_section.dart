@@ -42,10 +42,9 @@ class ModelSourceSection extends StatelessWidget {
           FilledButton.icon(
             onPressed: picking ? null : onPickFile,
             icon: picking
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 1),
                   )
                 : const Icon(Icons.attach_file),
             label: const Text('Choose file'),

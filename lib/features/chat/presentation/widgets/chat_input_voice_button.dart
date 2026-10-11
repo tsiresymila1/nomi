@@ -108,10 +108,9 @@ class _ChatInputVoiceButtonState extends State<ChatInputVoiceButton> {
         if (state.isTranscribing) {
           return const Padding(
             padding: EdgeInsets.all(8),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            child: SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(strokeWidth: 1),
             ),
           );
         }

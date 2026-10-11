@@ -28,40 +28,54 @@ void main() {
         .insert(db.WorkspacesCompanion.insert(name: name));
   }
 
-  Future<int> insertChat(int workspaceId,
-      {String title = 'New chat', DateTime? createdAt}) {
-    return database.into(database.chats).insert(
+  Future<int> insertChat(
+    int workspaceId, {
+    String title = 'New chat',
+    DateTime? createdAt,
+  }) {
+    return database
+        .into(database.chats)
+        .insert(
           db.ChatsCompanion.insert(
             title: title,
             workspace: workspaceId,
-            createdAt:
-                createdAt == null ? const Value.absent() : Value(createdAt),
+            createdAt: createdAt == null
+                ? const Value.absent()
+                : Value(createdAt),
           ),
         );
   }
 
-  test('selects the most recent existing chat for the active workspace',
-      () async {
-    final workspaceId = await insertWorkspace();
-    await insertChat(workspaceId,
-        title: 'Older one', createdAt: DateTime(2020));
-    final newerChatId = await insertChat(workspaceId,
-        title: 'Newer one', createdAt: DateTime(2022));
+  test(
+    'selects the most recent existing chat for the active workspace',
+    () async {
+      final workspaceId = await insertWorkspace();
+      await insertChat(
+        workspaceId,
+        title: 'Older one',
+        createdAt: DateTime(2020),
+      );
+      final newerChatId = await insertChat(
+        workspaceId,
+        title: 'Newer one',
+        createdAt: DateTime(2022),
+      );
 
-    final workspaceCubit = SelectedWorkspaceCubit(database);
-    addTearDown(workspaceCubit.close);
-    await _settle();
-    workspaceCubit.selectWorkspace(workspaceId.toString());
+      final workspaceCubit = SelectedWorkspaceCubit(database);
+      addTearDown(workspaceCubit.close);
+      await _settle();
+      workspaceCubit.selectWorkspace(workspaceId.toString());
 
-    final cubit = SelectedChatCubit(
-      database: database,
-      selectedWorkspaceCubit: workspaceCubit,
-    );
-    addTearDown(cubit.close);
-    await _settle();
+      final cubit = SelectedChatCubit(
+        database: database,
+        selectedWorkspaceCubit: workspaceCubit,
+      );
+      addTearDown(cubit.close);
+      await _settle();
 
-    expect(cubit.state, newerChatId.toString());
-  });
+      expect(cubit.state, newerChatId.toString());
+    },
+  );
 
   test('creates a new chat when the workspace has none', () async {
     final workspaceId = await insertWorkspace();
@@ -85,8 +99,7 @@ void main() {
     expect(cubit.state, chats.single.id.toString());
   });
 
-  test('keeps a valid current selection when the workspace re-syncs',
-      () async {
+  test('keeps a valid current selection when the workspace re-syncs', () async {
     final workspaceId = await insertWorkspace();
     final chatId = await insertChat(workspaceId, title: 'Existing chat');
 

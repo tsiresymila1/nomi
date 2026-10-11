@@ -38,11 +38,15 @@ void main() {
     test('selects the earliest existing workspace by createdAt', () async {
       final firstId = await database
           .into(database.workspaces)
-          .insert(db.WorkspacesCompanion.insert(
-            name: 'First',
-            createdAt: Value(DateTime(2020, 1, 1)),
-          ));
-      await database.into(database.workspaces).insert(
+          .insert(
+            db.WorkspacesCompanion.insert(
+              name: 'First',
+              createdAt: Value(DateTime(2020, 1, 1)),
+            ),
+          );
+      await database
+          .into(database.workspaces)
+          .insert(
             db.WorkspacesCompanion.insert(
               name: 'Second',
               createdAt: Value(DateTime(2021, 1, 1)),
@@ -62,10 +66,9 @@ void main() {
     test('keeps an already-hydrated selection from storage', () async {
       final storage = InMemoryHydratedStorage();
       HydratedBloc.storage = storage;
-      await storage.write(
-        'SelectedWorkspaceCubit',
-        <String, dynamic>{'workspaceId': '99'},
-      );
+      await storage.write('SelectedWorkspaceCubit', <String, dynamic>{
+        'workspaceId': '99',
+      });
 
       final cubit = SelectedWorkspaceCubit(database);
       addTearDown(cubit.close);
@@ -80,9 +83,9 @@ void main() {
 
   group('ensureWorkspace', () {
     test('returns existing selection without creating a workspace', () async {
-      final existingId = await database.into(database.workspaces).insert(
-            db.WorkspacesCompanion.insert(name: 'Existing'),
-          );
+      final existingId = await database
+          .into(database.workspaces)
+          .insert(db.WorkspacesCompanion.insert(name: 'Existing'));
 
       final cubit = SelectedWorkspaceCubit(database);
       addTearDown(cubit.close);

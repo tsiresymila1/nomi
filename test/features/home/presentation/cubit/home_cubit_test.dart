@@ -66,8 +66,7 @@ class _FakeRagBackend implements WorkspaceRagBackend {
   Future<WorkspaceRagIngestResult> addDocument(
     String workspaceId,
     WorkspaceRagDocument document,
-  ) async =>
-      const WorkspaceRagIngestResult(sourceId: 1, chunkCount: 1);
+  ) async => const WorkspaceRagIngestResult(sourceId: 1, chunkCount: 1);
 
   @override
   Future<void> removeDocument(String workspaceId, int sourceId) async {}
@@ -81,8 +80,7 @@ class _FakeRagBackend implements WorkspaceRagBackend {
     String query, {
     required int topK,
     required double threshold,
-  }) async =>
-      const <WorkspaceRagResult>[];
+  }) async => const <WorkspaceRagResult>[];
 }
 
 void main() {
@@ -129,9 +127,9 @@ void main() {
           source: 'https://example.com/api',
         )
         .then((_) async {
-      final rows = await database.select(database.models).get();
-      return rows.firstWhere((row) => row.name == name).id;
-    });
+          final rows = await database.select(database.models).get();
+          return rows.firstWhere((row) => row.name == name).id;
+        });
   }
 
   HomeCubit buildCubit({
@@ -145,7 +143,8 @@ void main() {
     final modelCubit = selectedModelCubit ?? SelectedModelCubit();
     final workspaceCubit =
         selectedWorkspaceCubit ?? SelectedWorkspaceCubit(database);
-    final chatCubit = selectedChatCubit ??
+    final chatCubit =
+        selectedChatCubit ??
         SelectedChatCubit(
           database: database,
           selectedWorkspaceCubit: workspaceCubit,
@@ -206,19 +205,21 @@ void main() {
       );
     });
 
-    test('reports not-ready status when the engine fails to initialize',
-        () async {
-      final backend = _FakeRagBackend()..throwOnReady = true;
-      final cubit = buildCubit(backend: backend);
-      addTearDown(cubit.close);
-      await _settle();
-      await _settle();
+    test(
+      'reports not-ready status when the engine fails to initialize',
+      () async {
+        final backend = _FakeRagBackend()..throwOnReady = true;
+        final cubit = buildCubit(backend: backend);
+        addTearDown(cubit.close);
+        await _settle();
+        await _settle();
 
-      expect(
-        cubit.state.embedderStatus,
-        'Workspace RAG engine is not ready yet',
-      );
-    });
+        expect(
+          cubit.state.embedderStatus,
+          'Workspace RAG engine is not ready yet',
+        );
+      },
+    );
   });
 
   group('setSelectedModel', () {
@@ -245,8 +246,7 @@ void main() {
       expect(cubit.state.selectedModelId, remoteId);
     });
 
-    test('throws when selecting a local model without local support',
-        () async {
+    test('throws when selecting a local model without local support', () async {
       // Seed a local default model and run on web (no local support).
       await seeder.ensureSeeded();
       final cubit = buildCubit(capabilities: _webCapabilities);
@@ -338,14 +338,18 @@ void main() {
       final workspaceId = await database
           .into(database.workspaces)
           .insert(db.WorkspacesCompanion.insert(name: 'WS'));
-      await database.into(database.chats).insert(
+      await database
+          .into(database.chats)
+          .insert(
             db.ChatsCompanion.insert(
               title: 'Old chat',
               workspace: workspaceId,
               createdAt: Value(DateTime(2020)),
             ),
           );
-      final newer = await database.into(database.chats).insert(
+      final newer = await database
+          .into(database.chats)
+          .insert(
             db.ChatsCompanion.insert(
               title: 'New chat',
               workspace: workspaceId,
@@ -353,8 +357,9 @@ void main() {
             ),
           );
 
-      final result =
-          await cubit.ensureWorkspaceChatSelection(workspaceId.toString());
+      final result = await cubit.ensureWorkspaceChatSelection(
+        workspaceId.toString(),
+      );
       expect(result, newer.toString());
     });
 
@@ -367,11 +372,12 @@ void main() {
           .into(database.workspaces)
           .insert(db.WorkspacesCompanion.insert(name: 'Empty WS'));
 
-      final result =
-          await cubit.ensureWorkspaceChatSelection(workspaceId.toString());
-      final chats = await (database.select(database.chats)
-            ..where((t) => t.workspace.equals(workspaceId)))
-          .get();
+      final result = await cubit.ensureWorkspaceChatSelection(
+        workspaceId.toString(),
+      );
+      final chats = await (database.select(
+        database.chats,
+      )..where((t) => t.workspace.equals(workspaceId))).get();
       expect(chats, hasLength(1));
       expect(result, chats.single.id.toString());
     });
@@ -393,8 +399,10 @@ void main() {
       final modelCubit = SelectedModelCubit();
       await modelCubit.selectModel(123);
       final installer = _FakeInstaller(modelRepository, const ['model-x']);
-      final cubit =
-          buildCubit(selectedModelCubit: modelCubit, installer: installer);
+      final cubit = buildCubit(
+        selectedModelCubit: modelCubit,
+        installer: installer,
+      );
       addTearDown(cubit.close);
       await _settle();
       await _settle();

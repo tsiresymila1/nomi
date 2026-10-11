@@ -50,24 +50,27 @@ class RemoteServerList extends StatelessWidget {
       ).animate().fade(duration: 300.ms);
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
-      itemCount: state.servers.length,
-      itemBuilder: (context, index) {
-        final server = state.servers[index];
-        return RemoteServerTile(
-              server: server,
-              modelCount: modelCountByServer[server.id] ?? 0,
-              busy: state.busy,
-              onTest: () => onTest(server),
-              onSync: () => onSync(server),
-              onEdit: () => onEdit(server),
-              onDelete: () => onDelete(server),
-            )
-            .animate()
-            .fadeIn(duration: 240.ms, delay: (index * 25).ms)
-            .slideY(begin: 0.04, end: 0);
-      },
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+        itemCount: state.servers.length,
+        itemBuilder: (context, index) {
+          final server = state.servers[index];
+          return RemoteServerTile(
+                server: server,
+                modelCount: modelCountByServer[server.id] ?? 0,
+                busy: state.busy,
+                onTest: () => onTest(server),
+                onSync: () => onSync(server),
+                onEdit: () => onEdit(server),
+                onDelete: () => onDelete(server),
+              )
+              .animate()
+              .fadeIn(duration: 240.ms, delay: (index * 25).ms)
+              .slideY(begin: 0.04, end: 0);
+        },
+      ),
     );
   }
 }

@@ -159,10 +159,9 @@ class _RemoteServerFormSheetState extends State<RemoteServerFormSheet> {
             child: FilledButton(
               onPressed: _saving ? null : _submit,
               child: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 1),
                     )
                   : Text(isEditMode ? 'Update Server' : 'Add Server'),
             ),

@@ -23,9 +23,9 @@ class WorkspaceDocumentsList extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.all(8),
         child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 1),
         ),
       );
     }
@@ -61,9 +61,9 @@ class WorkspaceDocumentsList extends StatelessWidget {
                     document.ingestionStatus ==
                         WorkspaceDocumentIngestionStatus.processing)
                   const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 1),
                   ),
                 if (document.ingestionStatus ==
                     WorkspaceDocumentIngestionStatus.failed)

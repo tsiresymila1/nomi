@@ -24,7 +24,7 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
             body: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               children: [
                 SwitchListTile(
                       title: const Text(
@@ -86,7 +86,7 @@ class SettingsPage extends StatelessWidget {
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 140.ms)
                     .slideY(begin: 0.08, end: 0),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 ListTile(
                       title: const Text(
                         'MCP servers',
@@ -106,6 +106,7 @@ class SettingsPage extends StatelessWidget {
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 180.ms)
                     .slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 16),
               ],
             ),
           );

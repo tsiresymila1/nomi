@@ -63,8 +63,10 @@ void main() {
       test('fromJson returns null for a non-numeric value', () {
         final cubit = SelectedModelCubit();
         addTearDown(cubit.close);
-        expect(cubit.fromJson(<String, dynamic>{'selectedModelId': 'x'}),
-            isNull);
+        expect(
+          cubit.fromJson(<String, dynamic>{'selectedModelId': 'x'}),
+          isNull,
+        );
       });
 
       test('toJson serializes the current state', () {

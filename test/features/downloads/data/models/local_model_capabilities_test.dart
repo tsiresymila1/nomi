@@ -35,10 +35,11 @@ void main() {
     });
 
     test('exposes exactly cpu, gpu, npu', () {
-      expect(
-        LocalModelBackend.values.map((b) => b.name).toList(),
-        <String>['cpu', 'gpu', 'npu'],
-      );
+      expect(LocalModelBackend.values.map((b) => b.name).toList(), <String>[
+        'cpu',
+        'gpu',
+        'npu',
+      ]);
     });
   });
 }

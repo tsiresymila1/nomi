@@ -87,7 +87,14 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
     return BlocBuilder<DownloadsCubit, DownloadsState>(
       builder: (context, state) {
         if (state.loading) {
-          return reveal(const Center(child: CircularProgressIndicator()));
+          return reveal(
+            const Center(
+              child: SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 1),
+              ),
+            ),
+          );
         }
         if (state.errorMessage != null && state.models.isEmpty) {
           return reveal(Center(child: Text('Error: ${state.errorMessage}')));
@@ -158,10 +165,20 @@ class _DownloadModelsListState extends State<DownloadModelsList> {
                     child: Column(
                       children: [
                         if (deviceInfo != null)
-                          ModelDeviceSummaryCard(
-                            deviceInfo: deviceInfo,
-                            storageInsights: storageInsights,
-                            compact: true,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ModelDeviceSummaryCard(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 8,
+                                  ),
+                                  deviceInfo: deviceInfo,
+                                  storageInsights: storageInsights,
+                                  compact: true,
+                                ),
+                              ),
+                            ],
                           ),
                         if (deviceInfo != null) const SizedBox(height: 8),
                         if (!capabilities.supportsLocalModels) ...[

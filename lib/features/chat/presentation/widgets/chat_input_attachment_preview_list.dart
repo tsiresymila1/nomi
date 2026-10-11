@@ -45,7 +45,7 @@ class ChatInputAttachmentPreviewList extends StatelessWidget {
                 if (draft.status == ChatAttachmentDraftStatus.preparing)
                   const SizedBox.square(
                     dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(strokeWidth: 1),
                   )
                 else
                   Icon(

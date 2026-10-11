@@ -171,7 +171,9 @@ class VoiceConversationStatus extends StatelessWidget {
             onPressed: onCancelTurn,
             icon: const Icon(Icons.close_rounded),
             label: const Text('Cancel current turn'),
-          ),
+          )
+        else
+          TextButton.icon(onPressed: () {}, label: const Text('')),
       ],
     );
   }

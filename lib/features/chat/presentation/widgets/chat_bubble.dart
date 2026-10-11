@@ -151,7 +151,10 @@ class ChatBubble extends StatelessWidget {
 
     final markdown = GptMarkdown(
       message,
-      style: TextStyle(fontSize: isUser ? 14 : 13),
+      style: TextStyle(
+        fontSize: isUser ? 14 : 13,
+        color: isUser ? Colors.white : null,
+      ),
     );
 
     if (!_canSpeak) return markdown;

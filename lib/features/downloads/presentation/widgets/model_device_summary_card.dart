@@ -7,12 +7,14 @@ class ModelDeviceSummaryCard extends StatelessWidget {
     required this.deviceInfo,
     this.storageInsights,
     this.compact = false,
+    this.padding,
     super.key,
   });
 
   final DeviceSystemInfo deviceInfo;
   final StorageInsights? storageInsights;
   final bool compact;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +22,8 @@ class ModelDeviceSummaryCard extends StatelessWidget {
 
     Widget statChip(String label, String value, IconData icon) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(14),

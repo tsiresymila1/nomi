@@ -36,8 +36,10 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      gradColor.withAlpha(0),
-                      gradColor.withAlpha(125),
+                      gradColor.withAlpha(10),
+                      gradColor.withAlpha(100),
+                      gradColor.withAlpha(180),
+                      gradColor.withAlpha(240),
                       gradColor.withAlpha(250),
                     ],
                   ),

@@ -116,9 +116,8 @@ class _HomeViewState extends State<HomeView> {
                     Expanded(
                       child: state.loading && state.groups.isEmpty
                           ? Center(
-                              child: SizedBox(
-                                width: 40,
-                                height: 18,
+                              child: SizedBox.square(
+                                dimension: 18,
                                 child: SpinKitThreeBounce(
                                   size: 18,
                                   color: Theme.of(

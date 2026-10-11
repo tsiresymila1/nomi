@@ -33,7 +33,12 @@ class WorkspaceConfigPage extends StatelessWidget {
         builder: (context, state) {
           if (state.workspaceLoading) {
             return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+              body: Center(
+                child: SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 1),
+                ),
+              ),
             );
           }
 

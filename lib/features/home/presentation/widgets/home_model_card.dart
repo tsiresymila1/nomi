@@ -34,6 +34,7 @@ class HomeModelCard extends StatelessWidget {
     }
 
     return Card(
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(

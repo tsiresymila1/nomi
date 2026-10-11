@@ -143,6 +143,7 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
           bloc: widget.generationCubit,
           builder: (context, generationState) {
             return Card(
+              elevation: 0,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(

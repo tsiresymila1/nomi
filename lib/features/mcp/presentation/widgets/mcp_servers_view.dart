@@ -32,7 +32,12 @@ class McpServersView extends StatelessWidget {
           body: Stack(
             children: [
               if (state.loading)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                  child: SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 1),
+                  ),
+                )
               else if (state.servers.isEmpty)
                 const Center(
                   child: Padding(

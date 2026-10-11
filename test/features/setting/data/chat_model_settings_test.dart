@@ -230,33 +230,35 @@ void main() {
       expect(settings.isThinkingOverride, isNull);
     });
 
-    test('saveToPrefs then fromPrefs round-trips a non-null override',
-        () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final prefs = await SharedPreferences.getInstance();
+    test(
+      'saveToPrefs then fromPrefs round-trips a non-null override',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final prefs = await SharedPreferences.getInstance();
 
-      const settings = ChatModelSettings(
-        temperature: 0.25,
-        topK: 12,
-        topP: 0.6,
-        maxTokens: 777,
-        tokenBuffer: 88,
-        randomSeed: 42,
-        preferredBackend: 'cpu',
-        isThinkingOverride: true,
-      );
-      await settings.saveToPrefs(prefs);
+        const settings = ChatModelSettings(
+          temperature: 0.25,
+          topK: 12,
+          topP: 0.6,
+          maxTokens: 777,
+          tokenBuffer: 88,
+          randomSeed: 42,
+          preferredBackend: 'cpu',
+          isThinkingOverride: true,
+        );
+        await settings.saveToPrefs(prefs);
 
-      final restored = ChatModelSettings.fromPrefs(prefs);
-      expect(restored.temperature, 0.25);
-      expect(restored.topK, 12);
-      expect(restored.topP, 0.6);
-      expect(restored.maxTokens, 777);
-      expect(restored.tokenBuffer, 88);
-      expect(restored.randomSeed, 42);
-      expect(restored.preferredBackend, 'cpu');
-      expect(restored.isThinkingOverride, isTrue);
-    });
+        final restored = ChatModelSettings.fromPrefs(prefs);
+        expect(restored.temperature, 0.25);
+        expect(restored.topK, 12);
+        expect(restored.topP, 0.6);
+        expect(restored.maxTokens, 777);
+        expect(restored.tokenBuffer, 88);
+        expect(restored.randomSeed, 42);
+        expect(restored.preferredBackend, 'cpu');
+        expect(restored.isThinkingOverride, isTrue);
+      },
+    );
 
     test('saving a null override removes the persisted key', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{

@@ -117,24 +117,26 @@ void main() {
       expect(cubit.installKeyForModel(_model(id: 12, name: 'A')), 'model_12');
     });
 
-    test('installedIdForModel uses modelId or source for non-file models',
-        () async {
-      final cubit = await buildCubit();
-      addTearDown(cubit.close);
+    test(
+      'installedIdForModel uses modelId or source for non-file models',
+      () async {
+        final cubit = await buildCubit();
+        addTearDown(cubit.close);
 
-      expect(
-        cubit.installedIdForModel(
-          _model(id: 1, name: 'A', modelId: 'resolved-id'),
-        ),
-        'resolved-id',
-      );
-      expect(
-        cubit.installedIdForModel(
-          _model(id: 1, name: 'A', source: 'https://x/y'),
-        ),
-        'https://x/y',
-      );
-    });
+        expect(
+          cubit.installedIdForModel(
+            _model(id: 1, name: 'A', modelId: 'resolved-id'),
+          ),
+          'resolved-id',
+        );
+        expect(
+          cubit.installedIdForModel(
+            _model(id: 1, name: 'A', source: 'https://x/y'),
+          ),
+          'https://x/y',
+        );
+      },
+    );
   });
 
   group('installModel guards', () {
@@ -197,8 +199,9 @@ void main() {
       final cubit = await buildCubit();
       addTearDown(cubit.close);
 
-      final row = (await database.select(database.models).get())
-          .firstWhere((model) => model.name == 'Removable Remote');
+      final row = (await database.select(database.models).get()).firstWhere(
+        (model) => model.name == 'Removable Remote',
+      );
 
       await cubit.removeModel(
         _model(
@@ -210,9 +213,9 @@ void main() {
       );
       await _settle();
 
-      final remaining = await (database.select(database.models)
-            ..where((t) => t.id.equals(row.id)))
-          .get();
+      final remaining = await (database.select(
+        database.models,
+      )..where((t) => t.id.equals(row.id))).get();
       expect(remaining, isEmpty);
     });
 
@@ -221,10 +224,8 @@ void main() {
       final cubit = await buildCubit();
       addTearDown(cubit.close);
 
-      final staticRow =
-          (await database.select(database.models).get()).first;
-      final countBefore =
-          (await database.select(database.models).get()).length;
+      final staticRow = (await database.select(database.models).get()).first;
+      final countBefore = (await database.select(database.models).get()).length;
 
       await cubit.removeModel(
         _model(

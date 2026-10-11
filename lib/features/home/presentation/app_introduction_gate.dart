@@ -52,7 +52,14 @@ class _AppIntroductionGateState extends State<AppIntroductionGate> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 1),
+          ),
+        ),
+      );
     }
 
     if (_seen) {

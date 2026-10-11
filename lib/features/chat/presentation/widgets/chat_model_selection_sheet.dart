@@ -202,12 +202,11 @@ class ChatModelSelectionSheet extends StatelessWidget {
                                                 },
                                               )
                                             : isDownloading
-                                            ? SizedBox(
-                                                width: 18,
-                                                height: 18,
+                                            ? SizedBox.square(
+                                                dimension: 16,
                                                 child:
                                                     CircularProgressIndicator(
-                                                      strokeWidth: 2,
+                                                      strokeWidth: 1,
                                                       value: progress,
                                                     ),
                                               )

@@ -605,9 +605,9 @@ class _ChatInputState extends State<ChatInput> {
                                     const Padding(
                                       padding: EdgeInsets.all(5),
                                       child: SizedBox.square(
-                                        dimension: 18,
+                                        dimension: 16,
                                         child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                          strokeWidth: 1,
                                         ),
                                       ),
                                     )

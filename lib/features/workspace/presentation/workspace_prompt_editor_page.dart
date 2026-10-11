@@ -118,7 +118,10 @@ class _WorkspacePromptEditorPageState extends State<WorkspacePromptEditorPage> {
       child: Scaffold(
         appBar: AppBar(
           leading: BackButton(onPressed: _requestClose),
-          title: const Text('Prompt editor'),
+          title: const Text(
+            'Prompt editor',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
           actions: [
             TextButton.icon(
               onPressed: _save,

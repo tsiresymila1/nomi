@@ -569,10 +569,9 @@ class _AddModelPageState extends State<AddModelPage> {
                 child: FilledButton(
                   onPressed: _saving || _picking ? null : _save,
                   child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 1),
                         )
                       : Text(_isEditMode ? 'Update model' : 'Save model'),
                 ),

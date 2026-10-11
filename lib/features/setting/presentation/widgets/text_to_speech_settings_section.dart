@@ -320,7 +320,9 @@ class _TextToSpeechSettingsSectionState
           final llamaDartCubit = widget.llamaDartCubit;
 
           return Card(
+            elevation: 0,
             child: ExpansionTile(
+              shape: Border.fromBorderSide(BorderSide.none),
               initiallyExpanded: widget.initiallyExpanded,
               leading: const Icon(Icons.record_voice_over_outlined),
               title: const Text(
@@ -331,7 +333,8 @@ class _TextToSpeechSettingsSectionState
                 'Android native voice or local LlamaDart neural voice',
                 style: TextStyle(fontSize: 13),
               ),
-              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              tilePadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
@@ -417,7 +420,7 @@ class _TextToSpeechSettingsSectionState
                       icon: _previewing
                           ? const SizedBox.square(
                               dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 1),
                             )
                           : const Icon(Icons.play_arrow_rounded),
                       label: const Text('Preview voice'),

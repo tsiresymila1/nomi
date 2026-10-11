@@ -36,90 +36,95 @@ class HomeWorkspaceList extends StatelessWidget {
                 color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: ExpansionTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide.none,
-                ),
-                collapsedShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide.none,
-                ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        group.workspace.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      key: ValueKey('workspace-settings-${group.workspace.id}'),
-                      tooltip: 'Workspace settings',
-                      visualDensity: VisualDensity.compact,
-                      icon: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedSettings02,
-                        size: 18,
-                      ),
-                      onPressed: () =>
-                          onOpenWorkspaceSettings(group.workspace.id),
-                    ),
-                  ],
-                ),
-                subtitle: Text(
-                  '$threadCount thread${threadCount == 1 ? '' : 's'}',
-                ),
-                children: [
-                  if (group.chats.isEmpty)
-                    ListTile(
-                      key: ValueKey(
-                        'workspace-start-chat-${group.workspace.id}',
-                      ),
-                      dense: true,
-                      leading: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedChatAdd01,
-                        size: 18,
-                      ),
-                      title: const Text('Start a chat'),
-                      trailing: const Icon(Icons.chevron_right, size: 18),
-                      onTap: () => onOpenWorkspaceChat(group.workspace.id),
-                    )
-                  else
-                    for (final chat in visibleChats)
-                      ListTile(
-                        key: ValueKey('home-chat-${chat.id}'),
-                        dense: true,
-                        leading: const HugeIcon(
-                          icon: HugeIcons.strokeRoundedChat01,
-                          size: 16,
-                        ),
-                        title: Text(
-                          chat.title,
+              child: Card(
+                elevation: 0,
+                child: ExpansionTile(
+                  childrenPadding: EdgeInsets.all(8),
+                  tilePadding: EdgeInsets.fromLTRB(12, 2, 12, 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide.none,
+                  ),
+                  collapsedShape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide.none,
+                  ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          group.workspace.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, size: 18),
-                        onTap: () => onOpenChat(group.workspace.id, chat.id),
                       ),
-                  if (group.chats.length > 5)
-                    ListTile(
-                      dense: true,
-                      leading: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedMoreHorizontalCircle01,
-                        size: 18,
-                      ),
-                      title: const Text(
-                        'View all chats',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      onTap: () => onOpenWorkspaceChat(group.workspace.id),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    key: ValueKey('workspace-settings-${group.workspace.id}'),
+                    tooltip: 'Workspace settings',
+                    visualDensity: VisualDensity.compact,
+                    icon: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedSettings02,
+                      size: 18,
                     ),
-                ],
+                    onPressed: () =>
+                        onOpenWorkspaceSettings(group.workspace.id),
+                  ),
+                  subtitle: Text(
+                    '$threadCount thread${threadCount == 1 ? '' : 's'}',
+                  ),
+                  children: [
+                    if (group.chats.isEmpty)
+                      ListTile(
+                        key: ValueKey(
+                          'workspace-start-chat-${group.workspace.id}',
+                        ),
+                        dense: true,
+                        leading: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedChatAdd01,
+                          size: 18,
+                        ),
+                        title: const Text('Start a chat'),
+                        trailing: const Icon(Icons.chevron_right, size: 18),
+                        onTap: () => onOpenWorkspaceChat(group.workspace.id),
+                      )
+                    else
+                      for (final chat in visibleChats)
+                        ListTile(
+                          key: ValueKey('home-chat-${chat.id}'),
+                          dense: true,
+                          leading: const HugeIcon(
+                            icon: HugeIcons.strokeRoundedChat01,
+                            size: 16,
+                          ),
+                          title: Text(
+                            chat.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.chevron_right, size: 18),
+                          onTap: () => onOpenChat(group.workspace.id, chat.id),
+                        ),
+                    if (group.chats.length > 5)
+                      ListTile(
+                        dense: true,
+                        leading: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedMoreHorizontalCircle01,
+                          size: 18,
+                        ),
+                        title: const Text(
+                          'View all chats',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        onTap: () => onOpenWorkspaceChat(group.workspace.id),
+                      ),
+                  ],
+                ),
               ),
             )
             .animate()

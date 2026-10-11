@@ -87,7 +87,7 @@ class _ChatPageState extends State<ChatPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              gradColor.withAlpha(0),
+              gradColor.withAlpha(50),
               gradColor.withAlpha(125),
               gradColor.withAlpha(250),
             ],

@@ -55,6 +55,7 @@ class _DownloadItemState extends State<DownloadItem> {
         model.source.startsWith('https://');
 
     return Card(
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(

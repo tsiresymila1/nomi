@@ -125,10 +125,7 @@ String _fallbackTitle(String messageText, {required bool hasImage}) {
 
   final words = candidate.split(' ');
   final firstWords = words.take(6).join(' ');
-  return _fitTitle(
-    _capitalize(firstWords),
-    suffix: hasImage ? ' (image)' : '',
-  );
+  return _fitTitle(_capitalize(firstWords), suffix: hasImage ? ' (image)' : '');
 }
 
 String? _sanitizeTitle(String? raw) {

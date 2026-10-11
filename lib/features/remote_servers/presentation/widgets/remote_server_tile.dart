@@ -27,6 +27,7 @@ class RemoteServerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 0,
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
         leading: const Icon(Icons.dns_outlined),

@@ -26,15 +26,18 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
     required LocalAiRuntimeCoordinator coordinator,
     required String? Function() languageCode,
     AudioPlayer? audioPlayer,
+    AudioPlayer Function()? audioPlayerFactory,
   }) : _modelStore = modelStore,
        _coordinator = coordinator,
        _languageCode = languageCode,
-       _player = audioPlayer ?? AudioPlayer();
+       _player = audioPlayer,
+       _audioPlayerFactory = audioPlayerFactory ?? AudioPlayer.new;
 
   final LlamaDartTtsModelStore _modelStore;
   final LocalAiRuntimeCoordinator _coordinator;
   final String? Function() _languageCode;
-  final AudioPlayer _player;
+  final AudioPlayer Function() _audioPlayerFactory;
+  AudioPlayer? _player;
   final StreamController<bool> _speakingController =
       StreamController<bool>.broadcast();
   final List<String> _queue = <String>[];
@@ -168,18 +171,27 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
   }
 
   Future<void> _play(List<int> wavBytes, int serial) async {
+    final player = _player ??= _audioPlayerFactory();
     final completion = Completer<void>();
     _playbackCompletion = completion;
     late final StreamSubscription<void> subscription;
-    subscription = _player.onPlayerComplete.listen((_) {
+    subscription = player.onPlayerComplete.listen((_) {
       if (!completion.isCompleted) completion.complete();
     });
     try {
-      await _player.play(
+      await player.play(
         BytesSource(Uint8List.fromList(wavBytes), mimeType: 'audio/wav'),
       );
       if (serial != _serial && !completion.isCompleted) completion.complete();
       await completion.future;
+    } catch (_) {
+      if (identical(_player, player)) _player = null;
+      try {
+        await player.dispose();
+      } catch (_) {
+        // Preserve the original playback error when native setup failed.
+      }
+      rethrow;
     } finally {
       await subscription.cancel();
       if (identical(_playbackCompletion, completion)) {
@@ -219,7 +231,7 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
     _activeTask = null;
     final completion = _playbackCompletion;
     if (completion != null && !completion.isCompleted) completion.complete();
-    await _player.stop();
+    await _player?.stop();
     _processing = false;
     _emit(false);
   }
@@ -273,7 +285,9 @@ class LlamaDartTextToSpeech implements LocalNeuralTextToSpeech {
     if (_disposed) return;
     await unload();
     _disposed = true;
-    await _player.dispose();
+    final player = _player;
+    _player = null;
+    await player?.dispose();
     await _speakingController.close();
   }
 }

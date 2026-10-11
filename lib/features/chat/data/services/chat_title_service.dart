@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
+import 'package:gena/features/chat/data/services/genkit_chat_helpers.dart';
 import 'package:gena/features/chat/data/services/remote_llm_service.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
@@ -46,6 +47,7 @@ Future<String?> _generateAiThreadTitle({
 
   try {
     if (activeModel.provider == ModelProviderType.remote) {
+      if (usesAnthropicRemoteProtocol(activeModel)) return null;
       return await _generateRemoteThreadTitle(
         model: activeModel,
         messageText: content,

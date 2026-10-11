@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gena/core/logger.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_entry.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_model_spec.dart';
+import 'package:gena/features/remote_servers/data/models/remote_server_protocol.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_catalog_service.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_model_sync_service.dart';
 import 'package:gena/features/remote_servers/data/services/remote_server_network_discovery_service.dart';
@@ -84,9 +85,11 @@ class RemoteServersCubit extends Cubit<RemoteServersState> {
     required String name,
     required String baseUrl,
     required String token,
+    required RemoteServerProtocol protocol,
   }) async {
     final normalizedUrl = _remoteServerCatalogService.normalizeApiBaseUrl(
       baseUrl,
+      protocol: protocol,
     );
     final now = DateTime.now();
     final next = [...state.servers];
@@ -101,6 +104,7 @@ class RemoteServersCubit extends Cubit<RemoteServersState> {
           autoDiscovered: false,
           createdAt: now,
           lastSeenAt: now,
+          protocol: protocol,
         ),
       );
     } else {
@@ -113,6 +117,7 @@ class RemoteServersCubit extends Cubit<RemoteServersState> {
         token: token.trim(),
         autoDiscovered: false,
         lastSeenAt: now,
+        protocol: protocol,
       );
     }
 
@@ -131,6 +136,7 @@ class RemoteServersCubit extends Cubit<RemoteServersState> {
     return _remoteServerCatalogService.probeAndFetchModels(
       baseUrl: entry.baseUrl,
       token: entry.token,
+      protocol: entry.protocol,
     );
   }
 

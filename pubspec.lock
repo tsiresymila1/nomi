@@ -25,6 +25,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.3"
+  anthropic_sdk_dart:
+    dependency: transitive
+    description:
+      name: anthropic_sdk_dart
+      sha256: c6156e106927eea40b75c4a97f193ea93e12adb033c41d51742b61b7ea122f17
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   archive:
     dependency: transitive
     description:
@@ -736,6 +744,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.2"
+  genkit_anthropic:
+    dependency: "direct main"
+    description:
+      name: genkit_anthropic
+      sha256: "2dcd6aeb6c92135eed3d78f319a4275d28ffa05f20d30ee4c04f1654d3cd5fbe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.7"
   genkit_llamadart:
     dependency: "direct main"
     description:

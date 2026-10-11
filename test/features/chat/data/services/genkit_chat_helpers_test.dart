@@ -4,6 +4,7 @@ import 'package:gena/features/chat/data/services/genkit_chat_helpers.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
+import 'package:genkit_anthropic/genkit_anthropic.dart';
 import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 
@@ -23,6 +24,7 @@ ModelInfo buildModel({
   int tokenBuffer = 512,
   int randomSeed = 123,
   String source = '/models/model.gguf',
+  String sourceType = 'file',
 }) {
   return ModelInfo(
     id: 1,
@@ -44,7 +46,7 @@ ModelInfo buildModel({
     tokenBuffer: tokenBuffer,
     randomSeed: randomSeed,
     preferredBackend: 'cpu',
-    sourceType: 'file',
+    sourceType: sourceType,
     source: source,
   );
 }
@@ -382,6 +384,26 @@ void main() {
       expect(config.topP, 0.5);
       expect(config.maxTokens, 1024);
       expect(config.seed, 7);
+    });
+
+    test('maps Anthropic remote model onto AnthropicOptions', () {
+      final config =
+          resolveModelConfig(
+                activeModel: buildModel(
+                  provider: ModelProviderType.remote,
+                  sourceType: 'remote-anthropic',
+                  temperature: 0.3,
+                  topP: 0.5,
+                  topK: 20,
+                  tokenBuffer: 1024,
+                ),
+              )
+              as AnthropicOptions;
+
+      expect(config.maxTokens, 1024);
+      expect(config.temperature, isNull);
+      expect(config.topP, isNull);
+      expect(config.topK, isNull);
     });
   });
 

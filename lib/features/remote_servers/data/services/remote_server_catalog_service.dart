@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_model_spec.dart';
+import 'package:gena/features/remote_servers/data/models/remote_server_protocol.dart';
 
 class RemoteServerCatalogService {
   RemoteServerCatalogService({Dio? dio})
@@ -21,32 +22,12 @@ class RemoteServerCatalogService {
   Future<RemoteServerProbeResult> probeAndFetchModels({
     required String baseUrl,
     required String token,
+    RemoteServerProtocol protocol = RemoteServerProtocol.openAiCompatible,
   }) async {
-    final normalized = normalizeApiBaseUrl(baseUrl);
+    final normalized = normalizeApiBaseUrl(baseUrl, protocol: protocol);
     final authToken = _normalizeToken(token);
-    final headers = <String, String>{};
-    if (authToken.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $authToken';
-    }
-
-    final endpoints = <_ProbeEndpoint>{
-      _ProbeEndpoint(
-        url: _joinPath(normalized, '/models'),
-        kind: _ProbeKind.openAiModels,
-      ),
-      _ProbeEndpoint(
-        url: _joinPath(normalized, '/v1/models'),
-        kind: _ProbeKind.openAiModels,
-      ),
-      _ProbeEndpoint(
-        url: _joinPath(normalized, '/api/v1/models'),
-        kind: _ProbeKind.openAiModels,
-      ),
-      _ProbeEndpoint(
-        url: _joinPath(normalized, '/api/tags'),
-        kind: _ProbeKind.ollamaTags,
-      ),
-    }.toList(growable: false);
+    final headers = _buildHeaders(protocol: protocol, token: authToken);
+    final endpoints = _buildEndpoints(normalized, protocol);
 
     var lastStatusCode = null as int?;
     var unauthorized = false;
@@ -108,7 +89,10 @@ class RemoteServerCatalogService {
     );
   }
 
-  String normalizeApiBaseUrl(String input) {
+  String normalizeApiBaseUrl(
+    String input, {
+    RemoteServerProtocol protocol = RemoteServerProtocol.openAiCompatible,
+  }) {
     final trimmed = input.trim();
     final parsed = Uri.tryParse(trimmed);
     if (parsed == null ||
@@ -120,11 +104,80 @@ class RemoteServerCatalogService {
     if (normalized.endsWith('/chat/completions')) {
       normalized = normalized.substring(0, normalized.length - 17);
     }
+    if (protocol == RemoteServerProtocol.anthropic) {
+      for (final suffix in const [
+        '/v1/messages',
+        '/v1/models',
+        '/messages',
+        '/models',
+        '/v1',
+      ]) {
+        if (normalized.endsWith(suffix)) {
+          normalized = normalized.substring(
+            0,
+            normalized.length - suffix.length,
+          );
+          break;
+        }
+      }
+    }
 
     return normalized;
   }
 
+  Map<String, String> _buildHeaders({
+    required RemoteServerProtocol protocol,
+    required String token,
+  }) {
+    if (protocol == RemoteServerProtocol.anthropic) {
+      return <String, String>{
+        if (token.isNotEmpty) 'x-api-key': token,
+        'anthropic-version': '2023-06-01',
+      };
+    }
+
+    return <String, String>{
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  List<_ProbeEndpoint> _buildEndpoints(
+    String normalized,
+    RemoteServerProtocol protocol,
+  ) {
+    if (protocol == RemoteServerProtocol.anthropic) {
+      return [
+        _ProbeEndpoint(
+          url: _joinPath(normalized, '/v1/models'),
+          kind: _ProbeKind.anthropicModels,
+        ),
+      ];
+    }
+
+    return <_ProbeEndpoint>{
+      _ProbeEndpoint(
+        url: _joinPath(normalized, '/models'),
+        kind: _ProbeKind.openAiModels,
+      ),
+      _ProbeEndpoint(
+        url: _joinPath(normalized, '/v1/models'),
+        kind: _ProbeKind.openAiModels,
+      ),
+      _ProbeEndpoint(
+        url: _joinPath(normalized, '/api/v1/models'),
+        kind: _ProbeKind.openAiModels,
+      ),
+      _ProbeEndpoint(
+        url: _joinPath(normalized, '/api/tags'),
+        kind: _ProbeKind.ollamaTags,
+      ),
+    }.toList(growable: false);
+  }
+
   String _resolveEffectiveApiBase(String base, _ProbeEndpoint endpoint) {
+    if (endpoint.kind == _ProbeKind.anthropicModels) {
+      return base;
+    }
     if (endpoint.kind == _ProbeKind.ollamaTags) {
       if (base.endsWith('/v1')) return base;
       return '$base/v1';
@@ -253,4 +306,4 @@ class _ProbeEndpoint {
   final _ProbeKind kind;
 }
 
-enum _ProbeKind { openAiModels, ollamaTags }
+enum _ProbeKind { openAiModels, anthropicModels, ollamaTags }

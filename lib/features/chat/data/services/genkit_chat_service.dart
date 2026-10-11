@@ -17,6 +17,7 @@ import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/workspace/data/models/workspace_entity.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
+import 'package:genkit_anthropic/genkit_anthropic.dart';
 import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 import 'package:schemantic/schemantic.dart';
@@ -342,6 +343,16 @@ Future<_StoredChat> _loadStoredChat(
 Genkit _buildRemoteGenkit(ModelInfo model) {
   final baseUrl = normalizeBaseUrl((model.apiUrl ?? '').trim());
   final apiToken = normalizeApiKey((model.apiToken ?? '').trim());
+  if (usesAnthropicRemoteProtocol(model)) {
+    return Genkit(
+      plugins: [
+        anthropic(
+          apiKey: apiToken.isEmpty ? 'local-api-key' : apiToken,
+          baseUrl: baseUrl,
+        ),
+      ],
+    );
+  }
   return Genkit(
     plugins: [
       openAI(
@@ -422,6 +433,9 @@ ModelRef<dynamic> _resolveModelRef(
       throw StateError('Local model runtime was not prepared.');
     }
     return prepared.modelRef;
+  }
+  if (usesAnthropicRemoteProtocol(model)) {
+    return anthropic.model(resolveRemoteModelId(model));
   }
   return openAI.model(resolveRemoteModelId(model), namespace: _remoteNamespace);
 }

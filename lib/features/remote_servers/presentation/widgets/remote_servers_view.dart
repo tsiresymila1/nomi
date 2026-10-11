@@ -144,13 +144,14 @@ class RemoteServersView extends StatelessWidget {
       builder: (context) {
         return RemoteServerFormSheet(
           existing: existing,
-          onSubmit: (name, baseUrl, token) async {
+          onSubmit: (name, baseUrl, token, protocol) async {
             await cubit.runBusyTask(() async {
               await cubit.addOrUpdateManualServer(
                 id: existing?.id,
                 name: name,
                 baseUrl: baseUrl,
                 token: token,
+                protocol: protocol,
               );
               final synced = await cubit.syncAllServers();
               await AppToast.show(

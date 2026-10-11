@@ -3,6 +3,7 @@ import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_entry.dart';
 import 'package:gena/features/remote_servers/data/models/remote_server_model_spec.dart';
+import 'package:gena/features/remote_servers/data/models/remote_server_protocol.dart';
 
 class RemoteServerModelSyncService {
   RemoteServerModelSyncService(this._database);
@@ -95,7 +96,10 @@ class RemoteServerModelSyncService {
       apiUrl: Value(effectiveApiBaseUrl),
       apiToken: Value(server.token.trim()),
       modelType: Value(modelType),
-      supportImage: Value(_supportsImage(model.raw, normalizedModelId)),
+      supportImage: Value(
+        server.protocol == RemoteServerProtocol.anthropic ||
+            _supportsImage(model.raw, normalizedModelId),
+      ),
       supportAudio: Value(_supportsAudio(model.raw, normalizedModelId)),
       supportsFunctionCalls: Value(_supportsToolCalls(normalizedModelId)),
       isThinking: Value(_isThinkingModel(normalizedModelId)),
@@ -106,7 +110,7 @@ class RemoteServerModelSyncService {
       tokenBuffer: Value(tokenBuffer <= 0 ? 512 : tokenBuffer),
       randomSeed: const Value(1),
       preferredBackend: const Value('gpu'),
-      sourceType: const Value('remote'),
+      sourceType: Value(server.protocol.modelSourceType),
       source: Value(source),
     );
   }
@@ -138,6 +142,7 @@ class RemoteServerModelSyncService {
     if (lower.contains('qwen')) return 'qwen';
     if (lower.contains('llama')) return 'llama';
     if (lower.contains('phi')) return 'phi';
+    if (lower.contains('claude')) return 'claude';
     return 'general';
   }
 
@@ -177,6 +182,7 @@ class RemoteServerModelSyncService {
         lower.contains('qwen') ||
         lower.contains('llama') ||
         lower.contains('gemma') ||
+        lower.contains('claude') ||
         lower.contains('deepseek');
   }
 

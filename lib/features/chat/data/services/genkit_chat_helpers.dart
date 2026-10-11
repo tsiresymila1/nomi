@@ -4,7 +4,9 @@ import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/tools/chat_tools.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/remote_servers/data/models/remote_server_protocol.dart';
 import 'package:genkit/genkit.dart' hide ModelInfo;
+import 'package:genkit_anthropic/genkit_anthropic.dart';
 import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 
@@ -181,12 +183,21 @@ Object resolveModelConfig({required ModelInfo activeModel}) {
     );
   }
 
+  if (usesAnthropicRemoteProtocol(activeModel)) {
+    return AnthropicOptions(maxTokens: activeModel.tokenBuffer);
+  }
+
   return OpenAIChatOptions(
     temperature: activeModel.temperature,
     topP: activeModel.topP,
     maxTokens: activeModel.tokenBuffer,
     seed: activeModel.randomSeed,
   );
+}
+
+bool usesAnthropicRemoteProtocol(ModelInfo model) {
+  return model.provider == ModelProviderType.remote &&
+      model.sourceType == RemoteServerProtocol.anthropic.modelSourceType;
 }
 
 /// Concatenates the reasoning text contained in [parts].

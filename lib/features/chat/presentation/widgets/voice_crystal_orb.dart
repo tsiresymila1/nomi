@@ -32,7 +32,7 @@ class _VoiceCrystalOrbState extends State<VoiceCrystalOrb>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 8),
+    duration: const Duration(seconds: 18),
   );
 
   @override
@@ -67,24 +67,45 @@ class _VoiceCrystalOrbState extends State<VoiceCrystalOrb>
           animation: _controller,
           builder: (context, _) {
             final phase = _controller.value * math.pi * 2;
-            final ambientPulse = (math.sin(phase * 2) + 1) * 0.5;
-            final voicePulse = widget.phase == VoiceConversationPhase.listening
-                ? level * 0.09
-                : widget.phase == VoiceConversationPhase.speaking
-                ? ambientPulse * 0.045
-                : ambientPulse * 0.012;
+            final bounceFrequency = switch (widget.phase) {
+              VoiceConversationPhase.listening => 9.0,
+              VoiceConversationPhase.speaking => 14.0,
+              _ => 2.0,
+            };
+            final bounce =
+                (math.sin((phase * bounceFrequency) - (math.pi / 2)) + 1) * 0.5;
+            final bounceAmount = switch (widget.phase) {
+              VoiceConversationPhase.listening => 0.025 + (level * 0.065),
+              VoiceConversationPhase.speaking => 0.065,
+              VoiceConversationPhase.thinking => 0.015,
+              _ => 0.008,
+            };
+            final isVoiceActive =
+                widget.phase == VoiceConversationPhase.listening ||
+                widget.phase == VoiceConversationPhase.speaking;
 
-            return Transform.scale(
-              scale: 1 + voicePulse,
-              child: SizedBox.square(
-                dimension: widget.size,
-                child: CustomPaint(
-                  key: const ValueKey('voice-crystal-orb'),
-                  painter: _VoiceCrystalOrbPainter(
-                    progress: _controller.value,
-                    phase: widget.phase,
-                    micLevel: level,
-                    accentColor: widget.accentColor,
+            return Transform.translate(
+              offset: Offset(
+                0,
+                isVoiceActive ? -widget.size * 0.012 * bounce : 0,
+              ),
+              child: Transform.scale(
+                key: const ValueKey('voice-crystal-bounce'),
+                scale: 1 + (bounce * bounceAmount),
+                child: Transform.rotate(
+                  key: const ValueKey('voice-crystal-rotation'),
+                  angle: phase,
+                  child: SizedBox.square(
+                    dimension: widget.size,
+                    child: CustomPaint(
+                      key: const ValueKey('voice-crystal-orb'),
+                      painter: _VoiceCrystalOrbPainter(
+                        progress: _controller.value,
+                        phase: widget.phase,
+                        micLevel: level,
+                        accentColor: widget.accentColor,
+                      ),
+                    ),
                   ),
                 ),
               ),

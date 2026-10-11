@@ -10,6 +10,8 @@ abstract interface class ImageGenerationActionsApi {
 
   Future<InstalledImageModel?> resolveModel();
 
+  Future<bool> hasActiveModelInstall();
+
   Future<InstalledImageModel> prepareModel();
 
   Future<InstalledImageModel> installModel({
@@ -51,6 +53,9 @@ class ImageGenerationActions implements ImageGenerationActionsApi {
 
   @override
   Future<InstalledImageModel?> resolveModel() => _service.resolveModel();
+
+  @override
+  Future<bool> hasActiveModelInstall() => _service.hasActiveModelInstall();
 
   @override
   Future<InstalledImageModel> prepareModel() => _service.prepareModel();

@@ -119,6 +119,10 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
         return;
       }
       final installed = await _actions.resolveModel();
+      if (installed == null && await _actions.hasActiveModelInstall()) {
+        await _installModel(support: support);
+        return;
+      }
       if (installed != null) {
         emit(
           state.copyWith(
@@ -151,9 +155,14 @@ class ImageGenerationCubit extends Cubit<ImageGenerationState> {
     if (state.isBusy || state.phase == ImageGenerationUiPhase.unsupported) {
       return;
     }
+    await _installModel(support: state.support);
+  }
+
+  Future<void> _installModel({ImageRuntimeSupport? support}) async {
     emit(
       state.copyWith(
         phase: ImageGenerationUiPhase.downloading,
+        support: support,
         downloadProgress: 0,
         clearError: true,
       ),

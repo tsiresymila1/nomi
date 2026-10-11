@@ -16,6 +16,8 @@ abstract interface class ImageGenerationServiceApi {
 
   Future<InstalledImageModel?> resolveModel();
 
+  Future<bool> hasActiveModelInstall();
+
   Future<InstalledImageModel> prepareModel();
 
   Future<InstalledImageModel> installModel({
@@ -83,6 +85,10 @@ class LocalImageGenerationService implements ImageGenerationServiceApi {
   @override
   Future<InstalledImageModel?> resolveModel() =>
       _modelStore.resolve(_selection.state.selectedProfile);
+
+  @override
+  Future<bool> hasActiveModelInstall() =>
+      _modelStore.hasActiveInstall(_selection.state.selectedProfile);
 
   @override
   Future<InstalledImageModel> installModel({

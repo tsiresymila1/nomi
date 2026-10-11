@@ -239,7 +239,8 @@ class ModelBackgroundDownloadService {
     return pending.completer.future;
   }
 
-  bool hasRunningDownload(String modelKey) {
+  Future<bool> hasRunningDownload(String modelKey) async {
+    await _ensureInitialized();
     final currentTaskId = _taskIdByModelKey[modelKey];
     if (currentTaskId == null) return false;
     final taskId = activeModelDownloadTaskId(

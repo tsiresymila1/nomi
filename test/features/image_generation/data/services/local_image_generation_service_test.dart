@@ -256,6 +256,9 @@ class _FakeImageModelStore implements ImageModelStore {
   );
 
   @override
+  Future<bool> hasActiveInstall(ImageModelProfile profile) async => false;
+
+  @override
   Future<void> cancelInstall(ImageModelProfile profile) async {}
 
   @override

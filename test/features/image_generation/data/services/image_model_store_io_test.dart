@@ -177,6 +177,9 @@ class _FakeDownloadClient implements ImageModelDownloadClient {
   int downloadCalls = 0;
 
   @override
+  Future<bool> hasActiveDownload(ImageModelProfile profile) async => false;
+
+  @override
   Future<void> cancel(ImageModelProfile profile) async {
     cancelCalls++;
   }

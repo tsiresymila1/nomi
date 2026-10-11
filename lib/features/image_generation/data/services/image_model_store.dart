@@ -8,6 +8,8 @@ class DownloadedImageModelFile {
 }
 
 abstract interface class ImageModelDownloadClient {
+  Future<bool> hasActiveDownload(ImageModelProfile profile);
+
   Future<DownloadedImageModelFile> download(
     ImageModelProfile profile, {
     required void Function(double progress) onProgress,
@@ -20,6 +22,8 @@ abstract interface class ImageModelStore {
   bool get isSupported;
 
   Future<InstalledImageModel?> resolve(ImageModelProfile profile);
+
+  Future<bool> hasActiveInstall(ImageModelProfile profile);
 
   Future<InstalledImageModel> install(
     ImageModelProfile profile, {

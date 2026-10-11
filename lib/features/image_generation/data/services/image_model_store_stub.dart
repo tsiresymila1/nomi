@@ -11,6 +11,9 @@ class UnsupportedImageModelStore implements ImageModelStore {
   bool get isSupported => false;
 
   @override
+  Future<bool> hasActiveInstall(ImageModelProfile profile) async => false;
+
+  @override
   Future<void> cancelInstall(ImageModelProfile profile) async {}
 
   @override

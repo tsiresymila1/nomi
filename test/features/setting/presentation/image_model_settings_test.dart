@@ -181,6 +181,9 @@ class _FakeImageActions implements ImageGenerationActionsApi {
   );
 
   @override
+  Future<bool> hasActiveModelInstall() async => false;
+
+  @override
   Future<InstalledImageModel> prepareModel() async {
     prepareCalls++;
     await prepareGate?.future;

@@ -140,6 +140,9 @@ class _FakeImageGenerationService implements ImageGenerationServiceApi {
   void completeGeneration() => _generationGate?.complete();
 
   @override
+  Future<bool> hasActiveModelInstall() async => false;
+
+  @override
   Future<void> cancelInstall() async {}
 
   @override

@@ -17,6 +17,10 @@ class BackgroundImageModelDownloadClient implements ImageModelDownloadClient {
   String _key(ImageModelProfile profile) => 'image-generation:${profile.id}';
 
   @override
+  Future<bool> hasActiveDownload(ImageModelProfile profile) =>
+      ModelBackgroundDownloadService.instance.hasRunningDownload(_key(profile));
+
+  @override
   Future<void> cancel(ImageModelProfile profile) async {
     await ModelBackgroundDownloadService.instance.cancelDownload(_key(profile));
   }
@@ -79,6 +83,11 @@ class IoImageModelStore implements ImageModelStore {
     }
     return InstalledImageModel(profile: profile, modelPath: model.path);
   }
+
+  @override
+  Future<bool> hasActiveInstall(ImageModelProfile profile) => profile.isExternal
+      ? Future<bool>.value(false)
+      : _downloadClient.hasActiveDownload(profile);
 
   @override
   Future<InstalledImageModel> install(

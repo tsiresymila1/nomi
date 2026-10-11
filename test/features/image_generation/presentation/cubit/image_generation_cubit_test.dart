@@ -56,6 +56,17 @@ void main() {
       expect(actions.prepareCalls, 0);
     });
 
+    test('reattaches to an active native model download', () async {
+      actions.installed = null;
+      actions.activeModelInstall = true;
+
+      await cubit.initialize();
+
+      expect(actions.installCalls, 1);
+      expect(cubit.state.phase, ImageGenerationUiPhase.ready);
+      expect(cubit.state.isInstalled, isTrue);
+    });
+
     test('initializes to ready when SDXS is installed', () async {
       await cubit.initialize();
 
@@ -233,6 +244,8 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
   int cancelGenerationCalls = 0;
   int removeCalls = 0;
   int releaseCalls = 0;
+  int installCalls = 0;
+  bool activeModelInstall = false;
   bool blockGeneration = false;
   Object? error;
   Object? prepareError;
@@ -253,6 +266,9 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
 
   @override
   Future<ImageRuntimeSupport> checkSupport() async => support;
+
+  @override
+  Future<bool> hasActiveModelInstall() async => activeModelInstall;
 
   @override
   Future<GeneratedImageArtifact> generateAndPersist({
@@ -294,6 +310,7 @@ class _FakeImageGenerationActions implements ImageGenerationActionsApi {
     required void Function(double progress) onProgress,
     required void Function() onVerifying,
   }) async {
+    installCalls++;
     onProgress(0.5);
     onVerifying();
     onProgress(1);

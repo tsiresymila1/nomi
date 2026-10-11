@@ -33,19 +33,22 @@ class DownloadItemActions extends StatelessWidget {
     return Row(
       children: [
         if (canDownload)
-          FilledButton.tonalIcon(
-            key: const ValueKey('model-primary-download'),
-            onPressed: onDownload,
-            icon: isNetworkSource
-                ? const HugeIcon(
-                    icon: HugeIcons.strokeRoundedDownload01,
-                    size: 18,
-                  )
-                : const HugeIcon(
-                    icon: HugeIcons.strokeRoundedComputerAdd,
-                    size: 18,
-                  ),
-            label: Text(isNetworkSource ? 'Download' : 'Choose file'),
+          Tooltip(
+            message: 'Download model',
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('model-primary-download'),
+              onPressed: onDownload,
+              icon: isNetworkSource
+                  ? const HugeIcon(
+                      icon: HugeIcons.strokeRoundedDownload01,
+                      size: 18,
+                    )
+                  : const HugeIcon(
+                      icon: HugeIcons.strokeRoundedComputerAdd,
+                      size: 18,
+                    ),
+              label: Text(isNetworkSource ? 'Download' : 'Choose file'),
+            ),
           )
         else
           const Spacer(),

@@ -152,18 +152,19 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(Path()..addOval(sphereBounds));
 
-    final coolBlue = Color.lerp(accentColor, const Color(0xFF258DFF), 0.72)!;
-    final cyan = Color.lerp(accentColor, const Color(0xFF8DEBFF), 0.84)!;
+    final crystalLight = Color.lerp(accentColor, Colors.white, 0.78)!;
+    final crystalMid = Color.lerp(accentColor, Colors.white, 0.38)!;
+    final crystalDeep = Color.lerp(accentColor, Colors.black, 0.28)!;
 
     canvas.drawCircle(
       center,
       radius,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF4FDFF), Color(0xFF6CD7FF), Color(0xFF1478F2)],
-          stops: [0, 0.52, 1],
+          colors: [crystalLight, crystalMid, crystalDeep],
+          stops: const [0, 0.52, 1],
         ).createShader(sphereBounds),
     );
 
@@ -184,7 +185,7 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
         math.sin(theta * 0.82 + 1.4) * radius * 0.38,
       ),
       radius * (0.62 + energy * 0.14),
-      cyan,
+      crystalLight,
       0.58,
     );
     _paintCloud(
@@ -194,7 +195,7 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
         math.sin(theta + 3.4) * radius * 0.44,
       ),
       radius * 0.7,
-      coolBlue,
+      crystalMid,
       0.48,
     );
     _paintCloud(
@@ -214,11 +215,15 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x00FFFFFF), Color(0x00033E89), Color(0x6600296B)],
-          stops: [0, 0.58, 1],
+          colors: [
+            accentColor.withValues(alpha: 0),
+            crystalDeep.withValues(alpha: 0),
+            crystalDeep.withValues(alpha: 0.48),
+          ],
+          stops: const [0, 0.58, 1],
         ).createShader(sphereBounds),
     );
 
@@ -243,12 +248,12 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = shortestSide * 0.008
-        ..shader = const SweepGradient(
+        ..shader = SweepGradient(
           colors: [
-            Color(0xD9FFFFFF),
-            Color(0x336FE7FF),
-            Color(0xB33690FF),
-            Color(0xE6FFFFFF),
+            Colors.white.withValues(alpha: 0.85),
+            crystalLight.withValues(alpha: 0.2),
+            accentColor.withValues(alpha: 0.7),
+            Colors.white.withValues(alpha: 0.9),
           ],
         ).createShader(sphereBounds),
     );
@@ -346,7 +351,7 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
         ..blendMode = BlendMode.screen
         ..shader = LinearGradient(
           colors: [
-            const Color(0x0018A7FF),
+            accentColor.withValues(alpha: 0),
             _phaseTint.withValues(alpha: 0.38),
             const Color(0x00FFFFFF),
           ],
@@ -370,13 +375,13 @@ class _VoiceCrystalOrbPainter extends CustomPainter {
     VoiceConversationPhase.speaking => 0.72,
   };
 
-  Color get _phaseTint => switch (phase) {
-    VoiceConversationPhase.idle => const Color(0xFF80BFFF),
-    VoiceConversationPhase.listening => const Color(0xFF42E6FF),
-    VoiceConversationPhase.transcribing => const Color(0xFF78C8FF),
-    VoiceConversationPhase.thinking => const Color(0xFF8B8DFF),
-    VoiceConversationPhase.speaking => const Color(0xFF35D6FF),
-  };
+  Color get _phaseTint => Color.lerp(accentColor, Colors.white, switch (phase) {
+    VoiceConversationPhase.idle => 0.32,
+    VoiceConversationPhase.listening => 0.12,
+    VoiceConversationPhase.transcribing => 0.24,
+    VoiceConversationPhase.thinking => 0.2,
+    VoiceConversationPhase.speaking => 0.08,
+  })!;
 
   @override
   bool shouldRepaint(covariant _VoiceCrystalOrbPainter oldDelegate) =>
@@ -399,7 +404,7 @@ Widget voiceCrystalOrbPreview() {
       child: VoiceCrystalOrb(
         phase: VoiceConversationPhase.listening,
         micLevel: 0.55,
-        accentColor: Color(0xFF4A8DFF),
+        accentColor: Color(0xFF008F72),
       ),
     ),
   );

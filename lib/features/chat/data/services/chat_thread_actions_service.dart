@@ -118,6 +118,13 @@ typedef ChatAssistantGenerator =
       required bool Function() isCancelled,
     });
 
+typedef ChatContextPrimer =
+    Future<void> Function({
+      required db.GenaDatabase database,
+      required int chatId,
+      required ModelInfo activeModel,
+    });
+
 typedef RemoteFallbackResolver =
     Future<RemoteFallbackProposal?> Function(ModelInfo failedModel);
 
@@ -134,6 +141,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
     required ChatGenerationFailureCubit chatGenerationFailureCubit,
     required ChatRuntimeDependencies runtimeDependencies,
     ChatAssistantGenerator? assistantGenerator,
+    ChatContextPrimer? contextPrimer,
     RemoteFallbackResolver? remoteFallbackResolver,
   }) : _database = database,
        _selectedChatCubit = selectedChatCubit,
@@ -146,6 +154,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
        _chatGenerationFailureCubit = chatGenerationFailureCubit,
        _runtimeDependencies = runtimeDependencies,
        _assistantGenerator = assistantGenerator,
+       _contextPrimer = contextPrimer,
        _remoteFallbackResolver = remoteFallbackResolver;
 
   final db.GenaDatabase _database;
@@ -159,6 +168,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
   final ChatGenerationFailureCubit _chatGenerationFailureCubit;
   final ChatRuntimeDependencies _runtimeDependencies;
   final ChatAssistantGenerator? _assistantGenerator;
+  final ChatContextPrimer? _contextPrimer;
   final RemoteFallbackResolver? _remoteFallbackResolver;
 
   int _generationSerial = 0;
@@ -270,12 +280,7 @@ class ChatThreadActions implements ChatThreadActionsApi {
     if (model == null || model.provider != ModelProviderType.local) return;
 
     final result = _generationTail.then(
-      (_) => primeLocalChatContextWithGenkit(
-        deps: _runtimeDependencies,
-        database: _database,
-        chatId: chatId,
-        activeModel: model,
-      ),
+      (_) => _primeContext(chatId: chatId, activeModel: model),
     );
     _generationTail = result.then<void>(
       (_) {},
@@ -457,13 +462,16 @@ class ChatThreadActions implements ChatThreadActionsApi {
       }
 
       scheduleThreadTitleUpdate(
-        localModelRuntime: _localModelRuntime,
         database: _database,
         chatId: chatId,
         messageText: messageText,
         hasImage: hasImage,
         activeModel: activeModel,
       );
+
+      if (activeModel.provider == ModelProviderType.local) {
+        _scheduleContextPrime(chatId: chatId, activeModel: activeModel);
+      }
     } catch (error, stackTrace) {
       if (_cancelGenerationSerial == currentGeneration) {
         await _recordCancelledGeneration(
@@ -530,6 +538,47 @@ class ChatThreadActions implements ChatThreadActionsApi {
       chatId: chatId,
       activeModel: activeModel,
       isCancelled: isCancelled,
+    );
+  }
+
+  Future<void> _primeContext({
+    required int chatId,
+    required ModelInfo activeModel,
+  }) {
+    final override = _contextPrimer;
+    if (override != null) {
+      return override(
+        database: _database,
+        chatId: chatId,
+        activeModel: activeModel,
+      );
+    }
+    return primeLocalChatContextWithGenkit(
+      deps: _runtimeDependencies,
+      database: _database,
+      chatId: chatId,
+      activeModel: activeModel,
+    );
+  }
+
+  /// Pre-fills the native llama KV cache with the completed conversation while
+  /// the user reads the answer. The next turn then evaluates only the newly
+  /// appended user message instead of replaying the whole thread.
+  void _scheduleContextPrime({
+    required int chatId,
+    required ModelInfo activeModel,
+  }) {
+    final result = _generationTail.then(
+      (_) => _primeContext(chatId: chatId, activeModel: activeModel),
+    );
+    _generationTail = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        logger.w(
+          'Could not prime the completed local chat context: $error',
+          stackTrace: stackTrace,
+        );
+      },
     );
   }
 

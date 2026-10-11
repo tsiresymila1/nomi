@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:gena/core/database/gena_database.dart' as db;
 import 'package:gena/features/chat/data/services/chat_runtime_helpers.dart';
-import 'package:gena/features/chat/data/services/local_model_runtime.dart';
 import 'package:gena/features/chat/data/services/remote_llm_service.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
-import 'package:genkit/genkit.dart' hide ModelInfo;
-import 'package:genkit_llamadart/genkit_llamadart.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 const String _threadTitleSystemInstruction =
@@ -17,7 +14,6 @@ const String _threadTitleSystemInstruction =
     'Return only the title text.';
 
 void scheduleThreadTitleUpdate({
-  required LocalModelRuntime localModelRuntime,
   required db.GenaDatabase database,
   required int chatId,
   required String messageText,
@@ -30,7 +26,6 @@ void scheduleThreadTitleUpdate({
     messageText: messageText,
     hasImage: hasImage,
     titleGenerator: (text, {required hasImage}) => _generateAiThreadTitle(
-      localModelRuntime: localModelRuntime,
       activeModel: activeModel,
       messageText: text,
       hasImage: hasImage,
@@ -39,7 +34,6 @@ void scheduleThreadTitleUpdate({
 }
 
 Future<String?> _generateAiThreadTitle({
-  required LocalModelRuntime localModelRuntime,
   required ModelInfo activeModel,
   required String messageText,
   required bool hasImage,
@@ -59,12 +53,11 @@ Future<String?> _generateAiThreadTitle({
       ).timeout(const Duration(seconds: 5));
     }
 
-    return await _generateLocalThreadTitle(
-      localModelRuntime: localModelRuntime,
-      activeModel: activeModel,
-      messageText: content,
-      hasImage: hasImage,
-    ).timeout(const Duration(seconds: 5));
+    // A second local generation here replaces llamadart's prompt/KV cache with
+    // an unrelated title prompt, forcing the next chat turn to replay the full
+    // conversation. Local chats use the deterministic first-message fallback;
+    // remote title generation does not touch the local runtime.
+    return null;
   } catch (_) {
     return null;
   }
@@ -88,38 +81,6 @@ Future<String?> _generateRemoteThreadTitle({
     tools: const <openai.Tool>[],
   );
   return result.generatedText;
-}
-
-Future<String?> _generateLocalThreadTitle({
-  required LocalModelRuntime localModelRuntime,
-  required ModelInfo activeModel,
-  required String messageText,
-  required bool hasImage,
-}) async {
-  final prepared = await localModelRuntime.prepare(activeModel);
-  final userPrompt = _buildTitlePrompt(
-    messageText: messageText,
-    hasImage: hasImage,
-  );
-  final res = await prepared.ai.generate(
-    model: prepared.modelRef,
-    messages: [
-      Message(
-        role: Role.system,
-        content: [TextPart(text: _threadTitleSystemInstruction)],
-      ),
-      Message(
-        role: Role.user,
-        content: [TextPart(text: userPrompt)],
-      ),
-    ],
-    config: const LlamaDartGenerationConfig(
-      maxTokens: 24,
-      temperature: 0.2,
-      enableThinking: false,
-    ),
-  );
-  return res.text;
 }
 
 String _buildTitlePrompt({

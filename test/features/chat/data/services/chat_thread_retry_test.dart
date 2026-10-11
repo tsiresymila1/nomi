@@ -14,6 +14,9 @@ import 'package:gena/features/chat/presentation/cubit/chat_ui_cubits.dart';
 import 'package:gena/features/chat/presentation/cubit/selected_chat_cubit.dart';
 import 'package:gena/features/downloads/data/models/model_info.dart';
 import 'package:gena/features/downloads/data/models/model_provider_type.dart';
+import 'package:gena/features/workspace/data/models/workspace_entity.dart';
+import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
+import 'package:genkit/genkit.dart' hide ModelInfo;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -330,6 +333,88 @@ void main() {
       expect(failureCubit.state, isNull);
     },
   );
+
+  test(
+    'successful local turns prime the completed context in background',
+    () async {
+      final database = db.GenaDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final workspaceId = await database
+          .into(database.workspaces)
+          .insert(db.WorkspacesCompanion.insert(name: 'Workspace'));
+      final chatId = await database
+          .into(database.chats)
+          .insert(
+            db.ChatsCompanion.insert(
+              workspace: workspaceId,
+              title: 'Existing title',
+            ),
+          );
+
+      final generatingCubit = ChatGeneratingCubit();
+      final responseCubit = ChatDraftResponseCubit();
+      final thinkingCubit = ChatDraftThinkingCubit();
+      final toolWaitingCubit = ChatToolWaitingCubit();
+      final failureCubit = ChatGenerationFailureCubit();
+      addTearDown(generatingCubit.close);
+      addTearDown(responseCubit.close);
+      addTearDown(thinkingCubit.close);
+      addTearDown(toolWaitingCubit.close);
+      addTearDown(failureCubit.close);
+
+      final contextWindowCubit = ChatContextWindowCubit();
+      addTearDown(contextWindowCubit.close);
+      final primed = Completer<void>();
+      final actions = ChatThreadActions(
+        database: database,
+        selectedChatCubit: _SelectedChatCubitFake(chatId.toString()),
+        activeModelInfoResolver: _ActiveModelInfoResolverFake(_localModel),
+        localModelRuntime: _PreparedLocalModelRuntimeFake(),
+        chatGeneratingCubit: generatingCubit,
+        chatDraftResponseCubit: responseCubit,
+        chatDraftThinkingCubit: thinkingCubit,
+        chatToolWaitingCubit: toolWaitingCubit,
+        chatGenerationFailureCubit: failureCubit,
+        runtimeDependencies: _ChatRuntimeDependenciesFake(
+          chatContextWindowCubit: contextWindowCubit,
+        ),
+        assistantGenerator:
+            ({
+              required database,
+              required chatId,
+              required activeModel,
+              required isCancelled,
+            }) async {
+              await database
+                  .into(database.messages)
+                  .insert(
+                    db.MessagesCompanion.insert(
+                      chat: chatId,
+                      role: 'assistant',
+                      kind: const Value('text'),
+                      content: 'Local response',
+                    ),
+                  );
+            },
+        contextPrimer:
+            ({required database, required chatId, required activeModel}) async {
+              expect(activeModel.id, _localModel.id);
+              final messages = await database.select(database.messages).get();
+              expect(messages.map((message) => message.content), [
+                'Hello locally',
+                'Local response',
+              ]);
+              primed.complete();
+            },
+      );
+
+      await actions.sendMessage('Hello locally');
+      await primed.future.timeout(const Duration(seconds: 1));
+
+      expect(generatingCubit.state, isFalse);
+      expect(failureCubit.state, isNull);
+    },
+  );
 }
 
 const _remoteModel = ModelInfo(
@@ -351,6 +436,27 @@ const _remoteModel = ModelInfo(
   preferredBackend: 'cpu',
   sourceType: 'remote',
   source: 'remote-server://test/model',
+);
+
+const _localModel = ModelInfo(
+  id: 8,
+  name: 'Local test model',
+  description: '',
+  provider: ModelProviderType.local,
+  modelType: 'general',
+  supportImage: false,
+  supportAudio: false,
+  supportsFunctionCalls: false,
+  isThinking: false,
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.95,
+  maxTokens: 2048,
+  tokenBuffer: 256,
+  randomSeed: 1,
+  preferredBackend: 'cpu',
+  sourceType: 'file',
+  source: '/models/local.gguf',
 );
 
 class _SelectedChatCubitFake extends Fake implements SelectedChatCubit {
@@ -377,5 +483,45 @@ class _LocalModelRuntimeFake extends Fake implements LocalModelRuntime {
   void cancelActiveGeneration() {}
 }
 
+class _PreparedLocalModelRuntimeFake implements LocalModelRuntime {
+  @override
+  Future<PreparedLocalModel> prepare(ModelInfo model) async {
+    return PreparedLocalModel(
+      ai: Genkit(),
+      modelRef: modelRef<dynamic>('local'),
+      modelId: 'local',
+    );
+  }
+
+  @override
+  Future<int> countTokens(String text) async => fallbackTokenEstimate(text);
+
+  @override
+  void cancelActiveGeneration() {}
+
+  @override
+  Future<void> reset() async {}
+}
+
 class _ChatRuntimeDependenciesFake extends Fake
-    implements ChatRuntimeDependencies {}
+    implements ChatRuntimeDependencies {
+  _ChatRuntimeDependenciesFake({ChatContextWindowCubit? chatContextWindowCubit})
+    : _chatContextWindowCubit = chatContextWindowCubit;
+
+  final ChatContextWindowCubit? _chatContextWindowCubit;
+
+  @override
+  ChatContextWindowCubit get chatContextWindowCubit =>
+      _chatContextWindowCubit ??
+      super.noSuchMethod(Invocation.getter(#chatContextWindowCubit));
+
+  @override
+  WorkspaceQueries get workspaceQueries => _WorkspaceQueriesFake();
+}
+
+class _WorkspaceQueriesFake extends Fake implements WorkspaceQueries {
+  @override
+  Future<WorkspaceEntity?> resolveActiveWorkspace({
+    List<WorkspaceEntity>? loadedWorkspaces,
+  }) async => null;
+}

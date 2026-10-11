@@ -37,6 +37,7 @@ import 'package:gena/features/mcp/data/services/mcp_client_manager.dart';
 import 'package:gena/features/mcp/data/services/mcp_tool_actions_service.dart';
 import 'package:gena/features/downloads/data/model_repository.dart';
 import 'package:gena/features/downloads/presentation/cubit/downloads_cubit.dart';
+import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
 import 'package:gena/features/workspace/presentation/cubit/selected_workspace_cubit.dart';
 import 'package:gena/features/workspace/data/services/workspace_memory_actions.dart';
 import 'package:gena/features/workspace/data/services/workspace_queries_entity_service.dart';
@@ -137,8 +138,15 @@ void registerChatDependencies() {
   }
 
   // Platform-native text-to-speech (flutter_tts; web + native).
+  if (!sl.isRegistered<FlutterTextToSpeech>()) {
+    sl.registerLazySingleton<FlutterTextToSpeech>(
+      () => FlutterTextToSpeech(
+        preferences: sl<TextToSpeechSettingsCubit>().state.preferences,
+      ),
+    );
+  }
   if (!sl.isRegistered<TextToSpeech>()) {
-    sl.registerLazySingleton<TextToSpeech>(FlutterTextToSpeech.new);
+    sl.registerLazySingleton<TextToSpeech>(() => sl<FlutterTextToSpeech>());
   }
 
   // Services (no deps or minimal deps)

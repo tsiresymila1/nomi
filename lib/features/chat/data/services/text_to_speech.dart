@@ -4,6 +4,47 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:gena/core/platform/app_capabilities.dart';
 
+class TextToSpeechPreferences {
+  const TextToSpeechPreferences({
+    this.engine,
+    this.voiceName,
+    this.voiceLocale,
+    this.speechRate = 0.5,
+    this.pitch = 1,
+  });
+
+  final String? engine;
+  final String? voiceName;
+  final String? voiceLocale;
+  final double speechRate;
+  final double pitch;
+}
+
+class TextToSpeechVoice {
+  const TextToSpeechVoice({
+    required this.name,
+    required this.locale,
+    this.quality = 'unknown',
+    this.latency = 'unknown',
+    this.networkRequired = false,
+  });
+
+  final String name;
+  final String locale;
+  final String quality;
+  final String latency;
+  final bool networkRequired;
+
+  String get id => '$name::$locale';
+  bool get isOffline => !networkRequired;
+  bool get isHighQuality => quality == 'high' || quality == 'very high';
+
+  Map<String, String> get platformValue => <String, String>{
+    'name': name,
+    'locale': locale,
+  };
+}
+
 /// Provider-neutral text-to-speech contract.
 ///
 /// Reads assistant replies aloud through the platform's native voices. Unlike
@@ -46,11 +87,14 @@ abstract interface class TextToSpeech {
 
 /// [TextToSpeech] backed by the platform-native `flutter_tts` engine.
 class FlutterTextToSpeech implements TextToSpeech {
-  FlutterTextToSpeech({FlutterTts? tts, AppCapabilities? capabilities})
-    : _tts = tts ?? FlutterTts(),
-      _capabilities = capabilities ?? AppCapabilities.current {
+  FlutterTextToSpeech({
+    FlutterTts? tts,
+    AppCapabilities? capabilities,
+    TextToSpeechPreferences preferences = const TextToSpeechPreferences(),
+  }) : _tts = tts ?? FlutterTts(),
+       _capabilities = capabilities ?? AppCapabilities.current {
     _wireHandlers();
-    _applyDefaults();
+    unawaited(applyPreferences(preferences).catchError((_) {}));
   }
 
   final FlutterTts _tts;
@@ -108,12 +152,91 @@ class FlutterTextToSpeech implements TextToSpeech {
     _emit(false);
   }
 
-  void _applyDefaults() {
-    // Best-effort defaults; failures are non-fatal (e.g. an engine that does
-    // not support a given setter). Kept modest so playback is easy to follow.
-    unawaited(_tts.setSpeechRate(0.5));
-    unawaited(_tts.setPitch(1.0));
-    unawaited(_tts.setVolume(1.0));
+  Future<List<String>> availableEngines() async {
+    if (!isAvailable) return const <String>[];
+    try {
+      final raw = await _tts.getEngines;
+      if (raw is! List) return const <String>[];
+      return raw
+          .map((engine) => engine.toString().trim())
+          .where((engine) => engine.isNotEmpty)
+          .toSet()
+          .toList(growable: false)
+        ..sort();
+    } catch (_) {
+      return const <String>[];
+    }
+  }
+
+  Future<List<TextToSpeechVoice>> availableVoices() async {
+    if (!isAvailable) return const <TextToSpeechVoice>[];
+    try {
+      final raw = await _tts.getVoices;
+      if (raw is! List) return const <TextToSpeechVoice>[];
+      final voices = <TextToSpeechVoice>[];
+      for (final item in raw) {
+        if (item is! Map) continue;
+        final name = item['name']?.toString().trim() ?? '';
+        final locale = item['locale']?.toString().trim() ?? '';
+        if (name.isEmpty || locale.isEmpty) continue;
+        voices.add(
+          TextToSpeechVoice(
+            name: name,
+            locale: locale,
+            quality: item['quality']?.toString().toLowerCase() ?? 'unknown',
+            latency: item['latency']?.toString().toLowerCase() ?? 'unknown',
+            networkRequired: item['network_required']?.toString() == '1',
+          ),
+        );
+      }
+      voices.sort((a, b) {
+        final offline = (b.isOffline ? 1 : 0).compareTo(a.isOffline ? 1 : 0);
+        if (offline != 0) return offline;
+        final quality = _qualityScore(
+          b.quality,
+        ).compareTo(_qualityScore(a.quality));
+        if (quality != 0) return quality;
+        final locale = a.locale.compareTo(b.locale);
+        return locale != 0 ? locale : a.name.compareTo(b.name);
+      });
+      return voices;
+    } catch (_) {
+      return const <TextToSpeechVoice>[];
+    }
+  }
+
+  static int _qualityScore(String quality) => switch (quality) {
+    'very high' => 4,
+    'high' => 3,
+    'normal' => 2,
+    'low' => 1,
+    _ => 0,
+  };
+
+  Future<void> applyPreferences(TextToSpeechPreferences preferences) async {
+    if (!isAvailable) return;
+    try {
+      final engine = preferences.engine?.trim();
+      if (engine != null && engine.isNotEmpty) {
+        await _tts.setEngine(engine);
+      }
+      final voiceName = preferences.voiceName?.trim();
+      final voiceLocale = preferences.voiceLocale?.trim();
+      if (voiceName != null &&
+          voiceName.isNotEmpty &&
+          voiceLocale != null &&
+          voiceLocale.isNotEmpty) {
+        await _tts.setVoice(<String, String>{
+          'name': voiceName,
+          'locale': voiceLocale,
+        });
+      }
+      await _tts.setSpeechRate(preferences.speechRate.clamp(0.2, 0.9));
+      await _tts.setPitch(preferences.pitch.clamp(0.5, 1.5));
+      await _tts.setVolume(1.0);
+    } catch (error) {
+      throw TextToSpeechException('Could not apply voice settings: $error');
+    }
   }
 
   void _emit(bool speaking) {

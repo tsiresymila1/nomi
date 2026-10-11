@@ -5,8 +5,11 @@ import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/features/downloads/data/services/model_catalog_insights_service.dart';
 import 'package:gena/features/downloads/presentation/widgets/model_device_summary_card.dart';
 import 'package:gena/features/chat/presentation/cubit/whisper_model_cubit.dart';
+import 'package:gena/features/chat/data/services/text_to_speech.dart';
 import 'package:gena/features/setting/data/services/theme_settings_service.dart';
+import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
 import 'package:gena/features/setting/presentation/widgets/whisper_model_settings_section.dart';
+import 'package:gena/features/setting/presentation/widgets/text_to_speech_settings_section.dart';
 import 'package:gena/features/setting/presentation/widgets/image_model_settings_section.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_generation_cubit.dart';
 import 'package:gena/features/image_generation/presentation/cubit/image_model_selection_cubit.dart';
@@ -77,6 +80,14 @@ class SettingsPage extends StatelessWidget {
                 WhisperModelSettingsSection(cubit: sl<WhisperModelCubit>())
                     .animate()
                     .fadeIn(duration: 220.ms, delay: 100.ms)
+                    .slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 8),
+                TextToSpeechSettingsSection(
+                      cubit: sl<TextToSpeechSettingsCubit>(),
+                      textToSpeech: sl<FlutterTextToSpeech>(),
+                    )
+                    .animate()
+                    .fadeIn(duration: 220.ms, delay: 110.ms)
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 8),
                 ImageModelSettingsSection(

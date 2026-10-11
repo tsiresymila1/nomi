@@ -1,6 +1,7 @@
 import 'package:gena/core/di/service_locator.dart';
 import 'package:gena/core/theme/theme_cubit.dart';
 import 'package:gena/features/setting/presentation/cubit/chat_model_settings_cubit.dart';
+import 'package:gena/features/setting/presentation/cubit/text_to_speech_settings_cubit.dart';
 
 void registerSettingsDependencies() {
   if (!sl.isRegistered<ThemeCubit>()) {
@@ -9,6 +10,11 @@ void registerSettingsDependencies() {
   if (!sl.isRegistered<ChatModelSettingsCubit>()) {
     sl.registerLazySingleton<ChatModelSettingsCubit>(
       ChatModelSettingsCubit.new,
+    );
+  }
+  if (!sl.isRegistered<TextToSpeechSettingsCubit>()) {
+    sl.registerLazySingleton<TextToSpeechSettingsCubit>(
+      TextToSpeechSettingsCubit.new,
     );
   }
 }

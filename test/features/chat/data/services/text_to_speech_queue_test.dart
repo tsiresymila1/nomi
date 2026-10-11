@@ -10,6 +10,12 @@ import 'package:gena/features/chat/data/services/text_to_speech.dart';
 class _FakeFlutterTts extends FlutterTts {
   final List<String> spoken = <String>[];
   int stopCount = 0;
+  List<dynamic> engines = <dynamic>['com.google.android.tts'];
+  List<dynamic> voices = <dynamic>[];
+  String? selectedEngine;
+  Map<String, String>? selectedVoice;
+  double? speechRate;
+  double? pitch;
 
   @override
   Future<dynamic> speak(String text, {bool focus = false}) async {
@@ -32,11 +38,37 @@ class _FakeFlutterTts extends FlutterTts {
 
   // Defaults applied by the wrapper hit the channel otherwise; no-op them.
   @override
-  Future<dynamic> setSpeechRate(double rate) async => 1;
+  Future<dynamic> setSpeechRate(double rate) async {
+    speechRate = rate;
+    return 1;
+  }
+
   @override
-  Future<dynamic> setPitch(double pitch) async => 1;
+  Future<dynamic> setPitch(double value) async {
+    pitch = value;
+    return 1;
+  }
+
   @override
   Future<dynamic> setVolume(double volume) async => 1;
+
+  @override
+  Future<dynamic> get getEngines async => engines;
+
+  @override
+  Future<dynamic> get getVoices async => voices;
+
+  @override
+  Future<dynamic> setEngine(String engine) async {
+    selectedEngine = engine;
+    return 1;
+  }
+
+  @override
+  Future<dynamic> setVoice(Map<String, String> voice) async {
+    selectedVoice = voice;
+    return 1;
+  }
 }
 
 const _availableCaps = AppCapabilities(
@@ -150,5 +182,50 @@ void main() {
   test('blank text is ignored by enqueue', () async {
     await tts.enqueue('   ');
     expect(fake.spoken, isEmpty);
+  });
+
+  test('available voices prioritize high-quality offline inference', () async {
+    fake.voices = <dynamic>[
+      <String, String>{
+        'name': 'online',
+        'locale': 'en-US',
+        'quality': 'very high',
+        'latency': 'normal',
+        'network_required': '1',
+      },
+      <String, String>{
+        'name': 'offline',
+        'locale': 'fr-FR',
+        'quality': 'high',
+        'latency': 'low',
+        'network_required': '0',
+      },
+    ];
+
+    final voices = await tts.availableVoices();
+
+    expect(voices.first.name, 'offline');
+    expect(voices.first.isOffline, isTrue);
+    expect(voices.first.isHighQuality, isTrue);
+  });
+
+  test('preferences configure engine, voice, speed and pitch', () async {
+    await tts.applyPreferences(
+      const TextToSpeechPreferences(
+        engine: 'com.google.android.tts',
+        voiceName: 'fr-fr-x-frd-local',
+        voiceLocale: 'fr-FR',
+        speechRate: 0.62,
+        pitch: 1.1,
+      ),
+    );
+
+    expect(fake.selectedEngine, 'com.google.android.tts');
+    expect(fake.selectedVoice, <String, String>{
+      'name': 'fr-fr-x-frd-local',
+      'locale': 'fr-FR',
+    });
+    expect(fake.speechRate, 0.62);
+    expect(fake.pitch, 1.1);
   });
 }

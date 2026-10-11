@@ -13,6 +13,17 @@ enum ImageModelSampler { euler, eulerAncestral, dpmpp2m, lcm }
 
 enum ImageModelScheduler { discrete, karras, sgmUniform, simple }
 
+const supportedExternalImageModelExtensions = <String>{
+  '.gguf',
+  '.safetensors',
+  '.ckpt',
+};
+
+bool isSupportedExternalImageModelPath(String path) {
+  final lower = path.trim().toLowerCase();
+  return supportedExternalImageModelExtensions.any(lower.endsWith);
+}
+
 /// A pinned, downloadable image-generation model.
 class ImageModelProfile {
   const ImageModelProfile({
@@ -46,7 +57,7 @@ class ImageModelProfile {
     return ImageModelProfile(
       id: id,
       name: name,
-      description: 'Custom local GGUF image model.',
+      description: 'Custom local image checkpoint.',
       url: '',
       fileName: normalizedPath.split(RegExp(r'[/\\]')).last,
       sizeBytes: sizeBytes,

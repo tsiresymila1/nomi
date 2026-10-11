@@ -86,13 +86,17 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
       final path =
           await (widget.pathPicker?.call() ??
               DirectModelFilePicker.pickModelPath(
-                allowedExtensions: const <String>['gguf'],
-                dialogTitle: 'Select Stable Diffusion GGUF',
+                allowedExtensions: const <String>[
+                  'gguf',
+                  'safetensors',
+                  'ckpt',
+                ],
+                dialogTitle: 'Select image model checkpoint',
               ));
       if (path == null || !mounted) return;
-      if (!path.toLowerCase().endsWith('.gguf')) {
+      if (!isSupportedExternalImageModelPath(path)) {
         throw const DirectModelFilePickerException(
-          'Choose a .gguf image model file.',
+          'Choose a .gguf, .safetensors, or .ckpt image model file.',
         );
       }
       final size =
@@ -104,7 +108,7 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
       }
       final fileName = path.split(RegExp(r'[/\\]')).last;
       final name = fileName.replaceFirst(
-        RegExp(r'\.gguf$', caseSensitive: false),
+        RegExp(r'\.(gguf|safetensors|ckpt)$', caseSensitive: false),
         '',
       );
       final profile = widget.selectionCubit.registerExternal(
@@ -149,7 +153,7 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
                       leading: Icon(Icons.auto_awesome_rounded),
                       title: Text('Image generation'),
                       subtitle: Text(
-                        'Choose the GGUF model used by every chat.',
+                        'Choose the checkpoint used by every chat.',
                       ),
                     ),
                     for (final profile in selectionState.allProfiles)
@@ -167,7 +171,7 @@ class _ImageModelSettingsSectionState extends State<ImageModelSettingsSection> {
                       child: OutlinedButton.icon(
                         onPressed: _registerExternal,
                         icon: const Icon(Icons.folder_open_rounded),
-                        label: const Text('Add GGUF model'),
+                        label: const Text('Add image model'),
                       ),
                     ),
                     if (generationState.profile.id == selectionState.selectedId)

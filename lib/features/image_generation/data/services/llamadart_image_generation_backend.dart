@@ -19,7 +19,12 @@ class LlamadartImageGenerationBackend implements ImageGenerationBackend {
   @override
   Future<LoadedImageGenerator> load(String modelPath) async {
     final engine = await llama.ImageGenerationEngine.load(
-      llama.ImageGenerationModel(llama.ModelSource.path(modelPath)),
+      llama.ImageGenerationModel(
+        llama.ModelSource.path(modelPath),
+        role: modelPath.toLowerCase().endsWith('.ckpt')
+            ? llama.ImageModelRole.checkpoint
+            : null,
+      ),
       params: const llama.ImageModelParams(checkMemory: true),
     );
     return _LlamadartLoadedImageGenerator(engine);

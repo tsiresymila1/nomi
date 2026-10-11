@@ -103,7 +103,7 @@ void main() {
   });
 
   test(
-    'resolves an external GGUF from its original path without copying',
+    'resolves an external checkpoint from its original path without copying',
     () async {
       final external = File('${directory.path}/external.gguf');
       await external.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
@@ -126,6 +126,21 @@ void main() {
       expect(downloader.downloadCalls, 0);
     },
   );
+
+  test('resolves an external safetensors checkpoint', () async {
+    final external = File('${directory.path}/external.safetensors');
+    await external.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+    final profile = ImageModelProfile.external(
+      id: 'custom:safetensors',
+      name: 'External safetensors',
+      filePath: external.path,
+      sizeBytes: 4,
+    );
+
+    final installed = await IoImageModelStore().resolve(profile);
+
+    expect(installed?.modelPath, external.path);
+  });
 
   test('never downloads or deletes an external GGUF', () async {
     final external = File('${directory.path}/external.gguf');

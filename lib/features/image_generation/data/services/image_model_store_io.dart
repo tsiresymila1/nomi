@@ -164,7 +164,7 @@ class IoImageModelStore implements ImageModelStore {
     ImageModelProfile profile,
   ) async {
     final path = profile.filePath;
-    if (path == null || !path.toLowerCase().endsWith('.gguf')) return null;
+    if (path == null || !isSupportedExternalImageModelPath(path)) return null;
     final model = File(path);
     try {
       if (!await model.exists()) return null;

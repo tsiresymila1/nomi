@@ -82,4 +82,14 @@ void main() {
     expect(restored.displaySize, '42 B');
     expect(restored.sampler, isNull);
   });
+
+  test('accepts supported single-file image checkpoint formats', () {
+    expect(isSupportedExternalImageModelPath('/models/image.gguf'), isTrue);
+    expect(
+      isSupportedExternalImageModelPath('/models/image.safetensors'),
+      isTrue,
+    );
+    expect(isSupportedExternalImageModelPath('/models/image.ckpt'), isTrue);
+    expect(isSupportedExternalImageModelPath('/models/image.bin'), isFalse);
+  });
 }

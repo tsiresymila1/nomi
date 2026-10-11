@@ -60,12 +60,30 @@ jobs:
       - name: Test
         run: flutter test
 
+      # Flutter tests can replace build/native_assets with host-platform assets.
+      # Clear those intermediates so Gradle cannot reuse an Android assemble task
+      # whose external native-assets directory has disappeared.
+      - name: Reset build intermediates
+        run: flutter clean
+
       - name: Build release APK
         env:
           CARGO_BUILD_JOBS: "1"
           CARGO_INCREMENTAL: "0"
           CARGO_PROFILE_RELEASE_DEBUG: "0"
         run: flutter build apk --release --target-platform android-arm64
+
+      - name: Verify required Android native libraries
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          APK_ENTRIES="$(unzip -Z1 "$APK_PATH")"
+          for LIBRARY in libsqlite3.so libllama.so libstable-diffusion.so; do
+            ENTRY="lib/arm64-v8a/$LIBRARY"
+            if ! grep -Fxq "$ENTRY" <<< "$APK_ENTRIES"; then
+              echo "Missing required native library: $ENTRY" >&2
+              exit 1
+            fi
+          done
 
       - name: Prepare APK filename
         id: meta

@@ -38,4 +38,11 @@ void main() {
   test('analyzes only the app sources and tests', () {
     expect(workflow, contains('run: flutter analyze lib test'));
   });
+
+  test('rebuilds and verifies required Android native libraries', () {
+    expect(workflow, contains('run: flutter clean'));
+    expect(workflow, contains('libsqlite3.so'));
+    expect(workflow, contains('libllama.so'));
+    expect(workflow, contains('libstable-diffusion.so'));
+  });
 }
